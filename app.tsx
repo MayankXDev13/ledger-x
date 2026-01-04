@@ -1,3 +1,10 @@
+import "react-native-get-random-values";
+import { Buffer } from "buffer";
+
+if (typeof globalThis.Buffer === "undefined") {
+  globalThis.Buffer = Buffer;
+}
+
 import { useEffect } from "react";
 import { Redirect } from "expo-router";
 import { router } from "expo-router";
