@@ -61,11 +61,12 @@ export default function LoginScreen() {
     }
 
     router.replace("/customers");
+    setLoading(false);
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <View style={styles.card}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -75,10 +76,10 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="email@address.com"
-              placeholderTextColor="#999999"
+              placeholderTextColor="#999"
               value={email}
-              onChangeText={(text) => {
-                setEmail(text);
+              onChangeText={(t) => {
+                setEmail(t);
                 setEmailError(null);
               }}
               autoCapitalize="none"
@@ -92,10 +93,10 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#999999"
+              placeholderTextColor="#999"
               value={password}
-              onChangeText={(text) => {
-                setPassword(text);
+              onChangeText={(t) => {
+                setPassword(t);
                 setPasswordError(null);
               }}
               secureTextEntry
@@ -113,98 +114,118 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text style={styles.buttonText}>Login</Text>
             )}
           </Pressable>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
+          <Text style={styles.footerText}>Don’t have an account?</Text>
           <Pressable onPress={() => router.push("/auth/signup")}>
             <Text style={styles.linkText}>Sign Up</Text>
           </Pressable>
         </View>
       </View>
-      <StatusBar style="auto" />
+
+      <StatusBar style="dark" />
     </View>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  content: {
-    flex: 1,
+    backgroundColor: "#F5F5F5",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    padding: 20,
   },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    elevation: 6,
+  },
+
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#000000",
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 6,
   },
+
   subtitle: {
-    fontSize: 18,
-    color: "#666666",
-    marginBottom: 32,
+    fontSize: 15,
+    color: "#666",
+    marginBottom: 24,
   },
+
   form: {
-    gap: 20,
+    gap: 18,
   },
+
   inputGroup: {
-    gap: 8,
+    gap: 6,
   },
+
   label: {
-    fontSize: 14,
+    fontSize: 13,
+    color: "#444",
     fontWeight: "500",
-    color: "#333333",
   },
+
   input: {
+    backgroundColor: "#F9F9F9",
     borderWidth: 1,
-    borderColor: "#CCCCCC",
-    borderRadius: 8,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#000000",
+    color: "#000",
   },
+
   errorText: {
-    color: "#FF0000",
-    fontSize: 14,
+    color: "#E53935",
+    fontSize: 13,
   },
+
   button: {
-    backgroundColor: "#000000",
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: "#000",
+    paddingVertical: 18,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 12,
   },
+
   buttonDisabled: {
     opacity: 0.6,
   },
+
   buttonText: {
-    color: "#FFFFFF",
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
   },
+
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 24,
-    gap: 4,
+    marginTop: 20,
+    gap: 6,
   },
+
   footerText: {
-    color: "#666666",
-    fontSize: 16,
+    color: "#777",
+    fontSize: 15,
   },
+
   linkText: {
-    color: "#000000",
-    fontSize: 16,
+    color: "#000",
+    fontSize: 15,
     fontWeight: "600",
   },
 });

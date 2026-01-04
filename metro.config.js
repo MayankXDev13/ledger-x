@@ -13,6 +13,13 @@ config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
   stream: path.resolve(__dirname, "node_modules/stream-browserify"),
   events: path.resolve(__dirname, "node_modules/events"),
+  https: path.resolve(__dirname, "node_modules/https-browserify"),
+  http: path.resolve(__dirname, "node_modules/http-browserify"),
+  net: path.resolve(__dirname, "node_modules/net-browserify"),
+  tls: path.resolve(__dirname, "node_modules/tls-browserify"),
+  buffer: path.resolve(__dirname, "node_modules/buffer"),
+  crypto: path.resolve(__dirname, "node_modules/crypto-browserify"),
+  url: path.resolve(__dirname, "node_modules/url-polyfill"),
 };
 
 config.transformer.unstable_allowRequireContext = true;

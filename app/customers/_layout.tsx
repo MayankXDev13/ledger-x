@@ -4,16 +4,10 @@ export default function CustomersLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: "#FFFFFF",
-        },
+        headerStyle: { backgroundColor: "#FFFFFF" },
         headerTintColor: "#000000",
-        headerTitleStyle: {
-          fontWeight: "600",
-        },
-        contentStyle: {
-          backgroundColor: "#FFFFFF",
-        },
+        headerTitleStyle: { fontWeight: "600" },
+        contentStyle: { backgroundColor: "#FFFFFF" },
       }}
     >
       <Stack.Screen

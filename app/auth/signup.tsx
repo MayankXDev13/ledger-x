@@ -39,7 +39,7 @@ export default function SignupScreen() {
       setPasswordError("Password is required");
       valid = false;
     } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+      setPasswordError("Minimum 6 characters");
       valid = false;
     }
 
@@ -73,7 +73,7 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <View style={styles.card}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Start tracking your ledger</Text>
 
@@ -83,10 +83,10 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="email@address.com"
-              placeholderTextColor="#999999"
+              placeholderTextColor="#999"
               value={email}
-              onChangeText={(text) => {
-                setEmail(text);
+              onChangeText={(t) => {
+                setEmail(t);
                 setEmailError(null);
               }}
               autoCapitalize="none"
@@ -99,11 +99,11 @@ export default function SignupScreen() {
             <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Password (min 6 characters)"
-              placeholderTextColor="#999999"
+              placeholder="Password"
+              placeholderTextColor="#999"
               value={password}
-              onChangeText={(text) => {
-                setPassword(text);
+              onChangeText={(t) => {
+                setPassword(t);
                 setPasswordError(null);
               }}
               secureTextEntry
@@ -117,11 +117,11 @@ export default function SignupScreen() {
             <Text style={styles.label}>Confirm Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor="#999999"
+              placeholder="Confirm password"
+              placeholderTextColor="#999"
               value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
+              onChangeText={(t) => {
+                setConfirmPassword(t);
                 setConfirmError(null);
               }}
               secureTextEntry
@@ -139,7 +139,7 @@ export default function SignupScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#FFF" />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
             )}
@@ -153,7 +153,8 @@ export default function SignupScreen() {
           </Pressable>
         </View>
       </View>
-      <StatusBar style="auto" />
+
+      <StatusBar style="dark" />
     </View>
   );
 }
@@ -161,76 +162,95 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  content: {
-    flex: 1,
+    backgroundColor: "#F5F5F5",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    padding: 20,
   },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    elevation: 6,
+  },
+
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#000000",
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 6,
   },
+
   subtitle: {
-    fontSize: 18,
-    color: "#666666",
-    marginBottom: 32,
+    fontSize: 15,
+    color: "#666",
+    marginBottom: 24,
   },
+
   form: {
-    gap: 20,
+    gap: 18,
   },
+
   inputGroup: {
-    gap: 8,
+    gap: 6,
   },
+
   label: {
-    fontSize: 14,
+    fontSize: 13,
+    color: "#444",
     fontWeight: "500",
-    color: "#333333",
   },
+
   input: {
+    backgroundColor: "#F9F9F9",
     borderWidth: 1,
-    borderColor: "#CCCCCC",
-    borderRadius: 8,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#000000",
+    color: "#000",
   },
+
   errorText: {
-    color: "#FF0000",
-    fontSize: 14,
+    color: "#E53935",
+    fontSize: 13,
   },
+
   button: {
-    backgroundColor: "#000000",
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: "#000",
+    paddingVertical: 18,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 12,
   },
+
   buttonDisabled: {
     opacity: 0.6,
   },
+
   buttonText: {
-    color: "#FFFFFF",
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
   },
+
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 24,
-    gap: 4,
+    marginTop: 20,
+    gap: 6,
   },
+
   footerText: {
-    color: "#666666",
-    fontSize: 16,
+    color: "#777",
+    fontSize: 15,
   },
+
   linkText: {
-    color: "#000000",
-    fontSize: 16,
+    color: "#000",
+    fontSize: 15,
     fontWeight: "600",
   },
 });
+
