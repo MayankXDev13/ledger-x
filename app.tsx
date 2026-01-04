@@ -1,8 +1,13 @@
 import "react-native-get-random-values";
 import { Buffer } from "buffer";
+import { EventEmitter } from "events";
 
 if (typeof globalThis.Buffer === "undefined") {
   globalThis.Buffer = Buffer;
+}
+
+if (typeof globalThis.EventEmitter === "undefined") {
+  globalThis.EventEmitter = EventEmitter;
 }
 
 import { useEffect } from "react";
