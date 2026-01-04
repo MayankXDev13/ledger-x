@@ -21,13 +21,7 @@ bun install
 
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to the SQL Editor and run the contents of `supabase-schema.sql`
-3. Copy `.env.example` to `.env` and fill in your Supabase URL and anon key:
-
-```bash
-cp .env.example .env
-```
-
-4. Update `.env` with your values:
+3. Create a `.env` file in the project root:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
