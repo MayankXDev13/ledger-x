@@ -38,6 +38,18 @@ export default function ProfileScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.button,
+            styles.menuButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => router.push("/tags/manage")}
+        >
+          <Ionicons name="pricetags-outline" size={20} color="#ffffff" />
+          <Text style={styles.menuButtonText}>Manage Tags</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
             styles.changePasswordButton,
             pressed && styles.pressed,
             isLoggingOut && styles.buttonDisabled,
@@ -118,6 +130,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  menuButton: {
+    backgroundColor: "#2a2a2a",
+    borderWidth: 1,
+    borderColor: "#3a3a3a",
+  },
+  menuButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
   },
   changePasswordButton: {
     backgroundColor: "#ffffff",

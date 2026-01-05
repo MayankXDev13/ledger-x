@@ -27,6 +27,7 @@ export default function CustomersScreen() {
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
+      .is("deleted_at", null)
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
 

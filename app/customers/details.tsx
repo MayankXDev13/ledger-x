@@ -7,11 +7,21 @@ import {
   Pressable,
   ActivityIndicator,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
-import { Contact, LedgerEntry } from "@/types/database";
+import { Contact, ContactTag, LedgerEntry } from "@/types/database";
 import { format } from "date-fns";
+import { DateFilterDropdown } from "@/components/DateFilterDropdown";
+import { EditTransactionModal } from "@/components/EditTransactionModal";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { TagSelector } from "@/components/TagSelector";
+import { TagManagementModal } from "@/components/TagManagementModal";
+import { DateFilter } from "@/types/database";
+import { updateTransaction, deleteTransaction } from "@/lib/transactions";
+import { getContactTags, replaceContactTags, getUserTags } from "@/lib/tags";
 
 interface BalanceData {
   total_credit: number;
@@ -29,6 +39,20 @@ export default function CustomerDetailsScreen() {
     balance: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>({
+    start: null,
+    end: null,
+    label: "All Time",
+  });
+  const [editingTransaction, setEditingTransaction] =
+    useState<LedgerEntry | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
+  const [availableTags, setAvailableTags] = useState<ContactTag[]>([]);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [showDeleteCustomerConfirm, setShowDeleteCustomerConfirm] =
+    useState(false);
 
   const fetchData = async () => {
     if (!id) return;
@@ -46,11 +70,22 @@ export default function CustomerDetailsScreen() {
 
     setContact(contactData);
 
-    const { data: entriesData, error: entriesError } = await supabase
-      .from("ledger_entries")
-      .select("*")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false });
+    await fetchTransactions();
+    await fetchBalance();
+    await fetchTags();
+  };
+
+  const fetchTransactions = async () => {
+    if (!id) return;
+
+    const { data: entriesData, error: entriesError } = await supabase.rpc(
+      "get_filtered_transactions",
+      {
+        p_contact_id: id,
+        p_start_date: dateFilter.start,
+        p_end_date: dateFilter.end,
+      },
+    );
 
     if (entriesError) {
       console.error("Error fetching entries:", entriesError);
@@ -58,6 +93,10 @@ export default function CustomerDetailsScreen() {
     }
 
     setEntries(entriesData || []);
+  };
+
+  const fetchBalance = async () => {
+    if (!id) return;
 
     const { data: balanceData } = await supabase.rpc("get_contact_balance", {
       contact_id: id,
@@ -68,9 +107,35 @@ export default function CustomerDetailsScreen() {
     }
   };
 
+  const fetchTags = async () => {
+    if (!id) return;
+
+    const contactTags = await getContactTags(id);
+    setSelectedTags(contactTags);
+
+    if (contact?.user_id) {
+      const userTags = await getUserTags(contact.user_id);
+      setAvailableTags(userTags);
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    if (id) {
+      fetchData();
+    }
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTransactions();
+    }
+  }, [id, dateFilter]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
 
   const formatAmount = (amount: number, type: string) => {
     const formatted = new Intl.NumberFormat("en-IN", {
@@ -96,18 +161,68 @@ export default function CustomerDetailsScreen() {
     Linking.openURL(`sms:${phoneNumber}?body=${encodeURIComponent(message)}`);
   };
 
+  const handleSaveTransaction = async (
+    entryId: string,
+    amount: number,
+    type: "credit" | "debit",
+    note: string,
+    createdAt: string,
+  ) => {
+    await updateTransaction(entryId, amount, type, note, createdAt);
+    await fetchTransactions();
+    await fetchBalance();
+  };
+
+  const handleDeleteTransaction = async (entryId: string) => {
+    await deleteTransaction(entryId);
+    await fetchTransactions();
+    await fetchBalance();
+  };
+
+  const handleSaveTags = async () => {
+    if (!id) return;
+    const tagIds = selectedTags.map((t) => t.id);
+    await replaceContactTags(id, tagIds);
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!id) return;
+
+    const { error } = await supabase.rpc("soft_delete_customer", {
+      p_contact_id: id,
+    });
+
+    if (error) {
+      console.error("Error deleting customer:", error);
+      return;
+    }
+
+    router.replace("/(tabs)/customers");
+  };
+
   const renderEntry = ({ item }: { item: LedgerEntry }) => (
-    <View style={styles.entryCard}>
+    <Pressable
+      style={styles.entryCard}
+      onPress={() => setEditingTransaction(item)}
+    >
       <View style={styles.entryInfo}>
-        <Text style={styles.entryAmount}>
+        <Text
+          style={[
+            styles.entryAmount,
+            item.type === "credit" ? styles.creditColor : styles.debitColor,
+          ]}
+        >
           {formatAmount(Number(item.amount), item.type)}
         </Text>
-        <Text style={styles.entryDate}>
-          {format(new Date(item.created_at), "MMM d, yyyy h:mm a")}
-        </Text>
-        {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
+        <View style={styles.entryMeta}>
+          <Text style={styles.entryDate}>
+            {format(new Date(item.created_at), "MMM d, yyyy h:mm a")}
+          </Text>
+          {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
+        </View>
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={20} color="#666" />
+    </Pressable>
   );
 
   if (!contact) {
@@ -121,24 +236,46 @@ export default function CustomerDetailsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{contact.name}</Text>
-          <Text style={styles.customerPhone}>{contact.phone}</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.customerInfo}>
+            <Text style={styles.customerName}>{contact.name}</Text>
+            <Text style={styles.customerPhone}>{contact.phone}</Text>
+          </View>
+          <Pressable
+            style={styles.editButton}
+            onPress={() => router.push(`/customers/edit?id=${id}`)}
+          >
+            <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
+            <Text style={styles.editButtonText}>Edit</Text>
+          </Pressable>
         </View>
+
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Balance</Text>
           <Text
             style={[
               styles.balanceAmount,
-              balance.balance > 0 ? styles.balanceOwe : styles.balanceOwed,
+              balance.balance > 0
+                ? styles.balanceOwe
+                : balance.balance < 0
+                  ? styles.balanceOwed
+                  : styles.balanceSettled,
             ]}
           >
             {balance.balance > 0
               ? "₹" + balance.balance.toFixed(2)
               : balance.balance < 0
                 ? "-₹" + Math.abs(balance.balance).toFixed(2)
-                : "Settled"}
+                : "₹0.00"}
           </Text>
+          <View style={styles.balanceDetails}>
+            <Text style={styles.balanceDetailText}>
+              Total Credit: ₹{Number(balance.total_credit).toFixed(2)}
+            </Text>
+            <Text style={styles.balanceDetailText}>
+              Total Debit: ₹{Number(balance.total_debit).toFixed(2)}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -147,23 +284,44 @@ export default function CustomerDetailsScreen() {
           style={styles.actionButton}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
         >
-          <Text style={styles.actionButtonText}>+ Credit</Text>
+          <Ionicons name="arrow-down-circle" size={20} color="#10B981" />
+          <Text style={styles.actionButtonText}>Credit</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
         >
-          <Text style={styles.actionButtonText}>+ Debit</Text>
+          <Ionicons name="arrow-up-circle" size={20} color="#EF4444" />
+          <Text style={styles.actionButtonText}>Debit</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.smsButton]}
           onPress={sendSMS}
         >
+          <Ionicons name="chatbubble-ellipses" size={20} color="#3B82F6" />
           <Text style={styles.smsButtonText}>SMS</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.sectionTitle}>Transactions</Text>
+      <View style={styles.tagsSection}>
+        <TagSelector
+          selectedTags={selectedTags}
+          onTagsChange={(tags) => {
+            setSelectedTags(tags);
+            handleSaveTags();
+          }}
+          availableTags={availableTags}
+          onManageTags={() => setShowTagModal(true)}
+        />
+      </View>
+
+      <View style={styles.transactionsHeader}>
+        <Text style={styles.sectionTitle}>Transactions</Text>
+        <DateFilterDropdown
+          selectedFilter={dateFilter}
+          onFilterChange={setDateFilter}
+        />
+      </View>
 
       {entries.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -177,8 +335,69 @@ export default function CustomerDetailsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
+
+      <View style={styles.deleteSection}>
+        <Pressable
+          style={styles.deleteCustomerButton}
+          onPress={() => setShowDeleteCustomerConfirm(true)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <Text style={styles.deleteCustomerButtonText}>Delete Customer</Text>
+        </Pressable>
+      </View>
+
+      <EditTransactionModal
+        visible={!!editingTransaction}
+        transaction={editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        onSave={handleSaveTransaction}
+        onDelete={(entryId) => {
+          setEditingTransaction(null);
+          setShowDeleteConfirm(true);
+        }}
+      />
+
+      <DeleteConfirmationDialog
+        visible={showDeleteConfirm}
+        title="Delete Transaction?"
+        message="This will permanently delete this transaction. The customer's balance will be updated accordingly."
+        confirmText="Delete"
+        onConfirm={() => {
+          if (editingTransaction) {
+            handleDeleteTransaction(editingTransaction.id);
+          }
+        }}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+        }}
+      />
+
+      <DeleteConfirmationDialog
+        visible={showDeleteCustomerConfirm}
+        title="Delete Customer?"
+        message="This will permanently delete this customer and all their transactions. This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleDeleteCustomer}
+        onCancel={() => setShowDeleteCustomerConfirm(false)}
+      />
+
+      <TagManagementModal
+        visible={showTagModal}
+        onClose={() => {
+          setShowTagModal(false);
+          if (contact?.user_id) {
+            getUserTags(contact.user_id).then(setAvailableTags);
+          }
+        }}
+        tags={availableTags}
+        onTagsChange={setAvailableTags}
+        userId={contact?.user_id || ""}
+      />
     </View>
   );
 }
@@ -193,8 +412,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
   },
-  customerInfo: {
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 16,
+  },
+  customerInfo: {
+    flex: 1,
   },
   customerName: {
     fontSize: 28,
@@ -206,8 +431,22 @@ const styles = StyleSheet.create({
     color: "#888888",
     marginTop: 4,
   },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#2D2D2D",
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: "#3B82F6",
+    fontSize: 14,
+    fontWeight: "500",
+  },
   balanceCard: {
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#2D2D2D",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -222,71 +461,106 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   balanceOwe: {
-    color: "#ffffff",
+    color: "#10B981",
   },
   balanceOwed: {
-    color: "#aaaaaa",
+    color: "#EF4444",
+  },
+  balanceSettled: {
+    color: "#888888",
+  },
+  balanceDetails: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 8,
+  },
+  balanceDetailText: {
+    fontSize: 12,
+    color: "#666",
   },
   actionsContainer: {
     flexDirection: "row",
     paddingHorizontal: 24,
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   actionButton: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: "#2D2D2D",
   },
   actionButtonText: {
-    color: "#000000",
+    color: "#10B981",
     fontSize: 16,
     fontWeight: "600",
   },
   smsButton: {
-    backgroundColor: "#2a2a2a",
     flex: 0.6,
   },
   smsButtonText: {
-    color: "#ffffff",
+    color: "#3B82F6",
     fontSize: 16,
     fontWeight: "600",
+  },
+  tagsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  transactionsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#ffffff",
-    paddingHorizontal: 24,
-    marginBottom: 12,
   },
   listContent: {
     paddingHorizontal: 24,
     paddingBottom: 24,
   },
   entryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#333333",
+    borderBottomColor: "#2D2D2D",
   },
   entryInfo: {
     flex: 1,
   },
+  entryMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
   entryAmount: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#ffffff",
+  },
+  creditColor: {
+    color: "#10B981",
+  },
+  debitColor: {
+    color: "#EF4444",
   },
   entryDate: {
     fontSize: 14,
     color: "#888888",
-    marginTop: 4,
   },
   entryNote: {
     fontSize: 14,
     color: "#666666",
-    marginTop: 4,
     fontStyle: "italic",
   },
   emptyContainer: {
@@ -302,5 +576,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666666",
     marginTop: 8,
+  },
+  deleteSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#2D2D2D",
+    marginTop: 16,
+  },
+  deleteCustomerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+  },
+  deleteCustomerButtonText: {
+    color: "#EF4444",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
