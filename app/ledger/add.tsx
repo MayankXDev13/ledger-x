@@ -11,18 +11,43 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
+import { useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import { TransactionTag } from "@/types/database";
+import {
+  getUserTransactionTags,
+  replaceTransactionTags,
+} from "@/lib/transaction-tags";
+import { TransactionTagSelector } from "@/components/TransactionTagSelector";
+import { TransactionTagManagementModal } from "@/components/TransactionTagManagementModal";
 
 export default function AddEntryScreen() {
   const { contactId, type } = useLocalSearchParams<{
     contactId: string;
     type: string;
   }>();
+  const { session } = useAuth();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
+  const [availableTags, setAvailableTags] = useState<TransactionTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<TransactionTag[]>([]);
+  const [showTagModal, setShowTagModal] = useState(false);
+
+  const fetchTags = useCallback(async () => {
+    if (!session?.user) return;
+    const tags = await getUserTransactionTags(session.user.id);
+    setAvailableTags(tags);
+  }, [session]);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchTags();
+    }
+  }, [session, fetchTags]);
 
   const validateForm = () => {
     let valid = true;
@@ -50,19 +75,26 @@ export default function AddEntryScreen() {
 
     const numAmount = parseFloat(amount);
 
-    const { error: insertError } = await supabase
+    const { data: entryData, error: insertError } = await supabase
       .from("ledger_entries")
       .insert({
         contact_id: contactId,
         amount: numAmount,
         type: type as "credit" | "debit",
         note: note || null,
-      });
+      })
+      .select()
+      .single();
 
     if (insertError) {
       setError(insertError.message);
       setLoading(false);
       return;
+    }
+
+    if (selectedTags.length > 0) {
+      const tagIds = selectedTags.map((t) => t.id);
+      await replaceTransactionTags(entryData.id, tagIds);
     }
 
     router.back();
@@ -112,6 +144,13 @@ export default function AddEntryScreen() {
             />
           </View>
 
+          <TransactionTagSelector
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
+            availableTags={availableTags}
+            onManageTags={() => setShowTagModal(true)}
+          />
+
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <View style={styles.buttonContainer}>
@@ -139,6 +178,18 @@ export default function AddEntryScreen() {
           </View>
         </View>
       </View>
+
+      <TransactionTagManagementModal
+        visible={showTagModal}
+        onClose={() => {
+          setShowTagModal(false);
+          fetchTags();
+        }}
+        tags={availableTags}
+        onTagsChange={setAvailableTags}
+        userId={session?.user?.id || ""}
+      />
+
       <StatusBar style="auto" />
     </KeyboardAvoidingView>
   );

@@ -145,6 +145,71 @@ export interface Database {
           },
         ];
       };
+      transaction_tags: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          color: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          color?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          color?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transaction_tags_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      transaction_tag_map: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          tag_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          transaction_id: string;
+          tag_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          transaction_id?: string;
+          tag_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transaction_tag_map_transaction_id_fkey";
+            columns: ["transaction_id"];
+            referencedRelation: "ledger_entries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transaction_tag_map_tag_id_fkey";
+            columns: ["tag_id"];
+            referencedRelation: "transaction_tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {};
     Functions: {
@@ -185,6 +250,20 @@ export interface Database {
         Args: { p_tag_id: string };
         Returns: number;
       };
+      get_transaction_tags: {
+        Args: { p_transaction_id: string };
+        Returns: {
+          id: string;
+          user_id: string;
+          name: string;
+          color: string;
+          created_at: string;
+        }[];
+      };
+      get_transaction_tag_usage_count: {
+        Args: { p_tag_id: string };
+        Returns: number;
+      };
     };
     Enums: {};
   };
@@ -195,6 +274,17 @@ export type LedgerEntry = Database["public"]["Tables"]["ledger_entries"]["Row"];
 export type ContactTag = Database["public"]["Tables"]["contact_tags"]["Row"];
 export type ContactTagMap =
   Database["public"]["Tables"]["contact_tag_map"]["Row"];
+export type TransactionTag =
+  Database["public"]["Tables"]["transaction_tags"]["Row"];
+export type TransactionTagMap =
+  Database["public"]["Tables"]["transaction_tag_map"]["Row"];
+
+export interface TagTotal {
+  tag_id: string;
+  tag_name: string;
+  tag_color: string;
+  total_amount: number;
+}
 
 export interface ContactWithTags extends Contact {
   tags: ContactTag[];

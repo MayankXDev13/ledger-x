@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,15 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LedgerEntry, TransactionType } from "@/types/database";
+import { LedgerEntry, TransactionType, TransactionTag } from "@/types/database";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  getTransactionTags,
+  getUserTransactionTags,
+  replaceTransactionTags,
+} from "@/lib/transaction-tags";
+import { TransactionTagSelector } from "@/components/TransactionTagSelector";
+import { TransactionTagManagementModal } from "@/components/TransactionTagManagementModal";
 
 interface EditTransactionModalProps {
   visible: boolean;
@@ -31,19 +39,33 @@ export function EditTransactionModal({
   onSave,
   onDelete,
 }: EditTransactionModalProps) {
+  const { session } = useAuth();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TransactionType>("credit");
   const [note, setNote] = useState("");
+  const [availableTags, setAvailableTags] = useState<TransactionTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<TransactionTag[]>([]);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  React.useEffect(() => {
-    if (transaction) {
+  useEffect(() => {
+    if (transaction && session?.user) {
       setAmount(transaction.amount.toString());
       setType(transaction.type as TransactionType);
       setNote(transaction.note || "");
+      setLoading(true);
+      Promise.all([
+        getTransactionTags(transaction.id),
+        getUserTransactionTags(session.user.id),
+      ]).then(([txTags, userTags]) => {
+        setSelectedTags(txTags);
+        setAvailableTags(userTags);
+        setLoading(false);
+      });
     }
-  }, [transaction]);
+  }, [transaction, session]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!transaction) return;
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) return;
@@ -55,6 +77,10 @@ export function EditTransactionModal({
       note.trim(),
       transaction.created_at,
     );
+
+    const tagIds = selectedTags.map((t) => t.id);
+    await replaceTransactionTags(transaction.id, tagIds);
+
     onClose();
   };
 
@@ -111,7 +137,11 @@ export function EditTransactionModal({
               </Text>
               <View className="flex-row gap-3">
                 <Pressable
-                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${type === "credit" ? "border-[#3D3D3D] bg-[#3D3D3D]" : "border-transparent bg-[#2D2D2D]"}`}
+                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${
+                    type === "credit"
+                      ? "border-[#3D3D3D] bg-[#3D3D3D]"
+                      : "border-transparent bg-[#2D2D2D]"
+                  }`}
                   onPress={() => setType("credit")}
                 >
                   <Ionicons
@@ -120,14 +150,20 @@ export function EditTransactionModal({
                     color={type === "credit" ? "#10B981" : "#666"}
                   />
                   <Text
-                    className={`text-sm font-medium ${type === "credit" ? "text-white" : "text-[#666]"}`}
+                    className={`text-sm font-medium ${
+                      type === "credit" ? "text-white" : "text-[#666]"
+                    }`}
                   >
                     Credit
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${type === "debit" ? "border-[#3D3D3D] bg-[#3D3D3D]" : "border-transparent bg-[#2D2D2D]"}`}
+                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${
+                    type === "debit"
+                      ? "border-[#3D3D3D] bg-[#3D3D3D]"
+                      : "border-transparent bg-[#2D2D2D]"
+                  }`}
                   onPress={() => setType("debit")}
                 >
                   <Ionicons
@@ -136,7 +172,9 @@ export function EditTransactionModal({
                     color={type === "debit" ? "#EF4444" : "#666"}
                   />
                   <Text
-                    className={`text-sm font-medium ${type === "debit" ? "text-white" : "text-[#666]"}`}
+                    className={`text-sm font-medium ${
+                      type === "debit" ? "text-white" : "text-[#666]"
+                    }`}
                   >
                     Debit
                   </Text>
@@ -160,6 +198,15 @@ export function EditTransactionModal({
               />
             </View>
 
+            {!loading && (
+              <TransactionTagSelector
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                availableTags={availableTags}
+                onManageTags={() => setShowTagModal(true)}
+              />
+            )}
+
             <View className="mt-8 pt-6 border-t border-[#2D2D2D]">
               <Pressable
                 className="flex-row items-center justify-center gap-2 py-3"
@@ -173,6 +220,19 @@ export function EditTransactionModal({
             </View>
           </View>
         </ScrollView>
+
+        <TransactionTagManagementModal
+          visible={showTagModal}
+          onClose={() => setShowTagModal(false)}
+          tags={availableTags}
+          onTagsChange={(newTags) => {
+            setAvailableTags(newTags);
+            const currentIds = selectedTags.map((t) => t.id);
+            const refreshed = newTags.filter((t) => currentIds.includes(t.id));
+            setSelectedTags(refreshed);
+          }}
+          userId={session?.user?.id || ""}
+        />
       </View>
     </Modal>
   );

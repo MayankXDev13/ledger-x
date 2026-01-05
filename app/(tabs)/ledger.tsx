@@ -1,16 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, ActivityIndicator } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { LedgerEntry } from "@/types/database";
+import { LedgerEntry, TransactionTag } from "@/types/database";
 import { format } from "date-fns";
+import { getTransactionTags } from "@/lib/transaction-tags";
+
+interface EntryWithTags extends LedgerEntry {
+  contacts?: { name: string; phone: string };
+  tags?: TransactionTag[];
+}
 
 export default function LedgerScreen() {
   const { session } = useAuth();
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [entries, setEntries] = useState<EntryWithTags[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     if (!session?.user) return;
 
     setLoading(true);
@@ -24,14 +30,20 @@ export default function LedgerScreen() {
     if (error) {
       console.error("Error fetching entries:", error);
     } else {
-      setEntries(data ?? []);
+      const entriesWithTags = await Promise.all(
+        (data || []).map(async (entry) => {
+          const tags = await getTransactionTags(entry.id);
+          return { ...entry, tags } as EntryWithTags;
+        }),
+      );
+      setEntries(entriesWithTags);
     }
     setLoading(false);
-  };
+  }, [session]);
 
   useEffect(() => {
     fetchEntries();
-  }, [session]);
+  }, [fetchEntries]);
 
   if (!session) {
     return null;
@@ -45,11 +57,7 @@ export default function LedgerScreen() {
     return type === "credit" ? `+${formatted}` : `-${formatted}`;
   };
 
-  const renderEntry = ({
-    item,
-  }: {
-    item: LedgerEntry & { contacts?: { name: string; phone: string } };
-  }) => (
+  const renderEntry = ({ item }: { item: EntryWithTags }) => (
     <View className="flex-row items-center justify-between py-4 border-b border-[#333333]">
       <View className="flex-1">
         <Text className="text-white font-medium text-base">
@@ -63,9 +71,28 @@ export default function LedgerScreen() {
             {item.note}
           </Text>
         )}
+        {item.tags && item.tags.length > 0 && (
+          <View className="flex-row gap-1 mt-2 flex-wrap">
+            {item.tags.map((tag) => (
+              <View
+                key={tag.id}
+                className="flex-row items-center px-2 py-0.5 rounded-full gap-1"
+                style={{ backgroundColor: tag.color + "30" }}
+              >
+                <View
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
+                <Text className="text-[#CCCCCC] text-xs">{tag.name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
       <Text
-        className={`text-base font-semibold ${item.type === "credit" ? "text-green-500" : "text-red-500"}`}
+        className={`text-base font-semibold ${
+          item.type === "credit" ? "text-green-500" : "text-red-500"
+        }`}
       >
         {formatAmount(Number(item.amount), item.type)}
       </Text>
