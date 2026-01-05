@@ -72,7 +72,7 @@ export default function SignupScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a] justify-center px-5">
-      <View className="bg-[#2a2a2a] rounded-xl p-6">
+      <View className="bg-[#2a2a2a] rounded-2xl p-6">
         <Text className="text-[28px] font-bold text-white mb-1.5">
           Create Account
         </Text>
@@ -80,7 +80,7 @@ export default function SignupScreen() {
           Start tracking your ledger
         </Text>
 
-        <View className="gap-4.5">
+        <View className="gap-[18px]">
           <View className="gap-1.5">
             <Text className="text-[13px] text-[#ccc] font-medium">Email</Text>
             <TextInput
@@ -143,14 +143,14 @@ export default function SignupScreen() {
           {error && <Text className="text-[#ff6b6b] text-sm">{error}</Text>}
 
           <Pressable
-            className={`bg-white py-4.5 rounded-xl items-center mt-3 ${loading ? "opacity-60" : ""}`}
+            className={`bg-white py-[18px] rounded-[14px] items-center mt-3 ${loading ? "opacity-60" : ""}`}
             onPress={onSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text className="text-black text-lg font-bold">
+              <Text className="text-black text-[18px] font-bold">
                 Create Account
               </Text>
             )}
