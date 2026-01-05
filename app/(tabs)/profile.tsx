@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,11 +7,21 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
   const { session, loading: authLoading } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
     await supabase.auth.signOut();
     router.replace("/auth/login");
   };
+
+  useEffect(() => {
+    if (!authLoading && !session && !isLoggingOut) {
+      router.replace("/auth/login");
+    }
+  }, [authLoading, session, isLoggingOut]);
 
   if (authLoading) {
     return (
@@ -21,7 +32,6 @@ export default function ProfileScreen() {
   }
 
   if (!session) {
-    router.replace("/auth/login");
     return null;
   }
 
@@ -44,8 +54,10 @@ export default function ProfileScreen() {
             styles.button,
             styles.changePasswordButton,
             pressed && styles.pressed,
+            isLoggingOut && styles.buttonDisabled,
           ]}
           onPress={() => router.push("/auth/update-password")}
+          disabled={isLoggingOut}
         >
           <Ionicons name="lock-closed-outline" size={20} color="#000000" />
           <Text style={styles.changePasswordButtonText}>Change Password</Text>
@@ -55,12 +67,15 @@ export default function ProfileScreen() {
           style={({ pressed }) => [
             styles.button,
             styles.logoutButton,
-            pressed && styles.pressed,
+            (pressed || isLoggingOut) && styles.pressed,
           ]}
           onPress={handleLogout}
+          disabled={isLoggingOut}
         >
           <Ionicons name="log-out-outline" size={20} color="#ff6b6b" />
-          <Text style={styles.logoutButtonText}>Logout</Text>
+          <Text style={styles.logoutButtonText}>
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -124,6 +139,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   changePasswordButton: {
     backgroundColor: "#ffffff",
