@@ -113,7 +113,7 @@ export default function CustomerDetailsScreen() {
   if (!contact) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#000000" />
+        <ActivityIndicator size="large" color="#ffffff" />
       </View>
     );
   }
@@ -186,7 +186,7 @@ export default function CustomerDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1a1a1a",
   },
   header: {
     paddingHorizontal: 24,
@@ -199,22 +199,22 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#000000",
+    color: "#ffffff",
   },
   customerPhone: {
     fontSize: 16,
-    color: "#666666",
+    color: "#888888",
     marginTop: 4,
   },
   balanceCard: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#2a2a2a",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
   },
   balanceLabel: {
     fontSize: 14,
-    color: "#666666",
+    color: "#888888",
     marginBottom: 4,
   },
   balanceAmount: {
@@ -222,10 +222,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   balanceOwe: {
-    color: "#000000",
+    color: "#ffffff",
   },
   balanceOwed: {
-    color: "#333333",
+    color: "#aaaaaa",
   },
   actionsContainer: {
     flexDirection: "row",
@@ -235,29 +235,29 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#ffffff",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
   },
   actionButtonText: {
-    color: "#FFFFFF",
+    color: "#000000",
     fontSize: 16,
     fontWeight: "600",
   },
   smsButton: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#2a2a2a",
     flex: 0.6,
   },
   smsButtonText: {
-    color: "#000000",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#000000",
+    color: "#ffffff",
     paddingHorizontal: 24,
     marginBottom: 12,
   },
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   entryCard: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
+    borderBottomColor: "#333333",
   },
   entryInfo: {
     flex: 1,
@@ -276,16 +276,16 @@ const styles = StyleSheet.create({
   entryAmount: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#000000",
+    color: "#ffffff",
   },
   entryDate: {
     fontSize: 14,
-    color: "#666666",
+    color: "#888888",
     marginTop: 4,
   },
   entryNote: {
     fontSize: 14,
-    color: "#999999",
+    color: "#666666",
     marginTop: 4,
     fontStyle: "italic",
   },
@@ -296,11 +296,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: "#666666",
+    color: "#888888",
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#999999",
+    color: "#666666",
     marginTop: 8,
   },
 });

@@ -20,7 +20,6 @@ export default function CustomersScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🔹 Fetch contacts
   const fetchContacts = async () => {
     if (!session?.user) return;
 
@@ -39,7 +38,6 @@ export default function CustomersScreen() {
     setLoading(false);
   };
 
-  // 🔹 Refetch when screen gains focus
   useFocusEffect(
     useCallback(() => {
       if (session) {
@@ -48,14 +46,12 @@ export default function CustomersScreen() {
     }, [session]),
   );
 
-  // 🔹 AUTH GUARD (FIXED)
   useEffect(() => {
     if (!authLoading && !session) {
       router.replace("/auth/login");
     }
   }, [authLoading, session]);
 
-  // 🔹 Wait for auth restoration
   if (authLoading) {
     return (
       <View style={styles.centerContainer}>
@@ -64,7 +60,6 @@ export default function CustomersScreen() {
     );
   }
 
-  // 🔹 Session missing (redirect in progress)
   if (!session) {
     return null;
   }
@@ -97,7 +92,7 @@ export default function CustomersScreen() {
       <TextInput
         style={styles.searchInput}
         placeholder="Search customers..."
-        placeholderTextColor="#999999"
+        placeholderTextColor="#666666"
         value={searchQuery}
         onChangeText={setSearchQuery}
       />

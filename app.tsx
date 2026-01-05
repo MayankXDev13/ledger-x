@@ -2,13 +2,9 @@ import "react-native-get-random-values";
 import { Buffer } from "buffer";
 import { EventEmitter } from "events";
 
-if (typeof globalThis.Buffer === "undefined") {
-  globalThis.Buffer = Buffer;
-}
-
-if (typeof globalThis.EventEmitter === "undefined") {
-  globalThis.EventEmitter = EventEmitter;
-}
+(globalThis as { Buffer?: typeof Buffer }).Buffer = Buffer;
+(globalThis as { EventEmitter?: typeof EventEmitter }).EventEmitter =
+  EventEmitter;
 
 import { useEffect } from "react";
 import { Redirect } from "expo-router";
@@ -21,7 +17,7 @@ export default function IndexRedirect() {
 
   useEffect(() => {
     if (!loading && session) {
-      router.replace("/customers");
+      router.replace("/home");
     }
   }, [session, loading]);
 
@@ -30,7 +26,7 @@ export default function IndexRedirect() {
   }
 
   if (session) {
-    return <Redirect href="/customers" />;
+    return <Redirect href="/home" />;
   }
 
   return <Index />;

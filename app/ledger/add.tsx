@@ -147,7 +147,7 @@ export default function AddEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1a1a1a",
   },
   content: {
     flex: 1,
@@ -157,12 +157,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#000000",
+    color: "#ffffff",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    color: "#666666",
+    color: "#888888",
     marginBottom: 32,
   },
   form: {
@@ -175,22 +175,23 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333333",
+    color: "#cccccc",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#CCCCCC",
+    borderColor: "#333333",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#000000",
+    color: "#ffffff",
+    backgroundColor: "#2a2a2a",
   },
   noteInput: {
     minHeight: 80,
   },
   errorText: {
-    color: "#FF0000",
+    color: "#ff6b6b",
     fontSize: 14,
   },
   buttonContainer: {
@@ -205,21 +206,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButton: {
-    backgroundColor: "#000000",
+    backgroundColor: "#ffffff",
   },
   cancelButton: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#2a2a2a",
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: "#000000",
     fontSize: 16,
     fontWeight: "600",
   },
   cancelButtonText: {
-    color: "#333333",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
   },

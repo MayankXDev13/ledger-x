@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { Redirect, usePathname } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from "react";
+import { Redirect, usePathname } from "expo-router";
+import { useAuth } from "@/hooks/useAuth";
 
-const publicRoutes = ['/', '/auth/login', '/auth/signup'];
+const publicRoutes = ["/", "/auth/login", "/auth/signup"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -19,7 +19,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (session && isPublicRoute) {
-    return <Redirect href="/customers" />;
+    return <Redirect href="/home" />;
   }
 
   return <>{children}</>;
