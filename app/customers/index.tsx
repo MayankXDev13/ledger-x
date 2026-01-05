@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -8,19 +8,18 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
-import { router, useFocusEffect, Link } from "expo-router";
+import { useFocusEffect, Link } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { Contact } from "@/types/database";
 
 export default function CustomersScreen() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🔹 Fetch contacts
   const fetchContacts = async () => {
     if (!session?.user) return;
 
@@ -28,6 +27,7 @@ export default function CustomersScreen() {
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
+      .is("deleted_at", null)
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
 
@@ -39,32 +39,12 @@ export default function CustomersScreen() {
     setLoading(false);
   };
 
-  // 🔹 Refetch when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      if (session) {
-        fetchContacts();
-      }
-    }, [session])
+      fetchContacts();
+    }, [session]),
   );
 
-  // 🔹 AUTH GUARD (FIXED)
-  useEffect(() => {
-    if (!authLoading && !session) {
-      router.replace("/auth/login");
-    }
-  }, [authLoading, session]);
-
-  // 🔹 Wait for auth restoration
-  if (authLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#000000" />
-      </View>
-    );
-  }
-
-  // 🔹 Session missing (redirect in progress)
   if (!session) {
     return null;
   }
@@ -72,7 +52,7 @@ export default function CustomersScreen() {
   const filteredContacts = contacts.filter(
     (contact) =>
       contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.includes(searchQuery)
+      contact.phone.includes(searchQuery),
   );
 
   const renderContact = ({ item }: { item: Contact }) => (
@@ -91,9 +71,7 @@ export default function CustomersScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Customers</Text>
-        <Text style={styles.subtitle}>
-          {filteredContacts.length} contacts
-        </Text>
+        <Text style={styles.subtitle}>{filteredContacts.length} contacts</Text>
       </View>
 
       <TextInput
@@ -106,7 +84,7 @@ export default function CustomersScreen() {
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#000000" />
+          <ActivityIndicator size="large" color="#ffffff" />
         </View>
       ) : filteredContacts.length === 0 ? (
         <View style={styles.centerContainer}>
@@ -141,7 +119,7 @@ export default function CustomersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1a1a1a",
   },
   header: {
     paddingHorizontal: 24,
@@ -151,23 +129,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#000000",
+    color: "#ffffff",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666666",
+    color: "#888888",
     marginTop: 4,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: "#CCCCCC",
+    borderColor: "#333333",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginHorizontal: 24,
     marginBottom: 16,
     fontSize: 16,
-    color: "#000000",
+    color: "#ffffff",
+    backgroundColor: "#2a2a2a",
   },
   centerContainer: {
     flex: 1,
@@ -176,11 +155,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: "#666666",
+    color: "#888888",
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#999999",
+    color: "#666666",
     marginTop: 8,
   },
   listContent: {
@@ -193,7 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
+    borderBottomColor: "#333333",
   },
   contactInfo: {
     flex: 1,
@@ -201,16 +180,16 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 18,
     fontWeight: "500",
-    color: "#000000",
+    color: "#ffffff",
   },
   contactPhone: {
     fontSize: 14,
-    color: "#666666",
+    color: "#888888",
     marginTop: 4,
   },
   arrow: {
     fontSize: 22,
-    color: "#CCCCCC",
+    color: "#666666",
     marginLeft: 12,
   },
   fab: {
@@ -220,14 +199,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#000000",
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
   },
   fabText: {
     fontSize: 28,
-    color: "#FFFFFF",
+    color: "#000000",
     lineHeight: 32,
   },
 });

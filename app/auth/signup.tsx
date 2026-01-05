@@ -68,7 +68,7 @@ export default function SignupScreen() {
       return;
     }
 
-    router.replace("/customers");
+    router.replace("/home");
   };
 
   return (
@@ -154,7 +154,7 @@ export default function SignupScreen() {
         </View>
       </View>
 
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
     </View>
   );
 }
@@ -162,28 +162,27 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#1a1a1a",
     justifyContent: "center",
     padding: 20,
   },
 
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#2a2a2a",
     borderRadius: 16,
     padding: 24,
-    elevation: 6,
   },
 
   title: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#000",
+    color: "#fff",
     marginBottom: 6,
   },
 
   subtitle: {
     fontSize: 15,
-    color: "#666",
+    color: "#aaa",
     marginBottom: 24,
   },
 
@@ -197,28 +196,28 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    color: "#444",
+    color: "#ccc",
     fontWeight: "500",
   },
 
   input: {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#333",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#444",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#000",
+    color: "#fff",
   },
 
   errorText: {
-    color: "#E53935",
+    color: "#ff6b6b",
     fontSize: 13,
   },
 
   button: {
-    backgroundColor: "#000",
+    backgroundColor: "#fff",
     paddingVertical: 18,
     borderRadius: 14,
     alignItems: "center",
@@ -230,7 +229,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#FFF",
+    color: "#000",
     fontSize: 18,
     fontWeight: "700",
   },
@@ -243,14 +242,13 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    color: "#777",
+    color: "#888",
     fontSize: 15,
   },
 
   linkText: {
-    color: "#000",
+    color: "#fff",
     fontSize: 15,
     fontWeight: "600",
   },
 });
-

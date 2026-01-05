@@ -1,15 +1,25 @@
-import { useEffect } from 'react';
-import { Redirect, usePathname } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
-
-const publicRoutes = ['/', '/auth/login', '/auth/signup'];
+import { ActivityIndicator, View } from "react-native";
+import { useAuth } from "@/hooks/useAuth";
+import { publicRoutes } from "@/lib/auth";
+import { usePathname, Redirect } from "expo-router";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const pathname = usePathname();
 
   if (loading) {
-    return null;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#1a1a1a",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
   }
 
   const isPublicRoute = publicRoutes.includes(pathname);
@@ -19,7 +29,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (session && isPublicRoute) {
-    return <Redirect href="/customers" />;
+    return <Redirect href="/(tabs)/home" />;
   }
 
   return <>{children}</>;
