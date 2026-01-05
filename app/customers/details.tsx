@@ -53,6 +53,7 @@ export default function CustomerDetailsScreen() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [showDeleteCustomerConfirm, setShowDeleteCustomerConfirm] =
     useState(false);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!id) return;
@@ -358,7 +359,10 @@ export default function CustomerDetailsScreen() {
         onSave={handleSaveTransaction}
         onDelete={(entryId) => {
           setEditingTransaction(null);
-          setShowDeleteConfirm(true);
+          if (entryId) {
+            setDeleteEntryId(entryId);
+            setShowDeleteConfirm(true);
+          }
         }}
       />
 
@@ -368,22 +372,16 @@ export default function CustomerDetailsScreen() {
         message="This will permanently delete this transaction. The customer's balance will be updated accordingly."
         confirmText="Delete"
         onConfirm={() => {
-          if (editingTransaction) {
-            handleDeleteTransaction(editingTransaction.id);
+          if (deleteEntryId) {
+            handleDeleteTransaction(deleteEntryId);
           }
-        }}
-        onCancel={() => {
+          setDeleteEntryId(null);
           setShowDeleteConfirm(false);
         }}
-      />
-
-      <DeleteConfirmationDialog
-        visible={showDeleteCustomerConfirm}
-        title="Delete Customer?"
-        message="This will permanently delete this customer and all their transactions. This action cannot be undone."
-        confirmText="Delete"
-        onConfirm={handleDeleteCustomer}
-        onCancel={() => setShowDeleteCustomerConfirm(false)}
+        onCancel={() => {
+          setDeleteEntryId(null);
+          setShowDeleteConfirm(false);
+        }}
       />
 
       <TagManagementModal
