@@ -14,14 +14,13 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
-import { Contact, ContactTag, LedgerEntry } from "@/types/database";
+import { Contact, ContactTag, LedgerEntry, DateFilter } from "@/types/database";
 import { format } from "date-fns";
 import { DateFilterDropdown } from "@/components/DateFilterDropdown";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { TagSelector } from "@/components/TagSelector";
 import { TagManagementModal } from "@/components/TagManagementModal";
-import { DateFilter } from "@/types/database";
 import { updateTransaction, deleteTransaction } from "@/lib/transactions";
 import { getContactTags, replaceContactTags, getUserTags } from "@/lib/tags";
 
@@ -33,6 +32,7 @@ interface BalanceData {
 
 export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const [contact, setContact] = useState<Contact | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<BalanceData>({
@@ -42,72 +42,66 @@ export default function CustomerDetailsScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const [dateFilter, setDateFilter] = useState<DateFilter>({
     start: null,
     end: null,
     label: "All Time",
   });
+
   const [editingTransaction, setEditingTransaction] =
     useState<LedgerEntry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+
   const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
   const [availableTags, setAvailableTags] = useState<ContactTag[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showDeleteCustomerConfirm, setShowDeleteCustomerConfirm] =
     useState(false);
-  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+
+  /* -------------------- DATA -------------------- */
 
   const fetchData = async () => {
     if (!id) return;
 
-    const { data: contactData, error: contactError } = await supabase
+    setLoading(true);
+
+    const { data: contactData } = await supabase
       .from("contacts")
       .select("*")
       .eq("id", id)
       .single();
 
-    if (contactError) {
-      console.error("Error fetching contact:", contactError);
-      return;
-    }
-
-    setContact(contactData);
+    if (contactData) setContact(contactData);
 
     await fetchTransactions();
     await fetchBalance();
     await fetchTags();
+
+    setLoading(false);
   };
 
   const fetchTransactions = async () => {
     if (!id) return;
 
-    const { data: entriesData, error: entriesError } = await supabase.rpc(
-      "get_filtered_transactions",
-      {
-        p_contact_id: id,
-        p_start_date: dateFilter.start,
-        p_end_date: dateFilter.end,
-      },
-    );
+    const { data } = await supabase.rpc("get_filtered_transactions", {
+      p_contact_id: id,
+      p_start_date: dateFilter.start,
+      p_end_date: dateFilter.end,
+    });
 
-    if (entriesError) {
-      console.error("Error fetching entries:", entriesError);
-      return;
-    }
-
-    setEntries(entriesData || []);
+    setEntries(data || []);
   };
 
   const fetchBalance = async () => {
     if (!id) return;
 
-    const { data: balanceData } = await supabase.rpc("get_contact_balance", {
+    const { data } = await supabase.rpc("get_contact_balance", {
       contact_id: id,
     });
 
-    if (balanceData && balanceData.length > 0) {
-      setBalance(balanceData[0] as BalanceData);
-    }
+    if (data?.length) setBalance(data[0]);
   };
 
   const fetchTags = async () => {
@@ -123,109 +117,17 @@ export default function CustomerDetailsScreen() {
   };
 
   useEffect(() => {
-    if (id) {
-      fetchData();
-    }
+    fetchData();
   }, [id]);
 
   useEffect(() => {
-    if (id) {
-      fetchTransactions();
-    }
-  }, [id, dateFilter]);
+    fetchTransactions();
+  }, [dateFilter]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
-  };
-
-  const formatAmount = (amount: number, type: string) => {
-    const formatted = new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount);
-    return type === "credit" ? `+${formatted}` : `-${formatted}`;
-  };
-
-  const sendSMS = () => {
-    if (!contact) return;
-
-    const balanceText =
-      balance.balance > 0
-        ? `You owe ₹${balance.balance.toFixed(2)}`
-        : balance.balance < 0
-          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
-          : "All settled up";
-
-    const message = `Ledger Update from LedgerX:\n\nCustomer: ${contact.name}\nBalance: ${balanceText}`;
-    const phoneNumber = contact.phone.replace(/\D/g, "");
-
-    Linking.openURL(`sms:${phoneNumber}?body=${encodeURIComponent(message)}`);
-  };
-
-  const sendWhatsApp = async () => {
-    if (!contact) return;
-
-    const balanceText =
-      balance.balance > 0
-        ? `You owe ₹${balance.balance.toFixed(2)}`
-        : balance.balance < 0
-          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
-          : "All settled up";
-
-    const message = `Ledger Update from LedgerX:\n\nCustomer: ${contact.name}\nBalance: ${balanceText}`;
-    const phoneNumber = contact.phone.replace(/\D/g, "");
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-    try {
-      const canOpen = await Linking.canOpenURL(whatsappUrl);
-      if (canOpen) {
-        Linking.openURL(whatsappUrl);
-      } else {
-        Alert.alert(
-          "WhatsApp Not Installed",
-          "WhatsApp is not installed on this device. Would you like to send an SMS instead?",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Send SMS", onPress: sendSMS },
-          ],
-        );
-      }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        "Unable to open WhatsApp. Please try sending an SMS instead.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Send SMS", onPress: sendSMS },
-        ],
-      );
-    }
-  };
-
-  const handleSaveTransaction = async (
-    entryId: string,
-    amount: number,
-    type: "credit" | "debit",
-    note: string,
-    createdAt: string,
-  ) => {
-    await updateTransaction(entryId, amount, type, note, createdAt);
-    await fetchTransactions();
-    await fetchBalance();
-  };
-
-  const handleDeleteTransaction = async (entryId: string) => {
-    await deleteTransaction(entryId);
-    await fetchTransactions();
-    await fetchBalance();
-  };
-
-  const handleSaveTags = async () => {
-    if (!id) return;
-    const tagIds = selectedTags.map((t) => t.id);
-    await replaceContactTags(id, tagIds);
   };
 
   const handleDeleteCustomer = async () => {
@@ -243,418 +145,375 @@ export default function CustomerDetailsScreen() {
     router.replace("/(tabs)/customers");
   };
 
+  /* -------------------- ACTIONS -------------------- */
+
+  const formatAmount = (amount: number, type: string) => {
+    const formatted = new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
+    return type === "credit" ? `+${formatted}` : `-${formatted}`;
+  };
+
+  const sendSMS = () => {
+    if (!contact) return;
+
+    const text =
+      balance.balance > 0
+        ? `You owe ₹${balance.balance.toFixed(2)}`
+        : balance.balance < 0
+          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
+          : "All settled up";
+
+    const message = `Ledger Update - LedgerX\n\nCustomer: ${contact.name}\nBalance: ${text}`;
+    const phone = contact.phone.replace(/\D/g, "");
+
+    Linking.openURL(`sms:${phone}?body=${encodeURIComponent(message)}`);
+  };
+
+  const sendWhatsApp = async () => {
+    if (!contact) return;
+
+    const text =
+      balance.balance > 0
+        ? `You owe ₹${balance.balance.toFixed(2)}`
+        : balance.balance < 0
+          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
+          : "All settled up";
+
+    const message = `Ledger Update - LedgerX\n\nCustomer: ${contact.name}\nBalance: ${text}`;
+    const phone = contact.phone.replace(/\D/g, "");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    Linking.openURL(url).catch(() => {
+      Alert.alert("WhatsApp not available", "Try sending SMS instead");
+    });
+  };
+
+  /* -------------------- RENDER -------------------- */
+
+  if (loading || !contact) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
   const renderEntry = ({ item }: { item: LedgerEntry }) => (
     <Pressable
       style={styles.entryCard}
       onPress={() => setEditingTransaction(item)}
     >
-      <View style={styles.entryInfo}>
+      <View>
         <Text
           style={[
             styles.entryAmount,
-            item.type === "credit" ? styles.creditColor : styles.debitColor,
+            item.type === "credit" ? styles.credit : styles.debit,
           ]}
         >
           {formatAmount(Number(item.amount), item.type)}
         </Text>
-        <View style={styles.entryMeta}>
-          <Text style={styles.entryDate}>
-            {format(new Date(item.created_at), "MMM d, yyyy h:mm a")}
-          </Text>
-          {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
-        </View>
+        <Text style={styles.entryDate}>
+          {format(new Date(item.created_at), "dd MMM yyyy, hh:mm a")}
+        </Text>
+        {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color="#666" />
     </Pressable>
   );
 
-  if (!contact) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#ffffff" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>{contact.name}</Text>
-            <Text style={styles.customerPhone}>{contact.phone}</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.name}>{contact.name}</Text>
+            <Text style={styles.phone}>{contact.phone}</Text>
           </View>
           <Pressable
-            style={styles.editButton}
+            style={styles.editBtn}
             onPress={() => router.push(`/customers/edit?id=${id}`)}
           >
-            <Ionicons name="pencil-outline" size={18} color="#3B82F6" />
-            <Text style={styles.editButtonText}>Edit</Text>
+            <Ionicons name="pencil" size={16} color="#3B82F6" />
+            <Text style={styles.editText}>Edit</Text>
           </Pressable>
         </View>
 
+        {/* BALANCE */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Balance</Text>
           <Text
             style={[
               styles.balanceAmount,
               balance.balance > 0
-                ? styles.balanceOwe
+                ? styles.owe
                 : balance.balance < 0
-                  ? styles.balanceOwed
-                  : styles.balanceSettled,
+                  ? styles.owed
+                  : styles.settled,
             ]}
           >
-            {balance.balance > 0
-              ? "₹" + balance.balance.toFixed(2)
-              : balance.balance < 0
-                ? "-₹" + Math.abs(balance.balance).toFixed(2)
-                : "₹0.00"}
+            ₹{Math.abs(balance.balance).toFixed(2)}
           </Text>
-          <View style={styles.balanceDetails}>
-            <Text style={styles.balanceDetailText}>
-              Total Credit: ₹{Number(balance.total_credit).toFixed(2)}
-            </Text>
-            <Text style={styles.balanceDetailText}>
-              Total Debit: ₹{Number(balance.total_debit).toFixed(2)}
-            </Text>
+
+          <View style={styles.balanceMeta}>
+            <Text style={styles.meta}>Credit ₹{balance.total_credit}</Text>
+            <Text style={styles.meta}>Debit ₹{balance.total_debit}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.actionsContainer}>
+      {/* ACTIONS */}
+      <View style={styles.actions}>
         <Pressable
-          style={styles.actionButton}
+          style={styles.actionBtn}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
         >
-          <Ionicons name="arrow-down-circle" size={18} color="#10B981" />
-          <Text style={styles.actionButtonText}>Credit</Text>
+          <Ionicons name="add-circle" size={18} color="#10B981" />
+          <Text style={styles.credit}>Credit</Text>
         </Pressable>
+
         <Pressable
-          style={styles.actionButton}
+          style={styles.actionBtn}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
         >
-          <Ionicons name="arrow-up-circle" size={18} color="#EF4444" />
-          <Text style={styles.actionButtonText}>Debit</Text>
+          <Ionicons name="remove-circle" size={18} color="#EF4444" />
+          <Text style={styles.debit}>Debit</Text>
         </Pressable>
-        <Pressable style={styles.whatsappButton} onPress={sendWhatsApp}>
+
+        <Pressable style={styles.whatsappBtn} onPress={sendWhatsApp}>
           <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-          <Text style={styles.whatsappButtonText}>WhatsApp</Text>
+          <Text style={styles.whatsappText}>WhatsApp</Text>
         </Pressable>
-        <Pressable
-          style={[styles.actionButton, styles.smsButton]}
-          onPress={sendSMS}
-        >
-          <Ionicons name="chatbubble-ellipses" size={18} color="#3B82F6" />
-          <Text style={styles.smsButtonText}>SMS</Text>
+
+        <Pressable style={styles.smsBtn} onPress={sendSMS}>
+          <Ionicons name="chatbubble" size={18} color="#3B82F6" />
+          <Text style={styles.smsText}>SMS</Text>
         </Pressable>
       </View>
 
-      <View style={styles.tagsSection}>
+      {/* TAGS */}
+      <View style={styles.tags}>
         <TagSelector
           selectedTags={selectedTags}
+          availableTags={availableTags}
           onTagsChange={(tags) => {
             setSelectedTags(tags);
-            handleSaveTags();
+            replaceContactTags(
+              id!,
+              tags.map((t) => t.id),
+            );
           }}
-          availableTags={availableTags}
           onManageTags={() => setShowTagModal(true)}
         />
       </View>
 
-      <View style={styles.transactionsHeader}>
-        <Text style={styles.sectionTitle}>Transactions</Text>
+      {/* TRANSACTIONS */}
+      <View style={styles.txHeader}>
+        <Text style={styles.txTitle}>Transactions</Text>
         <DateFilterDropdown
           selectedFilter={dateFilter}
           onFilterChange={setDateFilter}
         />
       </View>
 
-      {entries.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No transactions yet</Text>
-          <Text style={styles.emptySubtext}>Add a credit or debit entry</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={entries}
-          renderItem={renderEntry}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
+      <FlatList
+        data={entries}
+        renderItem={renderEntry}
+        keyExtractor={(i) => i.id}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
 
-      <View style={styles.deleteSection}>
-        <Pressable
-          style={styles.deleteCustomerButton}
-          onPress={() => setShowDeleteCustomerConfirm(true)}
-        >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          <Text style={styles.deleteCustomerButtonText}>Delete Customer</Text>
+      {/* DELETE */}
+      <View style={styles.deleteBox}>
+        <Pressable onPress={() => setShowDeleteCustomerConfirm(true)}>
+          <Text style={styles.deleteText}>Delete Customer</Text>
         </Pressable>
       </View>
 
+      {/* MODALS */}
       <EditTransactionModal
         visible={!!editingTransaction}
         transaction={editingTransaction}
         onClose={() => setEditingTransaction(null)}
-        onSave={handleSaveTransaction}
-        onDelete={(entryId) => {
-          setEditingTransaction(null);
-          if (entryId) {
-            setDeleteEntryId(entryId);
-            setShowDeleteConfirm(true);
-          }
+        onSave={updateTransaction}
+        onDelete={(id) => {
+          setDeleteEntryId(id);
+          setShowDeleteConfirm(true);
         }}
       />
 
       <DeleteConfirmationDialog
         visible={showDeleteConfirm}
         title="Delete Transaction?"
-        message="This will permanently delete this transaction. The customer's balance will be updated accordingly."
+        message="This action cannot be undone."
         confirmText="Delete"
         onConfirm={() => {
-          if (deleteEntryId) {
-            handleDeleteTransaction(deleteEntryId);
-          }
-          setDeleteEntryId(null);
+          if (deleteEntryId) deleteTransaction(deleteEntryId);
           setShowDeleteConfirm(false);
         }}
-        onCancel={() => {
-          setDeleteEntryId(null);
-          setShowDeleteConfirm(false);
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <DeleteConfirmationDialog
+        visible={showDeleteCustomerConfirm}
+        title="Delete Customer?"
+        message="This will permanently delete this customer and all their transactions. This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={() => {
+          handleDeleteCustomer();
+          setShowDeleteCustomerConfirm(false);
         }}
+        onCancel={() => setShowDeleteCustomerConfirm(false)}
       />
 
       <TagManagementModal
         visible={showTagModal}
-        onClose={() => {
-          setShowTagModal(false);
-          if (contact?.user_id) {
-            getUserTags(contact.user_id).then(setAvailableTags);
-          }
-        }}
+        onClose={() => setShowTagModal(false)}
         tags={availableTags}
         onTagsChange={setAvailableTags}
-        userId={contact?.user_id || ""}
+        userId={contact.user_id}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
+  container: { flex: 1, backgroundColor: "#121212" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingTop: Platform.OS === "android" ? 48 : 60,
+    paddingHorizontal: 20,
   },
-  headerTop: {
+
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
   },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  customerPhone: {
-    fontSize: 16,
-    color: "#888888",
-    marginTop: 4,
-  },
-  editButton: {
+
+  name: { fontSize: 26, fontWeight: "700", color: "#fff" },
+  phone: { color: "#888", marginTop: 4 },
+
+  editBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#2D2D2D",
+    gap: 6,
+    backgroundColor: "#1F1F1F",
+    padding: 10,
     borderRadius: 8,
   },
-  editButtonText: {
-    color: "#3B82F6",
-    fontSize: 14,
-    fontWeight: "500",
-  },
+
+  editText: { color: "#3B82F6" },
+
   balanceCard: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: "#1E1E1E",
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 16,
     alignItems: "center",
+    elevation: 4,
   },
-  balanceLabel: {
-    fontSize: 14,
-    color: "#888888",
-    marginBottom: 4,
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-  balanceOwe: {
-    color: "#10B981",
-  },
-  balanceOwed: {
-    color: "#EF4444",
-  },
-  balanceSettled: {
-    color: "#888888",
-  },
-  balanceDetails: {
+
+  balanceLabel: { color: "#777" },
+  balanceAmount: { fontSize: 32, fontWeight: "700" },
+
+  owe: { color: "#EF4444" },
+  owed: { color: "#10B981" },
+  settled: { color: "#888" },
+
+  balanceMeta: {
     flexDirection: "row",
     gap: 16,
     marginTop: 8,
   },
-  balanceDetailText: {
-    fontSize: 12,
-    color: "#666",
-  },
-  actionsContainer: {
+
+  meta: { color: "#666", fontSize: 12 },
+
+  actions: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    paddingHorizontal: 20,
+    marginVertical: 16,
   },
-  actionButton: {
+
+  actionBtn: {
     flex: 1,
-    flexDirection: "row",
+    height: 46,
+    backgroundColor: "#1F1F1F",
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#2D2D2D",
+    gap: 4,
   },
-  actionButtonText: {
-    color: "#10B981",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  smsButton: {
-    flex: 0.6,
-  },
-  smsButtonText: {
-    color: "#3B82F6",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  whatsappButton: {
-    flex: 0.6,
-    flexDirection: "row",
+
+  whatsappBtn: {
+    flex: 1,
+    height: 46,
+    backgroundColor: "#1A2F23",
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "rgba(37, 211, 102, 0.15)",
+    gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(37, 211, 102, 0.3)",
+    borderColor: "#25D366",
   },
-  whatsappButtonText: {
-    color: "#25D366",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  tagsSection: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  transactionsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  listContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  entryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2D2D2D",
-  },
-  entryInfo: {
+
+  whatsappText: { color: "#25D366", fontWeight: "600" },
+
+  smsBtn: {
     flex: 1,
-  },
-  entryMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  entryAmount: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  creditColor: {
-    color: "#10B981",
-  },
-  debitColor: {
-    color: "#EF4444",
-  },
-  entryDate: {
-    fontSize: 14,
-    color: "#888888",
-  },
-  entryNote: {
-    fontSize: 14,
-    color: "#666666",
-    fontStyle: "italic",
-  },
-  emptyContainer: {
-    flex: 1,
+    height: 46,
+    backgroundColor: "#1F1F1F",
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    gap: 4,
   },
-  emptyText: {
-    fontSize: 18,
-    color: "#888888",
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#666666",
+
+  smsText: { color: "#3B82F6", fontWeight: "600" },
+
+  credit: { color: "#10B981", fontWeight: "600" },
+  debit: { color: "#EF4444", fontWeight: "600" },
+
+  tags: { paddingHorizontal: 20 },
+
+  txHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
     marginTop: 8,
   },
-  deleteSection: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#2D2D2D",
-    marginTop: 16,
-  },
-  deleteCustomerButton: {
+
+  txTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+
+  list: { paddingHorizontal: 20, paddingBottom: 120 },
+
+  entryCard: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
+    justifyContent: "space-between",
   },
-  deleteCustomerButtonText: {
-    color: "#EF4444",
-    fontSize: 15,
-    fontWeight: "500",
+
+  entryAmount: { fontSize: 18, fontWeight: "600" },
+  entryDate: { color: "#777", marginTop: 2 },
+  entryNote: { color: "#666", fontStyle: "italic" },
+
+  deleteBox: {
+    borderTopWidth: 1,
+    borderTopColor: "#222",
+    padding: 14,
+    alignItems: "center",
+  },
+
+  deleteText: {
+    color: "#E11D48",
+    fontWeight: "600",
   },
 });
