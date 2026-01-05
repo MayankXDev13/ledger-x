@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -16,20 +16,6 @@ export default function ProfileScreen() {
     await supabase.auth.signOut();
     router.replace("/auth/login");
   };
-
-  useEffect(() => {
-    if (!authLoading && !session && !isLoggingOut) {
-      router.replace("/auth/login");
-    }
-  }, [authLoading, session, isLoggingOut]);
-
-  if (authLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
 
   if (!session) {
     return null;
@@ -96,16 +82,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: "#ffffff",
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    color: "#888888",
-    fontSize: 16,
   },
   profileSection: {
     alignItems: "center",

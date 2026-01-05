@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -8,19 +8,18 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
-import { router, useFocusEffect, Link } from "expo-router";
+import { useFocusEffect, Link } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { Contact } from "@/types/database";
 
 export default function CustomersScreen() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🔹 Fetch contacts
   const fetchContacts = async () => {
     if (!session?.user) return;
 
@@ -39,32 +38,12 @@ export default function CustomersScreen() {
     setLoading(false);
   };
 
-  // 🔹 Refetch when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      if (session) {
-        fetchContacts();
-      }
+      fetchContacts();
     }, [session]),
   );
 
-  // 🔹 AUTH GUARD (FIXED)
-  useEffect(() => {
-    if (!authLoading && !session) {
-      router.replace("/auth/login");
-    }
-  }, [authLoading, session]);
-
-  // 🔹 Wait for auth restoration
-  if (authLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#ffffff" />
-      </View>
-    );
-  }
-
-  // 🔹 Session missing (redirect in progress)
   if (!session) {
     return null;
   }

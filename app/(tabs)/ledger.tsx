@@ -4,17 +4,15 @@ import {
   View,
   Text,
   FlatList,
-  Pressable,
   ActivityIndicator,
 } from "react-native";
-import { router, Link } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { LedgerEntry } from "@/types/database";
 import { format } from "date-fns";
 
 export default function LedgerScreen() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,24 +36,8 @@ export default function LedgerScreen() {
   };
 
   useEffect(() => {
-    if (session) {
-      fetchEntries();
-    }
+    fetchEntries();
   }, [session]);
-
-  useEffect(() => {
-    if (!authLoading && !session) {
-      router.replace("/auth/login");
-    }
-  }, [authLoading, session]);
-
-  if (authLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#ffffff" />
-      </View>
-    );
-  }
 
   if (!session) {
     return null;
