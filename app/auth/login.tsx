@@ -1,6 +1,5 @@
 import { StatusBar } from "expo-status-bar";
 import {
-  StyleSheet,
   View,
   Text,
   TextInput,
@@ -65,16 +64,20 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+    <View className="flex-1 bg-[#1a1a1a] justify-center px-5">
+      <View className="bg-[#2a2a2a] rounded-2xl p-6">
+        <Text className="text-[28px] font-bold text-white mb-1.5">
+          Welcome Back
+        </Text>
+        <Text className="text-[15px] text-[#aaa] mb-6">
+          Sign in to continue
+        </Text>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+        <View className="gap-[18px]">
+          <View className="gap-1.5">
+            <Text className="text-[13px] text-[#ccc] font-medium">Email</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#333] border border-[#444] rounded-xl px-4 py-3.5 text-base text-white"
               placeholder="email@address.com"
               placeholderTextColor="#999"
               value={email}
@@ -85,13 +88,17 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            {emailError && <Text style={styles.errorText}>{emailError}</Text>}
+            {emailError && (
+              <Text className="text-[#ff6b6b] text-sm">{emailError}</Text>
+            )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+          <View className="gap-1.5">
+            <Text className="text-[13px] text-[#ccc] font-medium">
+              Password
+            </Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#333] border border-[#444] rounded-xl px-4 py-3.5 text-base text-white"
               placeholder="Password"
               placeholderTextColor="#999"
               value={password}
@@ -102,29 +109,29 @@ export default function LoginScreen() {
               secureTextEntry
             />
             {passwordError && (
-              <Text style={styles.errorText}>{passwordError}</Text>
+              <Text className="text-[#ff6b6b] text-sm">{passwordError}</Text>
             )}
           </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <Text className="text-[#ff6b6b] text-sm">{error}</Text>}
 
           <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
+            className={`bg-white py-[18px] rounded-[14px] items-center mt-3 ${loading ? "opacity-60" : ""}`}
             onPress={onSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Login</Text>
+              <Text className="text-black text-[18px] font-bold">Login</Text>
             )}
           </Pressable>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don’t have an account?</Text>
+        <View className="flex-row justify-center mt-5 gap-1.5">
+          <Text className="text-[#888] text-base">Don't have an account?</Text>
           <Pressable onPress={() => router.push("/auth/signup")}>
-            <Text style={styles.linkText}>Sign Up</Text>
+            <Text className="text-white text-base font-semibold">Sign Up</Text>
           </Pressable>
         </View>
       </View>
@@ -133,97 +140,3 @@ export default function LoginScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-    justifyContent: "center",
-    padding: 20,
-  },
-
-  card: {
-    backgroundColor: "#2a2a2a",
-    borderRadius: 16,
-    padding: 24,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 6,
-  },
-
-  subtitle: {
-    fontSize: 15,
-    color: "#aaa",
-    marginBottom: 24,
-  },
-
-  form: {
-    gap: 18,
-  },
-
-  inputGroup: {
-    gap: 6,
-  },
-
-  label: {
-    fontSize: 13,
-    color: "#ccc",
-    fontWeight: "500",
-  },
-
-  input: {
-    backgroundColor: "#333",
-    borderWidth: 1,
-    borderColor: "#444",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#fff",
-  },
-
-  errorText: {
-    color: "#ff6b6b",
-    fontSize: 13,
-  },
-
-  button: {
-    backgroundColor: "#fff",
-    paddingVertical: 18,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 12,
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  buttonText: {
-    color: "#000",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 20,
-    gap: 6,
-  },
-
-  footerText: {
-    color: "#888",
-    fontSize: 15,
-  },
-
-  linkText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

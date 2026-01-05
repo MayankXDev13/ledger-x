@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Pressable,
-  StyleSheet,
   FlatList,
   TextInput,
   Modal,
@@ -18,11 +17,6 @@ interface TagManagementModalProps {
   tags: ContactTag[];
   onTagsChange: (tags: ContactTag[]) => void;
   userId: string;
-}
-
-interface TagItem {
-  tag: ContactTag;
-  usageCount: number;
 }
 
 export function TagManagementModal({
@@ -132,27 +126,30 @@ export function TagManagementModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View className="flex-1 bg-[#1A1A1A]">
+        <View className="flex-row justify-between items-center px-4 py-4 border-b border-[#2D2D2D]">
           <Pressable onPress={onClose}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </Pressable>
-          <Text style={styles.headerTitle}>Manage Tags</Text>
-          <View style={{ width: 24 }} />
+          <Text className="text-white text-lg font-semibold">Manage Tags</Text>
+          <View className="w-6" />
         </View>
 
         <FlatList
           data={tags}
           keyExtractor={(tag) => tag.id}
           ListHeaderComponent={
-            <View style={styles.createSection}>
-              <Text style={styles.sectionTitle}>Create New Tag</Text>
-              <View style={styles.createRow}>
+            <View className="p-4 bg-[#2D2D2D] mb-4 rounded-xl">
+              <Text className="text-white text-sm font-semibold mb-3">
+                Create New Tag
+              </Text>
+              <View className="flex-row items-center gap-2.5 mb-3">
                 <View
-                  style={[styles.colorDot, { backgroundColor: editColor }]}
+                  className="w-6 h-6 rounded-full"
+                  style={{ backgroundColor: editColor }}
                 />
                 <TextInput
-                  style={styles.input}
+                  className="flex-1 bg-[#3D3D3D] rounded-lg px-3 py-2.5 text-white text-sm"
                   placeholder="Tag name"
                   placeholderTextColor="#666"
                   value={editName}
@@ -160,59 +157,54 @@ export function TagManagementModal({
                 />
               </View>
 
-              <View style={styles.colorPicker}>
+              <View className="flex-row gap-2 mb-4 flex-wrap">
                 {TAG_COLORS.map((color) => (
                   <Pressable
                     key={color}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      editColor === color && styles.colorOptionSelected,
-                    ]}
+                    className={`w-7 h-7 rounded-full ${editColor === color ? "border-2 border-white" : ""}`}
+                    style={{ backgroundColor: color }}
                     onPress={() => setEditColor(color)}
                   />
                 ))}
               </View>
 
               <Pressable
-                style={[
-                  styles.createButton,
-                  (!editName.trim() || loading) && styles.createButtonDisabled,
-                ]}
+                className={`py-3 rounded-lg items-center ${!editName.trim() || loading ? "opacity-50" : "bg-blue-500"}`}
                 onPress={handleCreateTag}
                 disabled={!editName.trim() || loading}
               >
-                <Text style={styles.createButtonText}>Create Tag</Text>
+                <Text className="text-white text-sm font-semibold">
+                  Create Tag
+                </Text>
               </Pressable>
             </View>
           }
           renderItem={({ item: tag }) => (
-            <View style={styles.tagItem}>
-              <View style={styles.tagInfo}>
-                <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
-                <Text style={styles.tagName}>{tag.name}</Text>
+            <View className="flex-row justify-between items-center py-3">
+              <View className="flex-row items-center gap-2.5">
+                <View
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
+                <Text className="text-white text-base">{tag.name}</Text>
               </View>
-              <View style={styles.tagActions}>
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={() => startEdit(tag)}
-                >
+              <View className="flex-row gap-2">
+                <Pressable className="p-2" onPress={() => startEdit(tag)}>
                   <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
                 </Pressable>
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={() => startDelete(tag)}
-                >
+                <Pressable className="p-2" onPress={() => startDelete(tag)}>
                   <Ionicons name="trash-outline" size={20} color="#EF4444" />
                 </Pressable>
               </View>
             </View>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No tags created yet</Text>
+            <Text className="text-[#666] text-sm text-center py-8">
+              No tags created yet
+            </Text>
           }
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View className="h-px bg-[#2D2D2D]" />}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
         />
 
         {editingTag && (
@@ -223,17 +215,20 @@ export function TagManagementModal({
             onRequestClose={() => setEditingTag(null)}
           >
             <Pressable
-              style={styles.modalOverlay}
+              className="flex-1 bg-black/70 justify-center items-center"
               onPress={() => setEditingTag(null)}
             >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Edit Tag</Text>
-                <View style={styles.createRow}>
+              <View className="bg-[#2D2D2D] rounded-xl p-6 w-[85%] max-w-[360]">
+                <Text className="text-white text-xl font-semibold mb-4 text-center">
+                  Edit Tag
+                </Text>
+                <View className="flex-row items-center gap-2.5 mb-3">
                   <View
-                    style={[styles.colorDot, { backgroundColor: editColor }]}
+                    className="w-6 h-6 rounded-full"
+                    style={{ backgroundColor: editColor }}
                   />
                   <TextInput
-                    style={styles.input}
+                    className="flex-1 bg-[#3D3D3D] rounded-lg px-3 py-2.5 text-white text-sm"
                     placeholder="Tag name"
                     placeholderTextColor="#666"
                     value={editName}
@@ -241,36 +236,34 @@ export function TagManagementModal({
                   />
                 </View>
 
-                <View style={styles.colorPicker}>
+                <View className="flex-row gap-2 mb-4 flex-wrap">
                   {TAG_COLORS.map((color) => (
                     <Pressable
                       key={color}
-                      style={[
-                        styles.colorOption,
-                        { backgroundColor: color },
-                        editColor === color && styles.colorOptionSelected,
-                      ]}
+                      className={`w-7 h-7 rounded-full ${editColor === color ? "border-2 border-white" : ""}`}
+                      style={{ backgroundColor: color }}
                       onPress={() => setEditColor(color)}
                     />
                   ))}
                 </View>
 
-                <View style={styles.modalButtons}>
+                <View className="flex-row gap-3">
                   <Pressable
-                    style={styles.modalCancelButton}
+                    className="flex-1 py-3 rounded-lg items-center bg-[#3D3D3D]"
                     onPress={() => setEditingTag(null)}
                   >
-                    <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                    <Text className="text-white text-sm font-medium">
+                      Cancel
+                    </Text>
                   </Pressable>
                   <Pressable
-                    style={[
-                      styles.modalSaveButton,
-                      loading && styles.createButtonDisabled,
-                    ]}
+                    className={`flex-1 py-3 rounded-lg items-center ${loading ? "opacity-50" : "bg-blue-500"}`}
                     onPress={handleEditTag}
                     disabled={loading}
                   >
-                    <Text style={styles.modalSaveButtonText}>Save</Text>
+                    <Text className="text-white text-sm font-semibold">
+                      Save
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -286,35 +279,41 @@ export function TagManagementModal({
             onRequestClose={() => setDeleteConfirmTag(null)}
           >
             <Pressable
-              style={styles.modalOverlay}
+              className="flex-1 bg-black/70 justify-center items-center"
               onPress={() => setDeleteConfirmTag(null)}
             >
-              <View style={styles.modalContent}>
+              <View className="bg-[#2D2D2D] rounded-xl p-6 w-[85%] max-w-[360]">
                 <Ionicons
                   name="warning-outline"
                   size={48}
                   color="#EF4444"
-                  style={{ alignSelf: "center", marginBottom: 16 }}
+                  className="self-center mb-4"
                 />
-                <Text style={styles.modalTitle}>Delete Tag?</Text>
-                <Text style={styles.deleteMessage}>
+                <Text className="text-white text-xl font-semibold mb-4 text-center">
+                  Delete Tag?
+                </Text>
+                <Text className="text-[#A0A0A0] text-sm text-center mb-6 leading-5">
                   This tag is used by {deleteUsageCount} customer
                   {deleteUsageCount !== 1 ? "s" : ""}.{"\n\n"}Removing it will
                   remove this tag from all customers.
                 </Text>
-                <View style={styles.modalButtons}>
+                <View className="flex-row gap-3">
                   <Pressable
-                    style={styles.modalCancelButton}
+                    className="flex-1 py-3 rounded-lg items-center bg-[#3D3D3D]"
                     onPress={() => setDeleteConfirmTag(null)}
                   >
-                    <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                    <Text className="text-white text-sm font-medium">
+                      Cancel
+                    </Text>
                   </Pressable>
                   <Pressable
-                    style={styles.modalDeleteButton}
+                    className="flex-1 py-3 rounded-lg items-center bg-red-500"
                     onPress={handleDeleteTag}
                     disabled={loading}
                   >
-                    <Text style={styles.modalDeleteButtonText}>Delete</Text>
+                    <Text className="text-white text-sm font-semibold">
+                      Delete
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -325,192 +324,3 @@ export function TagManagementModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2D2D2D",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  createSection: {
-    padding: 16,
-    backgroundColor: "#2D2D2D",
-    marginBottom: 16,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  createRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  colorDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#3D3D3D",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#FFFFFF",
-    fontSize: 15,
-  },
-  colorPicker: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  colorOption: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  colorOptionSelected: {
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
-  },
-  createButton: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  createButtonDisabled: {
-    opacity: 0.5,
-  },
-  createButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-  },
-  tagItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  tagInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  tagDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  tagName: {
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
-  tagActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#2D2D2D",
-  },
-  emptyText: {
-    color: "#666",
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 32,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 16,
-    padding: 24,
-    width: "85%",
-    maxWidth: 360,
-  },
-  modalTitle: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  deleteMessage: {
-    color: "#A0A0A0",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#3D3D3D",
-    alignItems: "center",
-  },
-  modalCancelButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  modalSaveButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#3B82F6",
-    alignItems: "center",
-  },
-  modalSaveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  modalDeleteButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#EF4444",
-    alignItems: "center",
-  },
-  modalDeleteButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

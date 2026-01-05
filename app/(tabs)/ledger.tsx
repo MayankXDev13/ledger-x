@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, FlatList, ActivityIndicator } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { LedgerEntry } from "@/types/database";
@@ -56,21 +50,22 @@ export default function LedgerScreen() {
   }: {
     item: LedgerEntry & { contacts?: { name: string; phone: string } };
   }) => (
-    <View style={styles.entryCard}>
-      <View style={styles.entryInfo}>
-        <Text style={styles.entryCustomer}>
+    <View className="flex-row items-center justify-between py-4 border-b border-[#333333]">
+      <View className="flex-1">
+        <Text className="text-white font-medium text-base">
           {item.contacts?.name || "Unknown"}
         </Text>
-        <Text style={styles.entryDate}>
+        <Text className="text-[#666666] text-xs mt-1">
           {format(new Date(item.created_at), "MMM d, yyyy h:mm a")}
         </Text>
-        {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
+        {item.note && (
+          <Text className="text-[#888888] text-xs mt-1 italic">
+            {item.note}
+          </Text>
+        )}
       </View>
       <Text
-        style={[
-          styles.entryAmount,
-          item.type === "credit" ? styles.creditAmount : styles.debitAmount,
-        ]}
+        className={`text-base font-semibold ${item.type === "credit" ? "text-green-500" : "text-red-500"}`}
       >
         {formatAmount(Number(item.amount), item.type)}
       </Text>
@@ -78,20 +73,22 @@ export default function LedgerScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Ledger</Text>
-        <Text style={styles.subtitle}>Recent transactions</Text>
+    <View className="flex-1 bg-[#1a1a1a]">
+      <View className="px-6 pt-[60px] pb-4">
+        <Text className="text-3xl font-bold text-white">Ledger</Text>
+        <Text className="text-base text-[#888888] mt-1">
+          Recent transactions
+        </Text>
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#ffffff" />
         </View>
       ) : entries.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No transactions yet</Text>
-          <Text style={styles.emptySubtext}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-[#888888] text-lg">No transactions yet</Text>
+          <Text className="text-[#666666] text-sm mt-2">
             Add your first entry from a customer
           </Text>
         </View>
@@ -100,87 +97,10 @@ export default function LedgerScreen() {
           data={entries}
           renderItem={renderEntry}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#888888",
-    marginTop: 4,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#888888",
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 8,
-  },
-  listContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  entryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#333333",
-  },
-  entryInfo: {
-    flex: 1,
-  },
-  entryCustomer: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#ffffff",
-  },
-  entryDate: {
-    fontSize: 13,
-    color: "#666666",
-    marginTop: 4,
-  },
-  entryNote: {
-    fontSize: 13,
-    color: "#888888",
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  entryAmount: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  creditAmount: {
-    color: "#4CAF50",
-  },
-  debitAmount: {
-    color: "#FF5252",
-  },
-});

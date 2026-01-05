@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, View, Pressable } from "react-native";
+import { Text, View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -22,56 +22,49 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
+    <View className="flex-1 bg-[#1a1a1a]">
+      <View className="px-6 pt-[60px] pb-6">
+        <Text className="text-3xl font-bold text-white">Profile</Text>
       </View>
 
-      <View style={styles.profileSection}>
-        <View style={styles.avatarContainer}>
+      <View className="items-center py-10">
+        <View className="w-24 h-24 rounded-full bg-[#2a2a2a] items-center justify-center mb-4">
           <Ionicons name="person" size={48} color="#ffffff" />
         </View>
-        <Text style={styles.email}>{session.user.email}</Text>
+        <Text className="text-white text-lg font-medium">
+          {session.user.email}
+        </Text>
       </View>
 
-      <View style={styles.buttonContainer}>
+      <View className="px-6 gap-4">
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            styles.menuButton,
-            pressed && styles.pressed,
-          ]}
+          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-[#2a2a2a] border-[#3a3a3a]"
           onPress={() => router.push("/tags/manage")}
         >
           <Ionicons name="pricetags-outline" size={20} color="#ffffff" />
-          <Text style={styles.menuButtonText}>Manage Tags</Text>
+          <Text className="text-white text-base font-semibold">
+            Manage Tags
+          </Text>
         </Pressable>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            styles.changePasswordButton,
-            pressed && styles.pressed,
-            isLoggingOut && styles.buttonDisabled,
-          ]}
+          className={`flex-row items-center justify-center py-4 rounded-xl gap-3 ${isLoggingOut ? "opacity-50" : "bg-white"}`}
           onPress={() => router.push("/auth/update-password")}
           disabled={isLoggingOut}
         >
           <Ionicons name="lock-closed-outline" size={20} color="#000000" />
-          <Text style={styles.changePasswordButtonText}>Change Password</Text>
+          <Text className="text-black text-base font-semibold">
+            Change Password
+          </Text>
         </Pressable>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            styles.logoutButton,
-            (pressed || isLoggingOut) && styles.pressed,
-          ]}
+          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border border-[#ff6b6b]"
           onPress={handleLogout}
           disabled={isLoggingOut}
         >
           <Ionicons name="log-out-outline" size={20} color="#ff6b6b" />
-          <Text style={styles.logoutButtonText}>
+          <Text className="text-[#ff6b6b] text-base font-semibold">
             {isLoggingOut ? "Logging out..." : "Logout"}
           </Text>
         </Pressable>
@@ -79,84 +72,3 @@ export default function ProfileScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  profileSection: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  avatarContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#2a2a2a",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  email: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#ffffff",
-  },
-  buttonContainer: {
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  menuButton: {
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "#3a3a3a",
-  },
-  menuButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  changePasswordButton: {
-    backgroundColor: "#ffffff",
-  },
-  changePasswordButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000000",
-  },
-  logoutButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#ff6b6b",
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ff6b6b",
-  },
-});

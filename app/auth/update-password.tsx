@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  StyleSheet,
   View,
   Text,
   TextInput,
@@ -86,18 +85,22 @@ export default function UpdatePasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Change Password</Text>
-        <Text style={styles.subtitle}>
+    <View className="flex-1 bg-[#1a1a1a]">
+      <View className="flex-1 px-6 pt-[60px]">
+        <Text className="text-3xl font-bold text-white mb-2">
+          Change Password
+        </Text>
+        <Text className="text-base text-[#888888] mb-8">
           Enter your current password and new password
         </Text>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Current Password</Text>
+        <View className="flex-1 gap-5">
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-[#cccccc]">
+              Current Password
+            </Text>
             <TextInput
-              style={styles.input}
+              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
               placeholder="Enter current password"
               placeholderTextColor="#666666"
               value={currentPassword}
@@ -108,14 +111,18 @@ export default function UpdatePasswordScreen() {
               secureTextEntry
             />
             {currentPasswordError && (
-              <Text style={styles.errorText}>{currentPasswordError}</Text>
+              <Text className="text-[#ff6b6b] text-sm">
+                {currentPasswordError}
+              </Text>
             )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>New Password</Text>
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-[#cccccc]">
+              New Password
+            </Text>
             <TextInput
-              style={styles.input}
+              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
               placeholder="Enter new password"
               placeholderTextColor="#666666"
               value={newPassword}
@@ -126,14 +133,16 @@ export default function UpdatePasswordScreen() {
               secureTextEntry
             />
             {newPasswordError && (
-              <Text style={styles.errorText}>{newPasswordError}</Text>
+              <Text className="text-[#ff6b6b] text-sm">{newPasswordError}</Text>
             )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm New Password</Text>
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-[#cccccc]">
+              Confirm New Password
+            </Text>
             <TextInput
-              style={styles.input}
+              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
               placeholder="Confirm new password"
               placeholderTextColor="#666666"
               value={confirmPassword}
@@ -144,21 +153,25 @@ export default function UpdatePasswordScreen() {
               secureTextEntry
             />
             {confirmPasswordError && (
-              <Text style={styles.errorText}>{confirmPasswordError}</Text>
+              <Text className="text-[#ff6b6b] text-sm">
+                {confirmPasswordError}
+              </Text>
             )}
           </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <Text className="text-[#ff6b6b] text-sm">{error}</Text>}
 
           <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
+            className={`bg-white py-4 rounded-lg items-center mt-4 ${loading ? "opacity-60" : ""}`}
             onPress={onSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#000000" />
             ) : (
-              <Text style={styles.buttonText}>Update Password</Text>
+              <Text className="text-black text-base font-semibold">
+                Update Password
+              </Text>
             )}
           </Pressable>
         </View>
@@ -166,67 +179,3 @@ export default function UpdatePasswordScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#888888",
-    marginBottom: 32,
-  },
-  form: {
-    flex: 1,
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#cccccc",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#333333",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#ffffff",
-    backgroundColor: "#2a2a2a",
-  },
-  errorText: {
-    color: "#ff6b6b",
-    fontSize: 14,
-  },
-  button: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#000000",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
