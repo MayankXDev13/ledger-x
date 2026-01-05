@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Linking,
   RefreshControl,
+  Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -162,6 +164,46 @@ export default function CustomerDetailsScreen() {
     Linking.openURL(`sms:${phoneNumber}?body=${encodeURIComponent(message)}`);
   };
 
+  const sendWhatsApp = async () => {
+    if (!contact) return;
+
+    const balanceText =
+      balance.balance > 0
+        ? `You owe ₹${balance.balance.toFixed(2)}`
+        : balance.balance < 0
+          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
+          : "All settled up";
+
+    const message = `Ledger Update from LedgerX:\n\nCustomer: ${contact.name}\nBalance: ${balanceText}`;
+    const phoneNumber = contact.phone.replace(/\D/g, "");
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(whatsappUrl);
+      if (canOpen) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        Alert.alert(
+          "WhatsApp Not Installed",
+          "WhatsApp is not installed on this device. Would you like to send an SMS instead?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Send SMS", onPress: sendSMS },
+          ],
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Unable to open WhatsApp. Please try sending an SMS instead.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Send SMS", onPress: sendSMS },
+        ],
+      );
+    }
+  };
+
   const handleSaveTransaction = async (
     entryId: string,
     amount: number,
@@ -294,6 +336,10 @@ export default function CustomerDetailsScreen() {
         >
           <Ionicons name="arrow-up-circle" size={20} color="#EF4444" />
           <Text style={styles.actionButtonText}>Debit</Text>
+        </Pressable>
+        <Pressable style={styles.whatsappButton} onPress={sendWhatsApp}>
+          <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+          <Text style={styles.whatsappButtonText}>WhatsApp</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.smsButton]}
@@ -502,6 +548,23 @@ const styles = StyleSheet.create({
   },
   smsButtonText: {
     color: "#3B82F6",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  whatsappButton: {
+    flex: 0.6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(37, 211, 102, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(37, 211, 102, 0.3)",
+  },
+  whatsappButtonText: {
+    color: "#25D366",
     fontSize: 16,
     fontWeight: "600",
   },
