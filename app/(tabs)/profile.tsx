@@ -43,7 +43,17 @@ export default function ProfileScreen() {
         >
           <Ionicons name="pricetags-outline" size={20} color="#ffffff" />
           <Text className="text-white text-base font-semibold">
-            Manage Tags
+            Manage Customer Tags
+          </Text>
+        </Pressable>
+
+        <Pressable
+          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-[#2a2a2a] border-[#3a3a3a]"
+          onPress={() => router.push("/transaction-tags/manage")}
+        >
+          <Ionicons name="wallet-outline" size={20} color="#ffffff" />
+          <Text className="text-white text-base font-semibold">
+            Manage Transaction Tags
           </Text>
         </Pressable>
 

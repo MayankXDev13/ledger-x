@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { TransactionType } from "@/types/database";
+import { TransactionType, TagTotal } from "@/types/database";
 
 export const updateTransaction = async (
   entryId: string,
@@ -47,6 +47,17 @@ export const getFilteredTransactions = async (
     p_contact_id: contactId,
     p_start_date: startDate,
     p_end_date: endDate,
+  });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const getTransactionTagTotals = async (
+  contactId: string,
+): Promise<TagTotal[]> => {
+  const { data, error } = await supabase.rpc("get_transaction_totals_by_tag", {
+    p_contact_id: contactId,
   });
 
   if (error) throw error;

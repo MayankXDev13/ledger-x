@@ -14,15 +14,22 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
-import { Contact, ContactTag, LedgerEntry, DateFilter } from "@/types/database";
+import {
+  Contact,
+  LedgerEntry,
+  TagTotal,
+  TransactionTag,
+} from "@/types/database";
 import { format } from "date-fns";
-import { DateFilterDropdown } from "@/components/DateFilterDropdown";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import { TagSelector } from "@/components/TagSelector";
-import { TagManagementModal } from "@/components/TagManagementModal";
-import { updateTransaction, deleteTransaction } from "@/lib/transactions";
-import { getContactTags, replaceContactTags, getUserTags } from "@/lib/tags";
+import {
+  updateTransaction,
+  deleteTransaction,
+  getTransactionTagTotals,
+} from "@/lib/transactions";
+import { getUserTransactionTags } from "@/lib/transaction-tags";
+import { formatCurrency } from "@/types/database";
 
 interface BalanceData {
   total_credit: number;
@@ -34,7 +41,9 @@ export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [contact, setContact] = useState<Contact | null>(null);
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [entriesWithTags, setEntriesWithTags] = useState<
+    (LedgerEntry & { tags?: TransactionTag[] })[]
+  >([]);
   const [balance, setBalance] = useState<BalanceData>({
     total_credit: 0,
     total_debit: 0,
@@ -43,22 +52,17 @@ export default function CustomerDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [dateFilter, setDateFilter] = useState<DateFilter>({
-    start: null,
-    end: null,
-    label: "All Time",
-  });
-
   const [editingTransaction, setEditingTransaction] =
     useState<LedgerEntry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
 
-  const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
-  const [availableTags, setAvailableTags] = useState<ContactTag[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [showDeleteCustomerConfirm, setShowDeleteCustomerConfirm] =
-    useState(false);
+  const [tagTotals, setTagTotals] = useState<TagTotal[]>([]);
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(
+    null,
+  );
+  const [showTagFilter, setShowTagFilter] = useState(false);
+  const [transactionTags, setTransactionTags] = useState<TransactionTag[]>([]);
 
   /* -------------------- DATA -------------------- */
 
@@ -77,7 +81,10 @@ export default function CustomerDetailsScreen() {
 
     await fetchTransactions();
     await fetchBalance();
-    await fetchTags();
+    await fetchTagTotals();
+    if (contactData?.user_id) {
+      await fetchTransactionTags(contactData.user_id);
+    }
 
     setLoading(false);
   };
@@ -85,13 +92,21 @@ export default function CustomerDetailsScreen() {
   const fetchTransactions = async () => {
     if (!id) return;
 
-    const { data } = await supabase.rpc("get_filtered_transactions", {
-      p_contact_id: id,
-      p_start_date: dateFilter.start,
-      p_end_date: dateFilter.end,
-    });
+    const { data } = await supabase
+      .from("ledger_entries")
+      .select("*")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false });
 
-    setEntries(data || []);
+    const entriesWithTagsData = await Promise.all(
+      (data || []).map(async (entry: LedgerEntry) => {
+        const { getTransactionTags } = await import("@/lib/transaction-tags");
+        const tags = await getTransactionTags(entry.id);
+        return { ...entry, tags };
+      }),
+    );
+
+    setEntriesWithTags(entriesWithTagsData);
   };
 
   const fetchBalance = async () => {
@@ -104,45 +119,26 @@ export default function CustomerDetailsScreen() {
     if (data?.length) setBalance(data[0]);
   };
 
-  const fetchTags = async () => {
+  const fetchTagTotals = async () => {
     if (!id) return;
+    const totals = await getTransactionTagTotals(id);
+    setTagTotals(totals);
+  };
 
-    const contactTags = await getContactTags(id);
-    setSelectedTags(contactTags);
-
-    if (contact?.user_id) {
-      const userTags = await getUserTags(contact.user_id);
-      setAvailableTags(userTags);
-    }
+  const fetchTransactionTags = async (userId: string) => {
+    if (!userId) return;
+    const tags = await getUserTransactionTags(userId);
+    setTransactionTags(tags);
   };
 
   useEffect(() => {
     fetchData();
   }, [id]);
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [dateFilter]);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
-  };
-
-  const handleDeleteCustomer = async () => {
-    if (!id) return;
-
-    const { error } = await supabase.rpc("soft_delete_customer", {
-      p_contact_id: id,
-    });
-
-    if (error) {
-      console.error("Error deleting customer:", error);
-      return;
-    }
-
-    router.replace("/(tabs)/customers");
   };
 
   /* -------------------- ACTIONS -------------------- */
@@ -200,7 +196,17 @@ export default function CustomerDetailsScreen() {
     );
   }
 
-  const renderEntry = ({ item }: { item: LedgerEntry }) => (
+  const filteredEntries = selectedTagFilter
+    ? entriesWithTags.filter((entry) =>
+        entry.tags?.some((tag) => tag.id === selectedTagFilter),
+      )
+    : entriesWithTags;
+
+  const renderEntry = ({
+    item,
+  }: {
+    item: LedgerEntry & { tags?: TransactionTag[] };
+  }) => (
     <Pressable
       style={styles.entryCard}
       onPress={() => setEditingTransaction(item)}
@@ -218,6 +224,21 @@ export default function CustomerDetailsScreen() {
           {format(new Date(item.created_at), "dd MMM yyyy, hh:mm a")}
         </Text>
         {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
+        {item.tags && item.tags.length > 0 && (
+          <View style={styles.entryTags}>
+            {item.tags.map((tag) => (
+              <View
+                key={tag.id}
+                style={[styles.entryTag, { backgroundColor: tag.color + "30" }]}
+              >
+                <View
+                  style={[styles.entryTagDot, { backgroundColor: tag.color }]}
+                />
+                <Text style={styles.entryTagText}>{tag.name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
       <Ionicons name="chevron-forward" size={18} color="#666" />
     </Pressable>
@@ -293,47 +314,113 @@ export default function CustomerDetailsScreen() {
         </Pressable>
       </View>
 
-      {/* TAGS */}
-      <View style={styles.tags}>
-        <TagSelector
-          selectedTags={selectedTags}
-          availableTags={availableTags}
-          onTagsChange={(tags) => {
-            setSelectedTags(tags);
-            replaceContactTags(
-              id!,
-              tags.map((t) => t.id),
-            );
-          }}
-          onManageTags={() => setShowTagModal(true)}
-        />
+      {/* TAG TOTALS */}
+      {tagTotals.length > 0 && (
+        <View style={styles.tagTotalsContainer}>
+          <Text style={styles.tagTotalsTitle}>💰 Tag Totals</Text>
+          <View style={styles.tagTotalsList}>
+            {tagTotals.map((total) => (
+              <View
+                key={total.tag_id}
+                style={[
+                  styles.tagTotalItem,
+                  { backgroundColor: total.tag_color + "30" },
+                ]}
+              >
+                <Text style={styles.tagTotalName}>{total.tag_name}</Text>
+                <Text style={styles.tagTotalAmount}>
+                  {formatCurrency(total.total_amount)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* TAG FILTER */}
+      <View style={styles.tagFilterContainer}>
+        <Pressable
+          style={styles.tagFilterButton}
+          onPress={() => setShowTagFilter(!showTagFilter)}
+        >
+          <Text style={styles.tagFilterText}>
+            Filter:{" "}
+            {selectedTagFilter
+              ? transactionTags.find((t) => t.id === selectedTagFilter)?.name ||
+                "Tag"
+              : "All"}
+          </Text>
+          <Ionicons
+            name={showTagFilter ? "chevron-up" : "chevron-down"}
+            size={20}
+            color="#FFFFFF"
+          />
+        </Pressable>
+
+        {showTagFilter && (
+          <View style={styles.tagFilterDropdown}>
+            <Pressable
+              style={styles.tagFilterOption}
+              onPress={() => {
+                setSelectedTagFilter(null);
+                setShowTagFilter(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.tagFilterOptionText,
+                  !selectedTagFilter && styles.tagFilterOptionTextSelected,
+                ]}
+              >
+                All Transactions
+              </Text>
+            </Pressable>
+            {transactionTags.map((tag) => (
+              <Pressable
+                key={tag.id}
+                style={styles.tagFilterOption}
+                onPress={() => {
+                  setSelectedTagFilter(tag.id);
+                  setShowTagFilter(false);
+                }}
+              >
+                <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+                <Text
+                  style={[
+                    styles.tagFilterOptionText,
+                    selectedTagFilter === tag.id &&
+                      styles.tagFilterOptionTextSelected,
+                  ]}
+                >
+                  {tag.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* TRANSACTIONS */}
       <View style={styles.txHeader}>
         <Text style={styles.txTitle}>Transactions</Text>
-        <DateFilterDropdown
-          selectedFilter={dateFilter}
-          onFilterChange={setDateFilter}
-        />
       </View>
 
       <FlatList
-        data={entries}
+        data={filteredEntries}
         renderItem={renderEntry}
         keyExtractor={(i) => i.id}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {selectedTagFilter
+              ? "No transactions with this tag"
+              : "No transactions yet"}
+          </Text>
+        }
       />
-
-      {/* DELETE */}
-      <View style={styles.deleteBox}>
-        <Pressable onPress={() => setShowDeleteCustomerConfirm(true)}>
-          <Text style={styles.deleteText}>Delete Customer</Text>
-        </Pressable>
-      </View>
 
       {/* MODALS */}
       <EditTransactionModal
@@ -357,26 +444,6 @@ export default function CustomerDetailsScreen() {
           setShowDeleteConfirm(false);
         }}
         onCancel={() => setShowDeleteConfirm(false)}
-      />
-
-      <DeleteConfirmationDialog
-        visible={showDeleteCustomerConfirm}
-        title="Delete Customer?"
-        message="This will permanently delete this customer and all their transactions. This action cannot be undone."
-        confirmText="Delete"
-        onConfirm={() => {
-          handleDeleteCustomer();
-          setShowDeleteCustomerConfirm(false);
-        }}
-        onCancel={() => setShowDeleteCustomerConfirm(false)}
-      />
-
-      <TagManagementModal
-        visible={showTagModal}
-        onClose={() => setShowTagModal(false)}
-        tags={availableTags}
-        onTagsChange={setAvailableTags}
-        userId={contact.user_id}
       />
     </View>
   );
@@ -480,7 +547,72 @@ const styles = StyleSheet.create({
   credit: { color: "#10B981", fontWeight: "600" },
   debit: { color: "#EF4444", fontWeight: "600" },
 
-  tags: { paddingHorizontal: 20 },
+  tagTotalsContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+
+  tagTotalsTitle: { color: "#888", fontSize: 12, marginBottom: 8 },
+
+  tagTotalsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  tagTotalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+
+  tagTotalName: { color: "#fff", fontSize: 13, fontWeight: "500" },
+
+  tagTotalAmount: { color: "#ccc", fontSize: 13 },
+
+  tagFilterContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+
+  tagFilterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#1F1F1F",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+
+  tagFilterText: { color: "#fff", fontSize: 14 },
+
+  tagFilterDropdown: {
+    backgroundColor: "#1F1F1F",
+    borderRadius: 10,
+    marginTop: 6,
+    padding: 8,
+  },
+
+  tagFilterOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 8,
+  },
+
+  tagFilterOptionText: { color: "#888", fontSize: 14 },
+
+  tagFilterOptionTextSelected: {
+    color: "#3B82F6",
+    fontWeight: "600",
+  },
+
+  tagDot: { width: 8, height: 8, borderRadius: 4 },
 
   txHeader: {
     flexDirection: "row",
@@ -503,17 +635,22 @@ const styles = StyleSheet.create({
 
   entryAmount: { fontSize: 18, fontWeight: "600" },
   entryDate: { color: "#777", marginTop: 2 },
-  entryNote: { color: "#666", fontStyle: "italic" },
+  entryNote: { color: "#666", fontStyle: "italic", marginTop: 4 },
 
-  deleteBox: {
-    borderTopWidth: 1,
-    borderTopColor: "#222",
-    padding: 14,
+  entryTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
+
+  entryTag: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
   },
 
-  deleteText: {
-    color: "#E11D48",
-    fontWeight: "600",
-  },
+  entryTagDot: { width: 6, height: 6, borderRadius: 3 },
+
+  entryTagText: { color: "#ccc", fontSize: 11 },
+
+  emptyText: { color: "#666", textAlign: "center", paddingVertical: 40 },
 });

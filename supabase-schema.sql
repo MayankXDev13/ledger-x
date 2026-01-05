@@ -48,8 +48,6 @@ ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_tag_map ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contact_tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contact_tag_map ENABLE ROW LEVEL SECURITY;
 
 ## Create policies for contacts
 CREATE POLICY "Users can view their own contacts"
@@ -248,9 +246,6 @@ BEGIN
     AND ct.user_id = auth.uid();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-  ORDER BY ct.name;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ## Create function to get tag usage count
 CREATE OR REPLACE FUNCTION get_tag_usage_count(p_tag_id UUID)
@@ -299,5 +294,131 @@ BEGIN
   INNER JOIN contacts c ON le.contact_id = c.id
   WHERE c.user_id = p_user_id
     AND c.deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+## Transaction Tags Tables (for categorizing transactions)
+CREATE TABLE transaction_tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT DEFAULT '#3B82F6',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+CREATE TABLE transaction_tag_map (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  transaction_id UUID REFERENCES ledger_entries(id) ON DELETE CASCADE NOT NULL,
+  tag_id UUID REFERENCES transaction_tags(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  UNIQUE(transaction_id, tag_id)
+);
+
+ALTER TABLE transaction_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transaction_tag_map ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own transaction tags"
+  ON transaction_tags FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own transaction tags"
+  ON transaction_tags FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own transaction tags"
+  ON transaction_tags FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own transaction tags"
+  ON transaction_tags FOR DELETE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view tag mappings for their transactions"
+  ON transaction_tag_map FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM ledger_entries le
+      INNER JOIN contacts c ON le.contact_id = c.id
+      WHERE le.id = transaction_tag_map.transaction_id
+      AND c.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert tag mappings for their transactions"
+  ON transaction_tag_map FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM ledger_entries le
+      INNER JOIN contacts c ON le.contact_id = c.id
+      WHERE le.id = transaction_tag_map.transaction_id
+      AND c.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete tag mappings for their transactions"
+  ON transaction_tag_map FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM ledger_entries le
+      INNER JOIN contacts c ON le.contact_id = c.id
+      WHERE le.id = transaction_tag_map.transaction_id
+      AND c.user_id = auth.uid()
+    )
+  );
+
+CREATE OR REPLACE FUNCTION get_transaction_tags(p_transaction_id UUID)
+RETURNS TABLE (
+  id UUID,
+  user_id UUID,
+  name TEXT,
+  color TEXT,
+  created_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT tt.id, tt.user_id, tt.name, tt.color, tt.created_at
+  FROM transaction_tags tt
+  INNER JOIN transaction_tag_map ttm ON tt.id = ttm.tag_id
+  WHERE ttm.transaction_id = p_transaction_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_transaction_tag_usage_count(p_tag_id UUID)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) FROM transaction_tag_map WHERE tag_id = p_tag_id
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE INDEX idx_transaction_tags_user_id ON transaction_tags(user_id);
+CREATE INDEX idx_transaction_tag_map_transaction_id ON transaction_tag_map(transaction_id);
+CREATE INDEX idx_transaction_tag_map_tag_id ON transaction_tag_map(tag_id);
+
+CREATE OR REPLACE FUNCTION get_transaction_totals_by_tag(
+  p_contact_id UUID
+)
+RETURNS TABLE (
+  tag_id UUID,
+  tag_name TEXT,
+  tag_color TEXT,
+  total_amount DECIMAL(12,2)
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    tt.id,
+    tt.name,
+    tt.color,
+    COALESCE(SUM(
+      CASE WHEN le.type = 'credit' THEN le.amount ELSE -le.amount END
+    ), 0)::DECIMAL(12,2) as total_amount
+  FROM transaction_tags tt
+  INNER JOIN transaction_tag_map ttm ON tt.id = ttm.tag_id
+  INNER JOIN ledger_entries le ON ttm.transaction_id = le.id
+  WHERE le.contact_id = p_contact_id
+  GROUP BY tt.id, tt.name, tt.color
+  ORDER BY total_amount DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
