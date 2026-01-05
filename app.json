@@ -4,7 +4,12 @@
     "slug": "ledger-x",
     "scheme": "ledgerx",
     "android": {
-      "package": "com.anonymous.ledgerx"
+      "package": "com.mayank.ledgerx"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ec0cc122-567f-4118-83e6-3d50f7266a46"
+      }
     }
   }
 }
