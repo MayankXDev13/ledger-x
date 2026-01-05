@@ -35,7 +35,6 @@ export function EditTransactionModal({
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TransactionType>("credit");
   const [note, setNote] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   React.useEffect(() => {
     if (transaction) {
@@ -64,7 +63,6 @@ export function EditTransactionModal({
     if (!transaction) return;
     onDelete(transaction.id);
     onClose();
-    setShowDeleteConfirm(false);
   };
 
   if (!transaction) return null;
@@ -170,55 +168,12 @@ export function EditTransactionModal({
           </View>
 
           <View style={styles.deleteSection}>
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => setShowDeleteConfirm(true)}
-            >
+            <Pressable style={styles.deleteButton} onPress={handleDelete}>
               <Ionicons name="trash-outline" size={20} color="#EF4444" />
               <Text style={styles.deleteButtonText}>Delete Transaction</Text>
             </Pressable>
           </View>
         </ScrollView>
-
-        <Modal
-          transparent
-          visible={showDeleteConfirm}
-          animationType="fade"
-          onRequestClose={() => setShowDeleteConfirm(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowDeleteConfirm(false)}
-          >
-            <View style={styles.modalContent}>
-              <Ionicons
-                name="warning-outline"
-                size={48}
-                color="#EF4444"
-                style={{ alignSelf: "center", marginBottom: 16 }}
-              />
-              <Text style={styles.modalTitle}>Delete Transaction?</Text>
-              <Text style={styles.modalMessage}>
-                This will permanently delete this transaction. The customer's
-                balance will be updated accordingly.
-              </Text>
-              <View style={styles.modalButtons}>
-                <Pressable
-                  style={styles.modalCancelButton}
-                  onPress={() => setShowDeleteConfirm(false)}
-                >
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.modalDeleteButton}
-                  onPress={handleDelete}
-                >
-                  <Text style={styles.modalDeleteButtonText}>Delete</Text>
-                </Pressable>
-              </View>
-            </View>
-          </Pressable>
-        </Modal>
       </View>
     </Modal>
   );
@@ -339,60 +294,5 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 15,
     fontWeight: "500",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 16,
-    padding: 24,
-    width: "85%",
-    maxWidth: 360,
-  },
-  modalTitle: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalMessage: {
-    color: "#A0A0A0",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#3D3D3D",
-    alignItems: "center",
-  },
-  modalCancelButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  modalDeleteButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#EF4444",
-    alignItems: "center",
-  },
-  modalDeleteButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
   },
 });

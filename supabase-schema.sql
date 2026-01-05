@@ -269,3 +269,35 @@ CREATE INDEX idx_ledger_entries_created_at ON ledger_entries(created_at DESC);
 CREATE INDEX idx_contact_tags_user_id ON contact_tags(user_id);
 CREATE INDEX idx_contact_tag_map_contact_id ON contact_tag_map(contact_id);
 CREATE INDEX idx_contact_tag_map_tag_id ON contact_tag_map(tag_id);
+
+## Create function to get total balance across all contacts for a user
+CREATE OR REPLACE FUNCTION get_total_balance(p_user_id UUID)
+RETURNS TABLE (balance DECIMAL) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(
+      CASE WHEN le.type = 'credit' THEN le.amount ELSE -le.amount END
+    ), 0)::DECIMAL(12,2) as balance
+  FROM ledger_entries le
+  INNER JOIN contacts c ON le.contact_id = c.id
+  WHERE c.user_id = p_user_id
+    AND c.deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+## Create function to get pending due (total amount customers owe)
+CREATE OR REPLACE FUNCTION get_pending_due(p_user_id UUID)
+RETURNS TABLE (pending_due DECIMAL) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(
+      CASE WHEN le.type = 'debit' THEN le.amount ELSE -le.amount END
+    ), 0)::DECIMAL(12,2) as pending_due
+  FROM ledger_entries le
+  INNER JOIN contacts c ON le.contact_id = c.id
+  WHERE c.user_id = p_user_id
+    AND c.deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
