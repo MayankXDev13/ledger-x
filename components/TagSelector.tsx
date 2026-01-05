@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, FlatList } from "react-native";
+import { View, Text, Pressable, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ContactTag } from "@/types/database";
 
@@ -26,20 +26,26 @@ export function TagSelector({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.label}>Tags</Text>
-        <Pressable style={styles.manageButton} onPress={onManageTags}>
+    <View className="mb-4">
+      <View className="flex-row justify-between items-center mb-2.5">
+        <Text className="text-[#A0A0A0] text-sm font-medium">Tags</Text>
+        <Pressable
+          className="flex-row items-center gap-1 py-1 px-2"
+          onPress={onManageTags}
+        >
           <Ionicons name="pricetags-outline" size={16} color="#3B82F6" />
-          <Text style={styles.manageButtonText}>Manage</Text>
+          <Text className="text-[#3B82F6] text-xs font-medium">Manage</Text>
         </Pressable>
       </View>
 
       {availableTags.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No tags yet</Text>
-          <Pressable onPress={onManageTags} style={styles.createTagButton}>
-            <Text style={styles.createTagButtonText}>
+        <View className="items-center py-4">
+          <Text className="text-[#A0A0A0] text-sm mb-2">No tags yet</Text>
+          <Pressable
+            onPress={onManageTags}
+            className="py-2 px-4 bg-blue-500 rounded-lg"
+          >
+            <Text className="text-white text-sm font-medium">
               Create your first tag
             </Text>
           </Pressable>
@@ -54,16 +60,16 @@ export function TagSelector({
             const isSelected = selectedTags.some((t) => t.id === tag.id);
             return (
               <Pressable
-                style={[
-                  styles.tagChip,
-                  { backgroundColor: tag.color + "20" },
-                  isSelected && styles.tagChipSelected,
-                ]}
+                className={`flex-row items-center py-1.5 px-3 rounded-full gap-1.5 border border-transparent ${isSelected ? "border-white" : ""}`}
+                style={{ backgroundColor: tag.color + "20" }}
                 onPress={() => toggleTag(tag)}
               >
-                <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+                <View
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
                 <Text
-                  style={[styles.tagText, isSelected && styles.tagTextSelected]}
+                  className={`text-white text-sm ${isSelected ? "font-medium" : ""}`}
                 >
                   {tag.name}
                 </Text>
@@ -73,87 +79,10 @@ export function TagSelector({
               </Pressable>
             );
           }}
-          ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
-          contentContainerStyle={styles.tagsList}
+          ItemSeparatorComponent={() => <View className="w-2" />}
+          contentContainerStyle={{ paddingVertical: 1 }}
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  label: {
-    color: "#A0A0A0",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  manageButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  manageButtonText: {
-    color: "#3B82F6",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  emptyText: {
-    color: "#A0A0A0",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  createTagButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
-  },
-  createTagButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  tagsList: {
-    paddingVertical: 4,
-  },
-  tagChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "transparent",
-    gap: 6,
-  },
-  tagChipSelected: {
-    borderColor: "#FFFFFF",
-  },
-  tagDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  tagText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-  },
-  tagTextSelected: {
-    fontWeight: "500",
-  },
-});

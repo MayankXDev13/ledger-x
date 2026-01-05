@@ -1,6 +1,5 @@
 import { StatusBar } from "expo-status-bar";
 import {
-  StyleSheet,
   View,
   Text,
   TextInput,
@@ -141,18 +140,22 @@ export default function AddCustomerScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className="flex-1 bg-[#1a1a1a]"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>Add Customer</Text>
-        <Text style={styles.subtitle}>Enter customer details</Text>
+      <View className="flex-1 px-6 pt-[60px]">
+        <Text className="text-3xl font-bold text-white mb-2">Add Customer</Text>
+        <Text className="text-lg text-[#888888] mb-8">
+          Enter customer details
+        </Text>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Customer Name</Text>
+        <View className="flex-1 gap-5">
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-[#A0A0A0]">
+              Customer Name
+            </Text>
             <TextInput
-              style={styles.input}
+              className="border border-[#3D3D3D] rounded-lg px-4 py-3.5 text-base text-white bg-[#2D2D2D]"
               placeholder="Full Name"
               placeholderTextColor="#666"
               value={name}
@@ -161,14 +164,18 @@ export default function AddCustomerScreen() {
                 setNameError(null);
               }}
             />
-            {nameError && <Text style={styles.errorText}>{nameError}</Text>}
+            {nameError && (
+              <Text className="text-red-500 text-sm">{nameError}</Text>
+            )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-[#A0A0A0]">
+              Phone Number
+            </Text>
             <TextInput
-              style={styles.input}
-              placeholder="+91 98765 43210"
+              className="border border-[#3D3D3D] rounded-lg px-4 py-3.5 text-base text-white bg-[#2D2D2D]"
+              placeholder="+91 99999 99999"
               placeholderTextColor="#666"
               value={phone}
               onChangeText={(text) => {
@@ -177,7 +184,9 @@ export default function AddCustomerScreen() {
               }}
               keyboardType="phone-pad"
             />
-            {phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+            {phoneError && (
+              <Text className="text-red-500 text-sm">{phoneError}</Text>
+            )}
           </View>
 
           <TagSelector
@@ -187,28 +196,26 @@ export default function AddCustomerScreen() {
             onManageTags={() => setShowTagModal(true)}
           />
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
-          <View style={styles.buttonContainer}>
+          <View className="flex-row gap-4 mt-4">
             <Pressable
-              style={[styles.button, styles.cancelButton]}
+              className="flex-1 py-4 rounded-lg items-center bg-[#2D2D2D]"
               onPress={() => router.back()}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text className="text-white text-base font-semibold">Cancel</Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.button,
-                styles.saveButton,
-                loading && styles.buttonDisabled,
-              ]}
+              className={`flex-1 py-4 rounded-lg items-center ${loading ? "opacity-60" : "bg-blue-500"}`}
               onPress={onSubmit}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Save Customer</Text>
+                <Text className="text-white text-base font-semibold">
+                  Save Customer
+                </Text>
               )}
             </Pressable>
           </View>
@@ -230,82 +237,3 @@ export default function AddCustomerScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: "#888888",
-    marginBottom: 32,
-  },
-  form: {
-    flex: 1,
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#A0A0A0",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#3D3D3D",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#ffffff",
-    backgroundColor: "#2D2D2D",
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 14,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 16,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  saveButton: {
-    backgroundColor: "#3B82F6",
-  },
-  cancelButton: {
-    backgroundColor: "#2D2D2D",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  cancelButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

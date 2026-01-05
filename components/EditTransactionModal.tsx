@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Pressable,
-  StyleSheet,
   TextInput,
   Modal,
   ScrollView,
@@ -74,225 +73,107 @@ export function EditTransactionModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View className="flex-1 bg-[#1A1A1A]">
+        <View className="flex-row justify-between items-center px-4 py-4 border-b border-[#2D2D2D]">
           <Pressable onPress={onClose}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Transaction</Text>
+          <Text className="text-white text-lg font-semibold">
+            Edit Transaction
+          </Text>
           <Pressable onPress={handleSave}>
-            <Text style={styles.saveButton}>Save</Text>
+            <Text className="text-blue-500 text-base font-semibold">Save</Text>
           </Pressable>
         </View>
 
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-        >
-          <View style={styles.amountSection}>
-            <Text style={styles.label}>Amount</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>₹</Text>
+        <ScrollView className="flex-1">
+          <View className="p-4">
+            <View className="mb-6">
+              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+                Amount
+              </Text>
+              <View className="flex-row items-center bg-[#2D2D2D] rounded-xl px-4">
+                <Text className="text-white text-xl font-semibold mr-1">₹</Text>
+                <TextInput
+                  className="flex-1 text-white text-xl font-semibold py-4"
+                  placeholder="0.00"
+                  placeholderTextColor="#666"
+                  keyboardType="decimal-pad"
+                  value={amount}
+                  onChangeText={setAmount}
+                />
+              </View>
+            </View>
+
+            <View className="mb-6">
+              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+                Type
+              </Text>
+              <View className="flex-row gap-3">
+                <Pressable
+                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${type === "credit" ? "border-[#3D3D3D] bg-[#3D3D3D]" : "border-transparent bg-[#2D2D2D]"}`}
+                  onPress={() => setType("credit")}
+                >
+                  <Ionicons
+                    name="arrow-down-circle"
+                    size={20}
+                    color={type === "credit" ? "#10B981" : "#666"}
+                  />
+                  <Text
+                    className={`text-sm font-medium ${type === "credit" ? "text-white" : "text-[#666]"}`}
+                  >
+                    Credit
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${type === "debit" ? "border-[#3D3D3D] bg-[#3D3D3D]" : "border-transparent bg-[#2D2D2D]"}`}
+                  onPress={() => setType("debit")}
+                >
+                  <Ionicons
+                    name="arrow-up-circle"
+                    size={20}
+                    color={type === "debit" ? "#EF4444" : "#666"}
+                  />
+                  <Text
+                    className={`text-sm font-medium ${type === "debit" ? "text-white" : "text-[#666]"}`}
+                  >
+                    Debit
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View className="mb-6">
+              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+                Note (Optional)
+              </Text>
               <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
+                className="bg-[#2D2D2D] rounded-xl p-4 text-white text-sm min-[80px]"
+                placeholder="Add a note..."
                 placeholderTextColor="#666"
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={setAmount}
+                value={note}
+                onChangeText={setNote}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Type</Text>
-            <View style={styles.typeToggle}>
+            <View className="mt-8 pt-6 border-t border-[#2D2D2D]">
               <Pressable
-                style={[
-                  styles.typeButton,
-                  type === "credit" && styles.typeButtonSelected,
-                ]}
-                onPress={() => setType("credit")}
+                className="flex-row items-center justify-center gap-2 py-3"
+                onPress={handleDelete}
               >
-                <Ionicons
-                  name="arrow-down-circle"
-                  size={20}
-                  color={type === "credit" ? "#10B981" : "#666"}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    type === "credit" && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  Credit
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.typeButton,
-                  type === "debit" && styles.typeButtonSelected,
-                ]}
-                onPress={() => setType("debit")}
-              >
-                <Ionicons
-                  name="arrow-up-circle"
-                  size={20}
-                  color={type === "debit" ? "#EF4444" : "#666"}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    type === "debit" && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  Debit
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                <Text className="text-red-500 text-sm font-medium">
+                  Delete Transaction
                 </Text>
               </Pressable>
             </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Note (Optional)</Text>
-            <TextInput
-              style={styles.noteInput}
-              placeholder="Add a note..."
-              placeholderTextColor="#666"
-              value={note}
-              onChangeText={setNote}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.deleteSection}>
-            <Pressable style={styles.deleteButton} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={20} color="#EF4444" />
-              <Text style={styles.deleteButtonText}>Delete Transaction</Text>
-            </Pressable>
           </View>
         </ScrollView>
       </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2D2D2D",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  saveButton: {
-    color: "#3B82F6",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-  },
-  amountSection: {
-    marginBottom: 24,
-  },
-  label: {
-    color: "#A0A0A0",
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 8,
-  },
-  amountInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2D2D2D",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  currencySymbol: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "600",
-    marginRight: 4,
-  },
-  amountInput: {
-    flex: 1,
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "600",
-    paddingVertical: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  typeToggle: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#2D2D2D",
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  typeButtonSelected: {
-    borderColor: "#3D3D3D",
-    backgroundColor: "#3D3D3D",
-  },
-  typeButtonText: {
-    color: "#666",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  typeButtonTextSelected: {
-    color: "#FFFFFF",
-  },
-  noteInput: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 12,
-    padding: 16,
-    color: "#FFFFFF",
-    fontSize: 15,
-    minHeight: 80,
-  },
-  deleteSection: {
-    marginTop: 32,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: "#2D2D2D",
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-  },
-  deleteButtonText: {
-    color: "#EF4444",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-});

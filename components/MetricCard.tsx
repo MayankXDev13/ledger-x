@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 interface MetricCardProps {
@@ -21,28 +21,27 @@ export function MetricCard({
   trend,
 }: MetricCardProps) {
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
+    <View className="bg-[#2a2a2a] rounded-xl p-4">
+      <View className="flex-row items-center gap-2 mb-3">
         <View
-          style={[styles.iconContainer, { backgroundColor: iconColor + "20" }]}
+          className="w-9 h-9 rounded-lg items-center justify-center"
+          style={{ backgroundColor: iconColor + "20" }}
         >
           <Ionicons name={icon as any} size={20} color={iconColor} />
         </View>
-        <Text style={styles.title}>{title}</Text>
+        <Text className="text-sm text-gray-400 font-medium">{title}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
+      <Text className="text-2xl font-bold text-white mb-1">{value}</Text>
       {trend && (
-        <View style={styles.trendContainer}>
+        <View className="flex-row items-center gap-1">
           <Ionicons
             name={trend.isPositive ? "trending-up" : "trending-down"}
             size={14}
             color={trend.isPositive ? "#10B981" : "#EF4444"}
           />
           <Text
-            style={[
-              styles.trendText,
-              { color: trend.isPositive ? "#10B981" : "#EF4444" },
-            ]}
+            className="text-sm font-medium"
+            style={{ color: trend.isPositive ? "#10B981" : "#EF4444" }}
           >
             {trend.value}
           </Text>
@@ -51,44 +50,3 @@ export function MetricCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#2a2a2a",
-    borderRadius: 16,
-    padding: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 14,
-    color: "#888888",
-    fontWeight: "500",
-  },
-  value: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  trendContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  trendText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-});

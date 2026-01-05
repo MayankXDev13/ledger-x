@@ -1,6 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
 import {
-  StyleSheet,
   View,
   Text,
   FlatList,
@@ -118,52 +117,59 @@ export default function CustomersScreen() {
 
   const renderContact = ({ item }: { item: ContactWithTags }) => (
     <Link href={`/customers/details?id=${item.id}`} asChild>
-      <Pressable style={styles.contactCard}>
-        <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{item.name}</Text>
-          <Text style={styles.contactPhone}>{item.phone}</Text>
+      <Pressable className="flex-row items-center justify-between py-4 border-b border-[#333333]">
+        <View className="flex-1">
+          <Text className="text-white font-medium text-lg">{item.name}</Text>
+          <Text className="text-[#888888] text-sm mt-1">{item.phone}</Text>
           {item.tags.length > 0 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.tagsContainer}
-              contentContainerStyle={styles.tagsContent}
+              className="mt-2 -ml-1"
+              contentContainerStyle={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 1.5,
+              }}
             >
               {item.tags.slice(0, 3).map((tag) => (
                 <View
                   key={tag.id}
-                  style={[
-                    styles.tagChip,
-                    { backgroundColor: tag.color + "30" },
-                  ]}
+                  className="flex-row items-center py-0.5 px-2 rounded-full"
+                  style={{ backgroundColor: tag.color + "30" }}
                 >
                   <View
-                    style={[styles.tagDot, { backgroundColor: tag.color }]}
+                    className="w-1.5 h-1.5 rounded-full mr-1"
+                    style={{ backgroundColor: tag.color }}
                   />
-                  <Text style={styles.tagText}>{tag.name}</Text>
+                  <Text className="text-[#A0A0A0] text-xs">{tag.name}</Text>
                 </View>
               ))}
               {item.tags.length > 3 && (
-                <Text style={styles.moreTags}>+{item.tags.length - 3}</Text>
+                <Text className="text-[#666666] text-xs ml-0.5">
+                  +{item.tags.length - 3}
+                </Text>
               )}
             </ScrollView>
           )}
         </View>
-        <Text style={styles.arrow}>›</Text>
+        <Text className="text-[#666666] text-xl ml-3">›</Text>
       </Pressable>
     </Link>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Customers</Text>
-        <Text style={styles.subtitle}>{filteredContacts.length} contacts</Text>
+    <View className="flex-1 bg-[#1a1a1a]">
+      <View className="px-6 pt-[60px] pb-4">
+        <Text className="text-3xl font-bold text-white">Customers</Text>
+        <Text className="text-base text-[#888888] mt-1">
+          {filteredContacts.length} contacts
+        </Text>
       </View>
 
-      <View style={styles.filterContainer}>
+      <View className="px-6 mb-4">
         <TextInput
-          style={styles.searchInput}
+          className="border border-[#333333] rounded-lg px-4 py-3 text-base text-white bg-[#2a2a2a] mb-3"
           placeholder="Search customers..."
           placeholderTextColor="#666666"
           value={searchQuery}
@@ -174,21 +180,15 @@ export default function CustomersScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.tagFilterContainer}
-            contentContainerStyle={styles.tagFilterContent}
+            className="mx-[-24] px-6"
+            contentContainerStyle={{ gap: 2 }}
           >
             <Pressable
-              style={[
-                styles.tagFilterChip,
-                !selectedTagFilter && styles.tagFilterChipSelected,
-              ]}
+              className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-[#2a2a2a] rounded-full border ${!selectedTagFilter ? "border-blue-500 bg-blue-500" : "border-[#333333]"}`}
               onPress={() => setSelectedTagFilter(null)}
             >
               <Text
-                style={[
-                  styles.tagFilterText,
-                  !selectedTagFilter && styles.tagFilterTextSelected,
-                ]}
+                className={`text-xs font-medium ${!selectedTagFilter ? "text-white" : "text-[#888888]"}`}
               >
                 All
               </Text>
@@ -197,10 +197,7 @@ export default function CustomersScreen() {
             {availableTags.map((tag) => (
               <Pressable
                 key={tag.id}
-                style={[
-                  styles.tagFilterChip,
-                  selectedTagFilter === tag.id && styles.tagFilterChipSelected,
-                ]}
+                className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-[#2a2a2a] rounded-full border ${selectedTagFilter === tag.id ? "border-blue-500 bg-blue-500" : "border-[#333333]"}`}
                 onPress={() =>
                   setSelectedTagFilter(
                     selectedTagFilter === tag.id ? null : tag.id,
@@ -208,14 +205,11 @@ export default function CustomersScreen() {
                 }
               >
                 <View
-                  style={[styles.tagFilterDot, { backgroundColor: tag.color }]}
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: tag.color }}
                 />
                 <Text
-                  style={[
-                    styles.tagFilterText,
-                    selectedTagFilter === tag.id &&
-                      styles.tagFilterTextSelected,
-                  ]}
+                  className={`text-xs font-medium ${selectedTagFilter === tag.id ? "text-white" : "text-[#888888]"}`}
                 >
                   {tag.name}
                 </Text>
@@ -226,18 +220,18 @@ export default function CustomersScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#ffffff" />
         </View>
       ) : filteredContacts.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-[#888888] text-lg">
             {searchQuery || selectedTagFilter
               ? "No customers found"
               : "No customers yet"}
           </Text>
           {!searchQuery && !selectedTagFilter && (
-            <Text style={styles.emptySubtext}>
+            <Text className="text-[#666666] text-sm mt-2">
               Tap + to add your first customer
             </Text>
           )}
@@ -247,174 +241,16 @@ export default function CustomersScreen() {
           data={filteredContacts}
           renderItem={renderContact}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
       <Link href="/customers/add" asChild>
-        <Pressable style={styles.fab}>
+        <Pressable className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-white items-center justify-center">
           <Ionicons name="add" size={28} color="#000000" />
         </Pressable>
       </Link>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#888888",
-    marginTop: 4,
-  },
-  filterContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#333333",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#ffffff",
-    backgroundColor: "#2a2a2a",
-    marginBottom: 12,
-  },
-  tagFilterContainer: {
-    marginHorizontal: -24,
-    paddingHorizontal: 24,
-  },
-  tagFilterContent: {
-    gap: 8,
-  },
-  tagFilterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#2a2a2a",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  tagFilterChipSelected: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
-  },
-  tagFilterDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  tagFilterText: {
-    color: "#888888",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  tagFilterTextSelected: {
-    color: "#ffffff",
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#888888",
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 8,
-  },
-  listContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-  },
-  contactCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#333333",
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#ffffff",
-  },
-  contactPhone: {
-    fontSize: 14,
-    color: "#888888",
-    marginTop: 4,
-  },
-  tagsContainer: {
-    marginTop: 8,
-    marginHorizontal: -4,
-  },
-  tagsContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  tagChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
-  tagDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  tagText: {
-    color: "#A0A0A0",
-    fontSize: 11,
-  },
-  moreTags: {
-    color: "#666666",
-    fontSize: 11,
-    marginLeft: 2,
-  },
-  arrow: {
-    fontSize: 22,
-    color: "#666666",
-    marginLeft: 12,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

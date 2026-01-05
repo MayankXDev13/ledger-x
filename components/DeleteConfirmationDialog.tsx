@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
+import { View, Text, Pressable, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 interface DeleteConfirmationDialogProps {
@@ -30,9 +30,9 @@ export function DeleteConfirmationDialog({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <View style={styles.iconContainer}>
+      <View className="flex-1 bg-black/70 justify-center items-center">
+        <View className="bg-[#2D2D2D] rounded-xl p-6 w-[85%] max-w-[360] items-center">
+          <View className="mb-4">
             <Ionicons
               name={isDestructive ? "warning-outline" : "information-outline"}
               size={40}
@@ -40,27 +40,30 @@ export function DeleteConfirmationDialog({
             />
           </View>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text className="text-xl font-semibold text-white text-center mb-2">
+            {title}
+          </Text>
+          <Text className="text-sm text-[#A0A0A0] text-center mb-6 leading-5">
+            {message}
+          </Text>
 
-          <View style={styles.buttonContainer}>
+          <View className="flex-row gap-3 w-full">
             <Pressable
-              style={[styles.button, styles.cancelButton]}
+              className="flex-1 py-3 rounded-lg items-center bg-[#3D3D3D]"
               onPress={onCancel}
             >
-              <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              <Text className="text-white text-base font-medium">
+                {cancelText}
+              </Text>
             </Pressable>
 
             <Pressable
-              style={[
-                styles.button,
-                isDestructive
-                  ? styles.confirmButtonDestructive
-                  : styles.confirmButton,
-              ]}
+              className={`flex-1 py-3 rounded-lg items-center ${isDestructive ? "bg-red-500" : "bg-blue-500"}`}
               onPress={onConfirm}
             >
-              <Text style={styles.confirmButtonText}>{confirmText}</Text>
+              <Text className="text-white text-base font-semibold">
+                {confirmText}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -68,67 +71,3 @@ export function DeleteConfirmationDialog({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 16,
-    padding: 24,
-    width: "85%",
-    maxWidth: 360,
-    alignItems: "center",
-  },
-  iconContainer: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  message: {
-    fontSize: 14,
-    color: "#A0A0A0",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#3D3D3D",
-  },
-  cancelButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  confirmButton: {
-    backgroundColor: "#3B82F6",
-  },
-  confirmButtonDestructive: {
-    backgroundColor: "#EF4444",
-  },
-  confirmButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

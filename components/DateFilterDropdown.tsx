@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Modal,
-  FlatList,
-} from "react-native";
+import { View, Text, Pressable, Modal, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DateFilter, DATE_FILTER_PRESETS } from "@/types/database";
 
@@ -39,9 +32,12 @@ export function DateFilterDropdown({
 
   return (
     <>
-      <Pressable style={styles.trigger} onPress={() => setVisible(true)}>
+      <Pressable
+        className="flex-row items-center bg-[#2D2D2D] px-3 py-2 rounded-lg gap-1.5"
+        onPress={() => setVisible(true)}
+      >
         <Ionicons name="calendar-outline" size={18} color="#3B82F6" />
-        <Text style={styles.triggerText}>{currentLabel}</Text>
+        <Text className="text-white text-sm font-medium">{currentLabel}</Text>
         <Ionicons name="chevron-down" size={16} color="#A0A0A0" />
       </Pressable>
 
@@ -51,10 +47,15 @@ export function DateFilterDropdown({
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <Pressable style={styles.overlay} onPress={() => setVisible(false)}>
-          <View style={styles.dropdown}>
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Filter by Date</Text>
+        <Pressable
+          className="flex-1 bg-black/50 justify-start pt-25 px-4"
+          onPress={() => setVisible(false)}
+        >
+          <View className="bg-[#2D2D2D] rounded-xl overflow-hidden">
+            <View className="flex-row justify-between items-center p-4 border-b border-[#3D3D3D]">
+              <Text className="text-white text-base font-semibold">
+                Filter by Date
+              </Text>
               <Pressable onPress={() => setVisible(false)}>
                 <Ionicons name="close" size={20} color="#A0A0A0" />
               </Pressable>
@@ -70,24 +71,23 @@ export function DateFilterDropdown({
 
                 return (
                   <Pressable
-                    style={[styles.item, isSelected && styles.itemSelected]}
+                    className={`flex-row items-center py-3.5 px-4 gap-2.5 ${isSelected ? "bg-blue-500/10" : ""}`}
                     onPress={() => handleSelect(item)}
                   >
                     {isSelected && (
                       <Ionicons name="checkmark" size={18} color="#3B82F6" />
                     )}
                     <Text
-                      style={[
-                        styles.itemText,
-                        isSelected && styles.itemTextSelected,
-                      ]}
+                      className={`text-base ${isSelected ? "text-blue-500 font-medium" : "text-[#A0A0A0]"}`}
                     >
                       {item.label}
                     </Text>
                   </Pressable>
                 );
               }}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => (
+                <View className="h-px bg-[#3D3D3D] mx-4" />
+              )}
             />
           </View>
         </Pressable>
@@ -95,68 +95,3 @@ export function DateFilterDropdown({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2D2D2D",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  triggerText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-start",
-    paddingTop: 100,
-    paddingHorizontal: 16,
-  },
-  dropdown: {
-    backgroundColor: "#2D2D2D",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#3D3D3D",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  itemSelected: {
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-  },
-  itemText: {
-    color: "#A0A0A0",
-    fontSize: 15,
-  },
-  itemTextSelected: {
-    color: "#3B82F6",
-    fontWeight: "500",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#3D3D3D",
-    marginHorizontal: 16,
-  },
-});
