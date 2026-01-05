@@ -264,7 +264,7 @@ export default function CustomerDetailsScreen() {
           {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#666" />
+      <Ionicons name="chevron-forward" size={18} color="#666" />
     </Pressable>
   );
 
@@ -288,7 +288,7 @@ export default function CustomerDetailsScreen() {
             style={styles.editButton}
             onPress={() => router.push(`/customers/edit?id=${id}`)}
           >
-            <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
+            <Ionicons name="pencil-outline" size={18} color="#3B82F6" />
             <Text style={styles.editButtonText}>Edit</Text>
           </Pressable>
         </View>
@@ -327,25 +327,25 @@ export default function CustomerDetailsScreen() {
           style={styles.actionButton}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
         >
-          <Ionicons name="arrow-down-circle" size={20} color="#10B981" />
+          <Ionicons name="arrow-down-circle" size={18} color="#10B981" />
           <Text style={styles.actionButtonText}>Credit</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
         >
-          <Ionicons name="arrow-up-circle" size={20} color="#EF4444" />
+          <Ionicons name="arrow-up-circle" size={18} color="#EF4444" />
           <Text style={styles.actionButtonText}>Debit</Text>
         </Pressable>
         <Pressable style={styles.whatsappButton} onPress={sendWhatsApp}>
-          <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+          <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
           <Text style={styles.whatsappButtonText}>WhatsApp</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.smsButton]}
           onPress={sendSMS}
         >
-          <Ionicons name="chatbubble-ellipses" size={20} color="#3B82F6" />
+          <Ionicons name="chatbubble-ellipses" size={18} color="#3B82F6" />
           <Text style={styles.smsButtonText}>SMS</Text>
         </Pressable>
       </View>
@@ -393,7 +393,7 @@ export default function CustomerDetailsScreen() {
           style={styles.deleteCustomerButton}
           onPress={() => setShowDeleteCustomerConfirm(true)}
         >
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
           <Text style={styles.deleteCustomerButtonText}>Delete Customer</Text>
         </Pressable>
       </View>
