@@ -1,8 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import AuthGuard from "@/components/AuthGuard";
-
-const publicRoutes = ["/", "/auth/login", "/auth/signup"];
+import { publicRoutes } from "@/lib/auth";
 
 export default function RootLayout() {
   return (

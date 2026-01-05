@@ -1,6 +1,6 @@
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
-import { publicRoutes } from "@/app/_layout";
+import { publicRoutes } from "@/lib/auth";
 import { usePathname, Redirect } from "expo-router";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (session && isPublicRoute) {
-    return <Redirect href="/home" />;
+    return <Redirect href="/(tabs)/home" />;
   }
 
   return <>{children}</>;
