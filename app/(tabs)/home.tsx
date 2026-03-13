@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +22,7 @@ import {
 } from "@/types/database";
 
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const { session, loading: authLoading } = useAuth();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -87,7 +89,7 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a]">
-      <View className="px-6 pt-[60px] pb-6">
+      <View className="px-6 pb-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-extrabold text-white">Dashboard</Text>
         <Text className="text-base text-[#888888] mt-1">
           Welcome back to LedgerX
@@ -96,7 +98,10 @@ export default function DashboardScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 24,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

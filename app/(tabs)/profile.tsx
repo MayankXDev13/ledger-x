@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Text, View, Pressable } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -23,7 +25,7 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a]">
-      <View className="px-6 pt-[60px] pb-6">
+      <View className="px-6 pb-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Profile</Text>
       </View>
 

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, Link } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +16,7 @@ import { Contact } from "@/types/database";
 
 export default function CustomersScreen() {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function CustomersScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>Customers</Text>
         <Text style={styles.subtitle}>{filteredContacts.length} contacts</Text>
       </View>
@@ -102,13 +104,16 @@ export default function CustomersScreen() {
           data={filteredContacts}
           renderItem={renderContact}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
           showsVerticalScrollIndicator={false}
         />
       )}
 
       <Link href="/customers/add" asChild>
-        <Pressable style={styles.fab}>
+        <Pressable style={[styles.fab, { bottom: insets.bottom + 16 }]}>
           <Text style={styles.fabText}>+</Text>
         </Pressable>
       </Link>
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   contactCard: {
     flexDirection: "row",

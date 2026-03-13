@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { LedgerEntry, TransactionTag } from "@/types/database";
@@ -12,6 +13,7 @@ interface EntryWithTags extends LedgerEntry {
 }
 
 export default function LedgerScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [entries, setEntries] = useState<EntryWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function LedgerScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a]">
-      <View className="px-6 pt-[60px] pb-4">
+      <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Ledger</Text>
         <Text className="text-base text-[#888888] mt-1">
           Recent transactions
@@ -124,7 +126,10 @@ export default function LedgerScreen() {
           data={entries}
           renderItem={renderEntry}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: insets.bottom + 24,
+          }}
           showsVerticalScrollIndicator={false}
         />
       )}

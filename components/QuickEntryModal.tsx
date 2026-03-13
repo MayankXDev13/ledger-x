@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +36,7 @@ export function QuickEntryModal({
   onEntryAdded,
 }: QuickEntryModalProps) {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -165,7 +167,10 @@ export function QuickEntryModal({
         className="flex-1 bg-[#1a1a1a]"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View className="flex-row items-center justify-between px-6 pt-[60px] pb-4 border-b border-[#333]">
+        <View
+          className="flex-row items-center justify-between px-6 border-b border-[#333]"
+          style={{ paddingTop: insets.top + 12, paddingBottom: 12 }}
+        >
           <Pressable onPress={handleClose}>
             <Text className="text-[#888] text-base">Cancel</Text>
           </Pressable>
@@ -202,7 +207,11 @@ export function QuickEntryModal({
                 data={filteredContacts}
                 renderItem={renderContactItem}
                 keyExtractor={(item) => item.id}
-                className="flex-1 px-6"
+                className="flex-1"
+                contentContainerStyle={{
+                  paddingHorizontal: 24,
+                  paddingBottom: insets.bottom + 16,
+                }}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                   <Text className="text-center text-[#666] mt-8">
@@ -214,7 +223,10 @@ export function QuickEntryModal({
           )}
         </View>
 
-        <View className="px-6 pb-8 pt-4 border-t border-[#333] gap-3">
+        <View
+          className="px-6 pt-4 border-t border-[#333] gap-3"
+          style={{ paddingBottom: insets.bottom + 12 }}
+        >
           {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
           <View className="flex-row items-center bg-[#2a2a2a] rounded-lg px-4">

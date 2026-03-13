@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -20,6 +21,7 @@ interface ContactWithTags extends Contact {
 }
 
 export default function CustomersScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
@@ -160,7 +162,7 @@ export default function CustomersScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a]">
-      <View className="px-6 pt-[60px] pb-4">
+      <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Customers</Text>
         <Text className="text-base text-[#888888] mt-1">
           {filteredContacts.length} contacts
@@ -241,13 +243,28 @@ export default function CustomersScreen() {
           data={filteredContacts}
           renderItem={renderContact}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: insets.bottom + 24,
+          }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
       <Link href="/customers/add" asChild>
-        <Pressable className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-white items-center justify-center">
+        <Pressable
+          style={{
+            position: "absolute",
+            bottom: insets.bottom + 16,
+            right: 16,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: "#ffffff",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Ionicons name="add" size={28} color="#000000" />
         </Pressable>
       </Link>
