@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
@@ -39,6 +40,7 @@ interface BalanceData {
 
 export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [entriesWithTags, setEntriesWithTags] = useState<
@@ -289,7 +291,7 @@ export default function CustomerDetailsScreen() {
   return (
     <View style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.name}>{contact.name}</Text>
@@ -451,7 +453,10 @@ export default function CustomerDetailsScreen() {
         data={filteredEntries}
         renderItem={renderEntry}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -665,7 +670,7 @@ const styles = StyleSheet.create({
 
   txTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
 
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
+  list: { paddingHorizontal: 20, paddingBottom: 24 },
 
   entryCard: {
     paddingVertical: 14,

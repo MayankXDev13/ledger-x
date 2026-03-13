@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +18,7 @@ import { TransactionTag, TAG_COLORS } from "@/types/database";
 export default function ManageTransactionTagsScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [tags, setTags] = useState<TransactionTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTagName, setNewTagName] = useState("");
@@ -159,7 +161,7 @@ export default function ManageTransactionTagsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </Pressable>
@@ -227,7 +229,10 @@ export default function ManageTransactionTagsScreen() {
           data={tags}
           keyExtractor={(item) => item.id}
           renderItem={renderTagItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}

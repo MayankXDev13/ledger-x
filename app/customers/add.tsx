@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +18,7 @@ import { TagSelector } from "@/components/TagSelector";
 import { TagManagementModal } from "@/components/TagManagementModal";
 
 export default function AddCustomerScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -143,7 +145,7 @@ export default function AddCustomerScreen() {
       className="flex-1 bg-[#1a1a1a]"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View className="flex-1 px-6 pt-[60px]">
+      <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white mb-2">Add Customer</Text>
         <Text className="text-lg text-[#888888] mb-8">
           Enter customer details

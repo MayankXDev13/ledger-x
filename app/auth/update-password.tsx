@@ -6,12 +6,14 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function UpdatePasswordScreen() {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -86,7 +88,7 @@ export default function UpdatePasswordScreen() {
 
   return (
     <View className="flex-1 bg-[#1a1a1a]">
-      <View className="flex-1 px-6 pt-[60px]">
+      <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white mb-2">
           Change Password
         </Text>
