@@ -42,7 +42,7 @@ export default function CustomerDetailsScreen() {
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [entriesWithTags, setEntriesWithTags] = useState<
-    (LedgerEntry & { tags?: TransactionTag[] })[]
+    (LedgerEntry & { tags?: TransactionTag[]; running_balance?: number })[]
   >([]);
   const [balance, setBalance] = useState<BalanceData>({
     total_credit: 0,
@@ -79,8 +79,9 @@ export default function CustomerDetailsScreen() {
 
     if (contactData) setContact(contactData);
 
-    await fetchTransactions();
-    await fetchBalance();
+    // Fetch balance first so we can compute running balances reliably
+    const startingBalance = await fetchBalance();
+    await fetchTransactions(startingBalance ?? undefined);
     await fetchTagTotals();
     if (contactData?.user_id) {
       await fetchTransactionTags(contactData.user_id);
@@ -89,7 +90,7 @@ export default function CustomerDetailsScreen() {
     setLoading(false);
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (startingBalanceParam?: number) => {
     if (!id) return;
 
     const { data } = await supabase
@@ -106,17 +107,43 @@ export default function CustomerDetailsScreen() {
       }),
     );
 
-    setEntriesWithTags(entriesWithTagsData);
+    // Compute running (post-transaction) balance for each entry.
+    // entriesWithTagsData is ordered newest -> oldest (created_at descending)
+    let running =
+      typeof startingBalanceParam === "number"
+        ? startingBalanceParam
+        : (balance.balance ?? 0);
+
+    const withRunning = entriesWithTagsData.map((entry) => {
+      const entryWithRunning = { ...entry, running_balance: running };
+      const amt = Number(entry.amount || 0);
+      // Reverse the effect so the next (older) entry gets its post-transaction balance
+      if (entry.type === "credit") {
+        // credit increases the balance
+        running = running - amt;
+      } else {
+        // debit decreases the balance
+        running = running + amt;
+      }
+      return entryWithRunning;
+    });
+
+    setEntriesWithTags(withRunning);
   };
 
-  const fetchBalance = async () => {
-    if (!id) return;
+  const fetchBalance = async (): Promise<number | null> => {
+    if (!id) return null;
 
     const { data } = await supabase.rpc("get_contact_balance", {
       contact_id: id,
     });
 
-    if (data?.length) setBalance(data[0]);
+    if (data?.length) {
+      setBalance(data[0]);
+      return data[0].balance;
+    }
+
+    return null;
   };
 
   const fetchTagTotals = async () => {
@@ -205,7 +232,7 @@ export default function CustomerDetailsScreen() {
   const renderEntry = ({
     item,
   }: {
-    item: LedgerEntry & { tags?: TransactionTag[] };
+    item: LedgerEntry & { tags?: TransactionTag[]; running_balance?: number };
   }) => (
     <Pressable
       style={styles.entryCard}
@@ -223,6 +250,21 @@ export default function CustomerDetailsScreen() {
         <Text style={styles.entryDate}>
           {format(new Date(item.created_at), "dd MMM yyyy, hh:mm a")}
         </Text>
+        {/* Post-transaction running balance for this row */}
+        {typeof item.running_balance !== "undefined" && (
+          <Text
+            style={[
+              styles.entryBalance,
+              item.running_balance > 0
+                ? styles.owe
+                : item.running_balance < 0
+                  ? styles.owed
+                  : styles.settled,
+            ]}
+          >
+            {formatCurrency(Math.abs(Number(item.running_balance || 0)))}
+          </Text>
+        )}
         {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
         {item.tags && item.tags.length > 0 && (
           <View style={styles.entryTags}>
@@ -635,6 +677,7 @@ const styles = StyleSheet.create({
 
   entryAmount: { fontSize: 18, fontWeight: "600" },
   entryDate: { color: "#777", marginTop: 2 },
+  entryBalance: { color: "#888", marginTop: 4, fontSize: 13 },
   entryNote: { color: "#666", fontStyle: "italic", marginTop: 4 },
 
   entryTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
