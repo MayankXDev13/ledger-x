@@ -1,17 +1,21 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        // adjust tab bar to respect bottom safe area (gesture bar / home indicator)
         tabBarStyle: {
           backgroundColor: "#1a1a1a",
           borderTopColor: "#333",
           borderTopWidth: 1,
-          height: 88,
-          paddingBottom: 8,
+          height: 56 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: "#fff",
