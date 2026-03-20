@@ -77,7 +77,7 @@ export default function DashboardScreen() {
 
   if (authLoading || loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#1a1a1a]">
+      <View className="flex-1 items-center justify-center bg-brand-dark">
         <ActivityIndicator size="large" color="#ffffff" />
       </View>
     );
@@ -88,7 +88,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#1a1a1a]">
+    <View className="flex-1 bg-brand-dark">
       <View className="px-6 pb-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-extrabold text-white">Dashboard</Text>
         <Text className="text-base text-[#888888] mt-1">
@@ -154,7 +154,7 @@ export default function DashboardScreen() {
           </Text>
           <View className="flex-row gap-3">
             <Pressable
-              className="flex-1 flex-row items-center justify-center bg-[#2a2a2a] rounded-xl py-4 gap-2 border border-[#333]"
+              className="flex-1 flex-row items-center justify-center bg-brand-card rounded-xl py-4 gap-2 border border-brand-border"
               onPress={() => handleQuickEntry("credit")}
             >
               <Ionicons name="add-circle" size={24} color="#10B981" />
@@ -163,7 +163,7 @@ export default function DashboardScreen() {
               </Text>
             </Pressable>
             <Pressable
-              className="flex-1 flex-row items-center justify-center bg-[#2a2a2a] rounded-xl py-4 gap-2 border border-[#333]"
+              className="flex-1 flex-row items-center justify-center bg-brand-card rounded-xl py-4 gap-2 border border-brand-border"
               onPress={() => handleQuickEntry("debit")}
             >
               <Ionicons name="remove-circle" size={24} color="#EF4444" />
@@ -193,7 +193,7 @@ export default function DashboardScreen() {
               {recentTransactions.map((transaction) => (
                 <View
                   key={transaction.id}
-                  className="flex-row items-center justify-between bg-[#2a2a2a] rounded-xl p-4"
+                  className="flex-row items-center justify-between bg-brand-card rounded-xl p-4"
                 >
                   <View className="flex-row items-center flex-1 mr-3">
                     <View

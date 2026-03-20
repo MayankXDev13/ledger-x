@@ -142,7 +142,7 @@ export default function AddCustomerScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#1a1a1a]"
+      className="flex-1 bg-brand-dark"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>

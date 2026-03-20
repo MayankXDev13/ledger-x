@@ -12,7 +12,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       <View
         style={{
           flex: 1,
-          backgroundColor: "#1a1a1a",
+          backgroundColor: "#0A0A0A",
           justifyContent: "center",
           alignItems: "center",
         }}

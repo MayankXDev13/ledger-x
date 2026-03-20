@@ -87,7 +87,7 @@ export default function UpdatePasswordScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#1a1a1a]">
+    <View className="flex-1 bg-brand-dark">
       <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white mb-2">
           Change Password
@@ -102,7 +102,7 @@ export default function UpdatePasswordScreen() {
               Current Password
             </Text>
             <TextInput
-              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
+              className="border border-brand-border rounded-lg px-4 py-3.5 text-base text-white bg-brand-card"
               placeholder="Enter current password"
               placeholderTextColor="#666666"
               value={currentPassword}
@@ -124,7 +124,7 @@ export default function UpdatePasswordScreen() {
               New Password
             </Text>
             <TextInput
-              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
+              className="border border-brand-border rounded-lg px-4 py-3.5 text-base text-white bg-brand-card"
               placeholder="Enter new password"
               placeholderTextColor="#666666"
               value={newPassword}
@@ -144,7 +144,7 @@ export default function UpdatePasswordScreen() {
               Confirm New Password
             </Text>
             <TextInput
-              className="border border-[#333333] rounded-lg px-4 py-3.5 text-base text-white bg-[#2a2a2a]"
+              className="border border-brand-border rounded-lg px-4 py-3.5 text-base text-white bg-brand-card"
               placeholder="Confirm new password"
               placeholderTextColor="#666666"
               value={confirmPassword}

@@ -119,7 +119,7 @@ export default function CustomersScreen() {
 
   const renderContact = ({ item }: { item: ContactWithTags }) => (
     <Link href={`/customers/details?id=${item.id}`} asChild>
-      <Pressable className="flex-row items-center justify-between py-4 border-b border-[#333333]">
+      <Pressable className="flex-row items-center justify-between py-4 border-b border-brand-border">
         <View className="flex-1">
           <Text className="text-white font-medium text-lg">{item.name}</Text>
           <Text className="text-[#888888] text-sm mt-1">{item.phone}</Text>
@@ -161,7 +161,7 @@ export default function CustomersScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#1a1a1a]">
+    <View className="flex-1 bg-brand-dark">
       <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Customers</Text>
         <Text className="text-base text-[#888888] mt-1">
@@ -171,7 +171,7 @@ export default function CustomersScreen() {
 
       <View className="px-6 mb-4">
         <TextInput
-          className="border border-[#333333] rounded-lg px-4 py-3 text-base text-white bg-[#2a2a2a] mb-3"
+          className="border border-brand-border rounded-lg px-4 py-3 text-base text-white bg-brand-card mb-3"
           placeholder="Search customers..."
           placeholderTextColor="#666666"
           value={searchQuery}
@@ -186,7 +186,7 @@ export default function CustomersScreen() {
             contentContainerStyle={{ gap: 2 }}
           >
             <Pressable
-              className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-[#2a2a2a] rounded-full border ${!selectedTagFilter ? "border-blue-500 bg-blue-500" : "border-[#333333]"}`}
+              className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-brand-card rounded-full border ${!selectedTagFilter ? "border-blue-500 bg-blue-500" : "border-brand-border"}`}
               onPress={() => setSelectedTagFilter(null)}
             >
               <Text
@@ -199,7 +199,7 @@ export default function CustomersScreen() {
             {availableTags.map((tag) => (
               <Pressable
                 key={tag.id}
-                className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-[#2a2a2a] rounded-full border ${selectedTagFilter === tag.id ? "border-blue-500 bg-blue-500" : "border-[#333333]"}`}
+                className={`flex-row items-center gap-1.5 py-1.5 px-3 bg-brand-card rounded-full border ${selectedTagFilter === tag.id ? "border-blue-500 bg-blue-500" : "border-brand-border"}`}
                 onPress={() =>
                   setSelectedTagFilter(
                     selectedTagFilter === tag.id ? null : tag.id,

@@ -60,7 +60,7 @@ export default function LedgerScreen() {
   };
 
   const renderEntry = ({ item }: { item: EntryWithTags }) => (
-    <View className="flex-row items-center justify-between py-4 border-b border-[#333333]">
+    <View className="flex-row items-center justify-between py-4 border-b border-brand-border">
       <View className="flex-1">
         <Text className="text-white font-medium text-base">
           {item.contacts?.name || "Unknown"}
@@ -102,7 +102,7 @@ export default function LedgerScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#1a1a1a]">
+    <View className="flex-1 bg-brand-dark">
       <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Ledger</Text>
         <Text className="text-base text-[#888888] mt-1">

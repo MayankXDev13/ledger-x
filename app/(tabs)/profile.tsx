@@ -24,13 +24,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#1a1a1a]">
+    <View className="flex-1 bg-brand-dark">
       <View className="px-6 pb-6" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-3xl font-bold text-white">Profile</Text>
       </View>
 
       <View className="items-center py-10">
-        <View className="w-24 h-24 rounded-full bg-[#2a2a2a] items-center justify-center mb-4">
+        <View className="w-24 h-24 rounded-full bg-brand-card items-center justify-center mb-4">
           <Ionicons name="person" size={48} color="#ffffff" />
         </View>
         <Text className="text-white text-lg font-medium">
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
 
       <View className="px-6 gap-4">
         <Pressable
-          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-[#2a2a2a] border-[#3a3a3a]"
+          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-brand-card border-brand-border"
           onPress={() => router.push("/tags/manage")}
         >
           <Ionicons name="pricetags-outline" size={20} color="#ffffff" />
@@ -50,7 +50,7 @@ export default function ProfileScreen() {
         </Pressable>
 
         <Pressable
-          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-[#2a2a2a] border-[#3a3a3a]"
+          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-brand-card border-brand-border"
           onPress={() => router.push("/transaction-tags/manage")}
         >
           <Ionicons name="wallet-outline" size={20} color="#ffffff" />
