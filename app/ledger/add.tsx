@@ -198,7 +198,7 @@ export default function AddEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#0A0A0A",
   },
   content: {
     flex: 1,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: "#ffffff",
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#171717",
   },
   noteInput: {
     minHeight: 80,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   cancelButton: {
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#171717",
   },
   buttonDisabled: {
     opacity: 0.6,

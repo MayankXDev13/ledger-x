@@ -26,7 +26,7 @@ export default function LoginScreen() {
     if (!email) {
       setEmailError("Email is required");
       valid = false;
-    } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+    } else if (!/^\\S+@\\S+\\.\\S+$/.test(email)) {
       setEmailError("Invalid email address");
       valid = false;
     }
@@ -64,22 +64,22 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#1a1a1a] justify-center px-5">
-      <View className="bg-[#2a2a2a] rounded-2xl p-6">
-        <Text className="text-[28px] font-bold text-white mb-1.5">
+    <View className="flex-1 bg-brand-dark justify-center px-6">
+      <View className="bg-brand-card border border-brand-border rounded-3xl p-7 shadow-sm shadow-brand-dark">
+        <Text className="text-[32px] font-extrabold text-white mb-2 tracking-tight">
           Welcome Back
         </Text>
-        <Text className="text-[15px] text-[#aaa] mb-6">
-          Sign in to continue
+        <Text className="text-base text-brand-muted mb-8 font-medium">
+          Sign in to your ledger
         </Text>
 
-        <View className="gap-[18px]">
-          <View className="gap-1.5">
-            <Text className="text-[13px] text-[#ccc] font-medium">Email</Text>
+        <View className="gap-5">
+          <View className="gap-2">
+            <Text className="text-[14px] text-brand-muted font-semibold ml-1">Email</Text>
             <TextInput
-              className="bg-[#333] border border-[#444] rounded-xl px-4 py-3.5 text-base text-white"
-              placeholder="email@address.com"
-              placeholderTextColor="#999"
+              className="bg-brand-surface border border-brand-border rounded-2xl px-5 py-4 text-[16px] text-white"
+              placeholder="name@company.com"
+              placeholderTextColor="#52525B"
               value={email}
               onChangeText={(t) => {
                 setEmail(t);
@@ -89,18 +89,18 @@ export default function LoginScreen() {
               keyboardType="email-address"
             />
             {emailError && (
-              <Text className="text-[#ff6b6b] text-sm">{emailError}</Text>
+              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">{emailError}</Text>
             )}
           </View>
 
-          <View className="gap-1.5">
-            <Text className="text-[13px] text-[#ccc] font-medium">
+          <View className="gap-2">
+            <Text className="text-[14px] text-brand-muted font-semibold ml-1">
               Password
             </Text>
             <TextInput
-              className="bg-[#333] border border-[#444] rounded-xl px-4 py-3.5 text-base text-white"
-              placeholder="Password"
-              placeholderTextColor="#999"
+              className="bg-brand-surface border border-brand-border rounded-2xl px-5 py-4 text-[16px] text-white"
+              placeholder="••••••••"
+              placeholderTextColor="#52525B"
               value={password}
               onChangeText={(t) => {
                 setPassword(t);
@@ -109,29 +109,29 @@ export default function LoginScreen() {
               secureTextEntry
             />
             {passwordError && (
-              <Text className="text-[#ff6b6b] text-sm">{passwordError}</Text>
+              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">{passwordError}</Text>
             )}
           </View>
 
-          {error && <Text className="text-[#ff6b6b] text-sm">{error}</Text>}
+          {error && <Text className="text-[#EF4444] text-[14px] font-medium text-center">{error}</Text>}
 
           <Pressable
-            className={`bg-white py-[18px] rounded-[14px] items-center mt-3 ${loading ? "opacity-60" : ""}`}
+            className={`bg-brand-accent py-[18px] rounded-2xl items-center mt-3 shadow-sm shadow-brand-accent/20 ${loading ? "opacity-60" : "active:scale-95"}`}
             onPress={onSubmit}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color="#0A0A0A" />
             ) : (
-              <Text className="text-black text-[18px] font-bold">Login</Text>
+              <Text className="text-brand-dark text-[18px] font-bold tracking-wide">Login</Text>
             )}
           </Pressable>
         </View>
 
-        <View className="flex-row justify-center mt-5 gap-1.5">
-          <Text className="text-[#888] text-base">Don't have an account?</Text>
-          <Pressable onPress={() => router.push("/auth/signup")}>
-            <Text className="text-white text-base font-semibold">Sign Up</Text>
+        <View className="flex-row justify-center mt-8 gap-2">
+          <Text className="text-brand-muted text-[15px] font-medium">Don't have an account?</Text>
+          <Pressable onPress={() => router.push("/auth/signup")} className="active:opacity-70">
+            <Text className="text-brand-accent text-[15px] font-bold">Sign Up</Text>
           </Pressable>
         </View>
       </View>

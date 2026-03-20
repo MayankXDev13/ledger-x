@@ -293,7 +293,7 @@ export default function EditCustomerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#0A0A0A",
   },
   scrollContent: {
     flex: 1,

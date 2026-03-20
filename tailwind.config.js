@@ -7,7 +7,18 @@ module.exports = {
   ],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        brand: {
+          dark: "#0A0A0A",
+          card: "#171717",
+          accent: "#10B981", // Emerald 500
+          muted: "#A3A3A3",
+          border: "#262626",
+          surface: "#262626",
+        },
+      },
+    },
   },
   plugins: [],
 };

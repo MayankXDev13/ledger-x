@@ -6,26 +6,26 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        // adjust tab bar to respect bottom safe area (gesture bar / home indicator)
-        tabBarStyle: {
-          backgroundColor: "#1a1a1a",
-          borderTopColor: "#333",
-          borderTopWidth: 1,
-          height: 56 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: "#fff",
-        tabBarInactiveTintColor: "#888",
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
-      }}
-    >
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          // adjust tab bar to respect bottom safe area (gesture bar / home indicator)
+          tabBarStyle: {
+            backgroundColor: "#0A0A0A", // brand-dark
+            borderTopColor: "#262626", // brand-border
+            borderTopWidth: 1,
+            height: 56 + insets.bottom,
+            paddingBottom: 8 + insets.bottom,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: "#10B981", // brand-accent
+          tabBarInactiveTintColor: "#A3A3A3", // brand-muted
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: "600",
+          },
+        }}
+      >
       <Tabs.Screen
         name="home"
         options={{

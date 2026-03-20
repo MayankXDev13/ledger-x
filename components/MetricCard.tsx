@@ -21,7 +21,7 @@ export function MetricCard({
   trend,
 }: MetricCardProps) {
   return (
-    <View className="bg-[#2a2a2a] rounded-xl p-4">
+    <View className="bg-brand-card rounded-xl p-4">
       <View className="flex-row items-center gap-2 mb-3">
         <View
           className="w-9 h-9 rounded-lg items-center justify-center"

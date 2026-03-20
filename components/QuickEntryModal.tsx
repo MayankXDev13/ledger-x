@@ -143,12 +143,12 @@ export function QuickEntryModal({
 
   const renderContactItem = ({ item }: { item: Contact }) => (
     <Pressable
-      className={`flex-row items-center justify-between py-3 border-b border-[#333] ${selectedContact?.id === item.id ? "bg-[#2a2a2a] -mx-3 px-3" : ""}`}
+      className={`flex-row items-center justify-between py-3 border-b border-brand-border ${selectedContact?.id === item.id ? "bg-brand-card -mx-3 px-3" : ""}`}
       onPress={() => setSelectedContact(item)}
     >
       <View className="flex-1">
         <Text className="text-white font-medium text-base">{item.name}</Text>
-        <Text className="text-[#888] text-sm mt-0.5">{item.phone}</Text>
+        <Text className="text-brand-muted text-sm mt-0.5">{item.phone}</Text>
       </View>
       {selectedContact?.id === item.id && (
         <Ionicons name="checkmark-circle" size={24} color="#10B981" />
@@ -164,15 +164,15 @@ export function QuickEntryModal({
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
-        className="flex-1 bg-[#1a1a1a]"
+        className="flex-1 bg-brand-dark"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View
-          className="flex-row items-center justify-between px-6 border-b border-[#333]"
+          className="flex-row items-center justify-between px-6 border-b border-brand-border"
           style={{ paddingTop: insets.top + 12, paddingBottom: 12 }}
         >
           <Pressable onPress={handleClose}>
-            <Text className="text-[#888] text-base">Cancel</Text>
+            <Text className="text-brand-muted text-base">Cancel</Text>
           </Pressable>
           <Text className="text-white text-xl font-semibold">
             {type === "credit" ? "Add Credit" : "Add Debit"}
@@ -188,10 +188,10 @@ export function QuickEntryModal({
           ) : (
             <>
               <View className="px-6 py-4">
-                <Text className="text-[#888] text-sm font-medium mb-3">
+                <Text className="text-brand-muted text-sm font-medium mb-3">
                   Select Customer
                 </Text>
-                <View className="flex-row items-center bg-[#2a2a2a] rounded-lg px-3 gap-2">
+                <View className="flex-row items-center bg-brand-card rounded-lg px-3 gap-2">
                   <Ionicons name="search" size={18} color="#666" />
                   <TextInput
                     className="flex-1 py-3 text-white text-base"
@@ -224,12 +224,12 @@ export function QuickEntryModal({
         </View>
 
         <View
-          className="px-6 pt-4 border-t border-[#333] gap-3"
+          className="px-6 pt-4 border-t border-brand-border gap-3"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
           {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
-          <View className="flex-row items-center bg-[#2a2a2a] rounded-lg px-4">
+          <View className="flex-row items-center bg-brand-card rounded-lg px-4">
             <Text className="text-white text-xl font-semibold">₹</Text>
             <TextInput
               className="flex-1 py-4 text-xl font-semibold text-white"
@@ -245,7 +245,7 @@ export function QuickEntryModal({
           </View>
 
           <TextInput
-            className="bg-[#2a2a2a] rounded-lg px-4 py-3 text-white text-base min-h-12"
+            className="bg-brand-card rounded-lg px-4 py-3 text-white text-base min-h-12"
             placeholder="Add a note (optional)"
             placeholderTextColor="#666"
             value={note}

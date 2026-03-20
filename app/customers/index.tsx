@@ -124,7 +124,7 @@ export default function CustomersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#0A0A0A",
   },
   header: {
     paddingHorizontal: 24,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: "#ffffff",
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#171717",
   },
   centerContainer: {
     flex: 1,
