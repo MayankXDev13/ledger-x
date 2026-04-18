@@ -75,7 +75,9 @@ export default function LoginScreen() {
 
         <View className="gap-5">
           <View className="gap-2">
-            <Text className="text-[14px] text-brand-muted font-semibold ml-1">Email</Text>
+            <Text className="text-[14px] text-brand-muted font-semibold ml-1">
+              Email
+            </Text>
             <TextInput
               className="bg-brand-surface border border-brand-border rounded-2xl px-5 py-4 text-[16px] text-white"
               placeholder="name@company.com"
@@ -89,7 +91,9 @@ export default function LoginScreen() {
               keyboardType="email-address"
             />
             {emailError && (
-              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">{emailError}</Text>
+              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">
+                {emailError}
+              </Text>
             )}
           </View>
 
@@ -109,11 +113,17 @@ export default function LoginScreen() {
               secureTextEntry
             />
             {passwordError && (
-              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">{passwordError}</Text>
+              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">
+                {passwordError}
+              </Text>
             )}
           </View>
 
-          {error && <Text className="text-[#EF4444] text-[14px] font-medium text-center">{error}</Text>}
+          {error && (
+            <Text className="text-[#EF4444] text-[14px] font-medium text-center">
+              {error}
+            </Text>
+          )}
 
           <Pressable
             className={`bg-brand-accent py-[18px] rounded-2xl items-center mt-3 shadow-sm shadow-brand-accent/20 ${loading ? "opacity-60" : "active:scale-95"}`}
@@ -123,17 +133,35 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color="#0A0A0A" />
             ) : (
-              <Text className="text-brand-dark text-[18px] font-bold tracking-wide">Login</Text>
+              <Text className="text-brand-dark text-[18px] font-bold tracking-wide">
+                Login
+              </Text>
             )}
           </Pressable>
         </View>
 
         <View className="flex-row justify-center mt-8 gap-2">
-          <Text className="text-brand-muted text-[15px] font-medium">Don't have an account?</Text>
-          <Pressable onPress={() => router.push("/auth/signup")} className="active:opacity-70">
-            <Text className="text-brand-accent text-[15px] font-bold">Sign Up</Text>
+          <Text className="text-brand-muted text-[15px] font-medium">
+            Don't have an account?
+          </Text>
+          <Pressable
+            onPress={() => router.push("/auth/signup")}
+            className="active:opacity-70"
+          >
+            <Text className="text-brand-accent text-[15px] font-bold">
+              Sign Up
+            </Text>
           </Pressable>
         </View>
+
+        <Pressable
+          onPress={() => router.push("/auth/forgot-password")}
+          className="mt-5 active:opacity-70"
+        >
+          <Text className="text-brand-muted text-[14px] font-medium text-center">
+            Forgot your password?
+          </Text>
+        </Pressable>
       </View>
 
       <StatusBar style="light" />
