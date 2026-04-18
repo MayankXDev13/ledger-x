@@ -33,6 +33,7 @@ export default function ForgotPasswordScreen() {
     setError(null);
 
     const redirectTo = ExpoLinking.createURL("/auth/reset-password");
+    console.log(redirectTo);
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email,

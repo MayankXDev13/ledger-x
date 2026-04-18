@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useLinkingURL } from "expo-linking";
 import { supabase } from "@/lib/supabase";
 
 type VerificationState =
@@ -16,8 +17,8 @@ type VerificationState =
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams();
-  const tokenHash = params.token_hash;
-  const type = params.type;
+
+  const linkingUrl = useLinkingURL();
 
   const [verification, setVerification] = useState<VerificationState>({
     status: "verifying",
@@ -35,41 +36,106 @@ export default function ResetPasswordScreen() {
 
   useEffect(() => {
     const run = async () => {
-      if (!tokenHash || typeof tokenHash !== "string") {
+      if (verification.status !== "verifying") return;
+
+      const tokenHashCandidate =
+        (typeof params.token_hash === "string"
+          ? params.token_hash
+          : undefined) ??
+        (typeof (params as any).token === "string"
+          ? (params as any).token
+          : undefined);
+
+      if (tokenHashCandidate) {
+        setVerification({ status: "verifying" });
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHashCandidate,
+          type: "recovery",
+        });
+
+        if (error) {
+          setVerification({ status: "error", message: error.message });
+          return;
+        }
+
+        setVerification({ status: "verified" });
+        return;
+      }
+
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          setVerification({ status: "verified" });
+          return;
+        }
+      } catch {}
+
+      if (!linkingUrl) {
+        return;
+      }
+
+      try {
+        console.log("[ResetPassword] linkingUrl:", linkingUrl);
+        const url = new URL(linkingUrl);
+        const searchParams = url.searchParams;
+
+        const queryAccessToken = searchParams.get("access_token");
+        const queryRefreshToken = searchParams.get("refresh_token");
+
+        const accessTokenFromParams =
+          typeof (params as any).access_token === "string"
+            ? (params as any).access_token
+            : undefined;
+        const refreshTokenFromParams =
+          typeof (params as any).refresh_token === "string"
+            ? (params as any).refresh_token
+            : undefined;
+
+        const hash = url.hash?.replace(/^#/, "") ?? "";
+        const hashParams = new URLSearchParams(hash);
+
+        const hashAccessToken = hashParams.get("access_token");
+        const hashRefreshToken = hashParams.get("refresh_token");
+
+        const access_token =
+          accessTokenFromParams ?? queryAccessToken ?? hashAccessToken;
+        const refresh_token =
+          refreshTokenFromParams ?? queryRefreshToken ?? hashRefreshToken;
+
+        console.log("[ResetPassword] deep-link token presence:", {
+          hasAccessToken: Boolean(access_token),
+          hasRefreshToken: Boolean(refresh_token),
+        });
+
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+
+          if (error) {
+            setVerification({ status: "error", message: error.message });
+            return;
+          }
+
+          setVerification({ status: "verified" });
+          return;
+        }
+
         setVerification({
           status: "error",
           message: "Missing reset token.",
         });
-        return;
-      }
-
-      if (!type || typeof type !== "string") {
+      } catch {
         setVerification({
           status: "error",
-          message: "Missing reset type.",
+          message: "Invalid reset link URL.",
         });
-        return;
       }
-
-      setVerification({ status: "verifying" });
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: type as "recovery",
-      });
-
-      if (error) {
-        setVerification({
-          status: "error",
-          message: error.message,
-        });
-        return;
-      }
-
-      setVerification({ status: "verified" });
     };
 
     void run();
-  }, [tokenHash, type]);
+  }, [params, linkingUrl, verification.status]);
 
   const validateForm = () => {
     let valid = true;
@@ -99,6 +165,15 @@ export default function ResetPasswordScreen() {
 
     setLoading(true);
     setFormError(null);
+
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      setFormError(sessionError?.message ?? "Your reset link has expired.");
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
