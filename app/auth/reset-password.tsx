@@ -6,7 +6,8 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
+import * as Linking from "expo-linking";
 import { useLinkingURL } from "expo-linking";
 import { supabase } from "@/lib/supabase";
 
@@ -16,10 +17,6 @@ type VerificationState =
   | { status: "error"; message: string };
 
 export default function ResetPasswordScreen() {
-  const params = useLocalSearchParams();
-
-  const linkingUrl = useLinkingURL();
-
   const [verification, setVerification] = useState<VerificationState>({
     status: "verifying",
   });
@@ -34,108 +31,58 @@ export default function ResetPasswordScreen() {
   >(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const linkingUrl = useLinkingURL();
+
   useEffect(() => {
-    const run = async () => {
-      if (verification.status !== "verifying") return;
+    const handleSession = async () => {
+      try {
+        const url = linkingUrl;
 
-      const tokenHashCandidate =
-        (typeof params.token_hash === "string"
-          ? params.token_hash
-          : undefined) ??
-        (typeof (params as any).token === "string"
-          ? (params as any).token
-          : undefined);
+        if (!url) {
+          setVerification({
+            status: "error",
+            message: "Invalid or missing reset link.",
+          });
+          return;
+        }
 
-      if (tokenHashCandidate) {
-        setVerification({ status: "verifying" });
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHashCandidate,
-          type: "recovery",
+        const parsed = Linking.parse(url);
+
+        const access_token = parsed.queryParams?.access_token as string;
+        const refresh_token = parsed.queryParams?.refresh_token as string;
+
+        if (!access_token || !refresh_token) {
+          setVerification({
+            status: "error",
+            message: "Reset link is invalid or expired.",
+          });
+          return;
+        }
+
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
         });
 
         if (error) {
-          setVerification({ status: "error", message: error.message });
+          setVerification({
+            status: "error",
+            message: error.message,
+          });
           return;
         }
 
         setVerification({ status: "verified" });
-        return;
-      }
-
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
-          setVerification({ status: "verified" });
-          return;
-        }
-      } catch {}
-
-      if (!linkingUrl) {
-        return;
-      }
-
-      try {
-        console.log("[ResetPassword] linkingUrl:", linkingUrl);
-        const url = new URL(linkingUrl);
-        const searchParams = url.searchParams;
-
-        const queryAccessToken = searchParams.get("access_token");
-        const queryRefreshToken = searchParams.get("refresh_token");
-
-        const accessTokenFromParams =
-          typeof (params as any).access_token === "string"
-            ? (params as any).access_token
-            : undefined;
-        const refreshTokenFromParams =
-          typeof (params as any).refresh_token === "string"
-            ? (params as any).refresh_token
-            : undefined;
-
-        const hash = url.hash?.replace(/^#/, "") ?? "";
-        const hashParams = new URLSearchParams(hash);
-
-        const hashAccessToken = hashParams.get("access_token");
-        const hashRefreshToken = hashParams.get("refresh_token");
-
-        const access_token =
-          accessTokenFromParams ?? queryAccessToken ?? hashAccessToken;
-        const refresh_token =
-          refreshTokenFromParams ?? queryRefreshToken ?? hashRefreshToken;
-
-        console.log("[ResetPassword] deep-link token presence:", {
-          hasAccessToken: Boolean(access_token),
-          hasRefreshToken: Boolean(refresh_token),
-        });
-
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-
-          if (error) {
-            setVerification({ status: "error", message: error.message });
-            return;
-          }
-
-          setVerification({ status: "verified" });
-          return;
-        }
-
+      } catch (err: any) {
         setVerification({
           status: "error",
-          message: "Missing reset token.",
-        });
-      } catch {
-        setVerification({
-          status: "error",
-          message: "Invalid reset link URL.",
+          message: err.message || "Something went wrong.",
         });
       }
     };
 
-    void run();
-  }, [params, linkingUrl, verification.status]);
+    handleSession();
+  }, [linkingUrl]);
 
   const validateForm = () => {
     let valid = true;
@@ -185,7 +132,6 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    // After password reset, force the user to login with the new password.
     await supabase.auth.signOut();
     router.replace("/auth/login");
   };
@@ -193,11 +139,9 @@ export default function ResetPasswordScreen() {
   if (verification.status === "verifying") {
     return (
       <View className="flex-1 bg-brand-dark justify-center px-6">
-        <View className="bg-brand-card border border-brand-border rounded-3xl p-7 shadow-sm shadow-brand-dark items-center">
+        <View className="bg-brand-card border border-brand-border rounded-3xl p-7 items-center">
           <ActivityIndicator color="#ffffff" />
-          <Text className="text-brand-muted mt-4 font-medium">
-            Verifying reset link...
-          </Text>
+          <Text className="text-brand-muted mt-4">Verifying reset link...</Text>
         </View>
       </View>
     );
@@ -206,21 +150,17 @@ export default function ResetPasswordScreen() {
   if (verification.status === "error") {
     return (
       <View className="flex-1 bg-brand-dark justify-center px-6">
-        <View className="bg-brand-card border border-brand-border rounded-3xl p-7 shadow-sm shadow-brand-dark">
-          <Text className="text-[26px] font-extrabold text-white mb-2">
+        <View className="bg-brand-card border border-brand-border rounded-3xl p-7">
+          <Text className="text-[26px] font-bold text-white mb-2">
             Reset Failed
           </Text>
-          <Text className="text-[#EF4444] text-[14px] font-medium mb-6">
-            {verification.message}
-          </Text>
+          <Text className="text-red-500 mb-6">{verification.message}</Text>
 
           <Pressable
-            className="bg-brand-accent py-[18px] rounded-2xl items-center shadow-sm shadow-brand-accent/20 active:scale-95"
+            className="bg-brand-accent py-4 rounded-2xl items-center"
             onPress={() => router.replace("/auth/forgot-password")}
           >
-            <Text className="text-brand-dark text-[18px] font-bold tracking-wide">
-              Try Again
-            </Text>
+            <Text className="text-black font-bold">Try Again</Text>
           </Pressable>
         </View>
       </View>
@@ -229,96 +169,51 @@ export default function ResetPasswordScreen() {
 
   return (
     <View className="flex-1 bg-brand-dark justify-center px-6">
-      <View className="bg-brand-card border border-brand-border rounded-3xl p-7 shadow-sm shadow-brand-dark">
-        <Text className="text-[32px] font-extrabold text-white mb-2 tracking-tight">
+      <View className="bg-brand-card border border-brand-border rounded-3xl p-7">
+        <Text className="text-2xl font-bold text-white mb-2">
           Reset Password
         </Text>
-        <Text className="text-base text-brand-muted mb-8 font-medium">
-          Choose a new password
-        </Text>
 
-        <View className="gap-5">
-          <View className="gap-2">
-            <Text className="text-[14px] text-brand-muted font-semibold ml-1">
-              New Password
-            </Text>
-            <TextInput
-              className="bg-brand-surface border border-brand-border rounded-2xl px-5 py-4 text-[16px] text-white"
-              placeholder="••••••••"
-              placeholderTextColor="#52525B"
-              value={newPassword}
-              onChangeText={(t) => {
-                setNewPassword(t);
-                setNewPasswordError(null);
-                setFormError(null);
-              }}
-              secureTextEntry
-            />
-            {newPasswordError && (
-              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">
-                {newPasswordError}
-              </Text>
-            )}
-          </View>
+        <View className="gap-4 mt-4">
+          <TextInput
+            placeholder="New Password"
+            placeholderTextColor="#999"
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            className="bg-brand-surface p-4 rounded-xl text-white"
+          />
+          {newPasswordError && (
+            <Text className="text-red-500">{newPasswordError}</Text>
+          )}
 
-          <View className="gap-2">
-            <Text className="text-[14px] text-brand-muted font-semibold ml-1">
-              Confirm Password
-            </Text>
-            <TextInput
-              className="bg-brand-surface border border-brand-border rounded-2xl px-5 py-4 text-[16px] text-white"
-              placeholder="••••••••"
-              placeholderTextColor="#52525B"
-              value={confirmPassword}
-              onChangeText={(t) => {
-                setConfirmPassword(t);
-                setConfirmPasswordError(null);
-                setFormError(null);
-              }}
-              secureTextEntry
-            />
-            {confirmPasswordError && (
-              <Text className="text-[#EF4444] text-[13px] ml-1 font-medium">
-                {confirmPasswordError}
-              </Text>
-            )}
-          </View>
+          <TextInput
+            placeholder="Confirm Password"
+            placeholderTextColor="#999"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            className="bg-brand-surface p-4 rounded-xl text-white"
+          />
+          {confirmPasswordError && (
+            <Text className="text-red-500">{confirmPasswordError}</Text>
+          )}
 
           {formError && (
-            <Text className="text-[#EF4444] text-[14px] font-medium text-center">
-              {formError}
-            </Text>
+            <Text className="text-red-500 text-center">{formError}</Text>
           )}
 
           <Pressable
-            className={`bg-brand-accent py-[18px] rounded-2xl items-center shadow-sm shadow-brand-accent/20 ${
-              loading ? "opacity-60" : "active:scale-95"
-            }`}
             onPress={onUpdate}
             disabled={loading}
+            className="bg-brand-accent py-4 rounded-xl items-center mt-4"
           >
             {loading ? (
-              <ActivityIndicator color="#0A0A0A" />
+              <ActivityIndicator color="#000" />
             ) : (
-              <Text className="text-brand-dark text-[18px] font-bold tracking-wide">
-                Update Password
-              </Text>
+              <Text className="text-black font-bold">Update Password</Text>
             )}
           </Pressable>
-
-          <View className="flex-row justify-center mt-2 gap-2">
-            <Text className="text-brand-muted text-[15px] font-medium">
-              Back to login
-            </Text>
-            <Pressable
-              onPress={() => router.replace("/auth/login")}
-              className="active:opacity-70"
-            >
-              <Text className="text-brand-accent text-[15px] font-bold">
-                Sign In
-              </Text>
-            </Pressable>
-          </View>
         </View>
       </View>
     </View>
