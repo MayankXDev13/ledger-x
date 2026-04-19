@@ -16,7 +16,7 @@ export function useAuth() {
       (_event, session) => {
         setSession(session);
         setLoading(false);
-      }
+      },
     );
 
     return () => {
