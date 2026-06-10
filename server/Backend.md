@@ -78,7 +78,7 @@ server/
 | GET | `/transactions/:id` | Get transaction details |
 | POST | `/transactions` | Create transaction |
 | PUT | `/transactions/:id` | Update transaction |
-| DELETE | `/transactions/:id` | Delete transaction |
+| DELETE | `/transactions/:id` | Delete transaction (soft delete) |
 
 ### Contact Tag Routes
 
