@@ -1,37 +1,21 @@
 {
-  "name": "server",
-  "version": "1.0.0",
-  "description": "",
-  "main": "src/server.js",
+  "name": "server-v2",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate:local": "wrangler d1 migrations apply ledger-x-db  --local",
+    "db:migrate:remote": "wrangler d1 migrations apply ledger-x-db  --remote",
     "db:studio": "drizzle-kit studio"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@11.1.1",
-  "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^25.7.0",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
-  },
   "dependencies": {
-    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "express": "^5.2.1",
-    "morgan": "^1.10.1",
-    "multer": "^2.1.1",
-    "postgres": "^3.4.9",
-    "winston": "^3.19.0",
-    "zod": "^4.4.3"
+    "hono": "^4.12.25"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "wrangler": "^4.99.0"
   }
 }

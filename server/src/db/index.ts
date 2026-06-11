@@ -1,8 +1,12 @@
-import { config } from 'dotenv';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/d1';
+import * as schema from './schema';
 
-config({ path: '.env' }); // or .env.local
+export interface Env {
+	ledger_x_db: D1Database;
+}
 
-const client = postgres(process.env.DATABASE_URL!);
-export const db = drizzle({ client });
+export default {
+	async fetch(request: Request, env: Env) {
+		const db = drizzle(env.auth_hono, { schema: schema });
+	},
+};
