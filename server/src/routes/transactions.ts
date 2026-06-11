@@ -3,6 +3,14 @@ import { eq, isNull, and, gte, lte, desc, count } from "drizzle-orm";
 import { getDb } from "../db";
 import { transactions, transactionTags, transactionTagMap } from "../db/schema";
 import type { AppEnv } from "../types/hono";
+import {
+  createTransactionSchema,
+  updateTransactionSchema,
+  createTagSchema,
+  updateTagSchema,
+  addTagToTransactionSchema,
+  parseBody,
+} from "../validators";
 
 const transactionsApp = new Hono<AppEnv>();
 
@@ -68,12 +76,12 @@ transactionsApp.get("/:id", async (c) => {
 
 // POST /transactions - Create transaction
 transactionsApp.post("/", async (c) => {
-  const body = await c.req.json<{
-    customerId: string;
-    amount: number;
-    type: "credit" | "debit";
-    note?: string;
-  }>();
+  const { data: body, error } = await parseBody(
+    c.req.raw,
+    createTransactionSchema,
+  );
+  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+
   const user = c.get("user");
   const db = getDb(c);
   const [created] = await db
@@ -92,11 +100,12 @@ transactionsApp.post("/", async (c) => {
 // PUT /transactions/:id - Update transaction
 transactionsApp.put("/:id", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json<{
-    amount?: number;
-    type?: "credit" | "debit";
-    note?: string;
-  }>();
+  const { data: body, error } = await parseBody(
+    c.req.raw,
+    updateTransactionSchema,
+  );
+  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+
   const user = c.get("user");
   const db = getDb(c);
   const [updated] = await db
@@ -135,7 +144,9 @@ transactionsApp.get("/transaction-tags", async (c) => {
 
 // POST /transaction-tags
 transactionsApp.post("/transaction-tags", async (c) => {
-  const body = await c.req.json<{ name: string; color?: string }>();
+  const { data: body, error } = await parseBody(c.req.raw, createTagSchema);
+  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+
   const user = c.get("user");
   const db = getDb(c);
   const [created] = await db
@@ -152,15 +163,15 @@ transactionsApp.post("/transaction-tags", async (c) => {
 // PUT /transaction-tags/:id
 transactionsApp.put("/transaction-tags/:id", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json<{ name?: string; color?: string }>();
+  const { data: body, error } = await parseBody(c.req.raw, updateTagSchema);
+  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+
   const user = c.get("user");
   const db = getDb(c);
   const [updated] = await db
     .update(transactionTags)
     .set({ ...body, updatedAt: new Date() })
-    .where(
-      and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)),
-    )
+    .where(and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)))
     .returning();
   if (!updated) return c.json({ error: "Tag not found" }, 404);
   return c.json(updated);
@@ -196,11 +207,16 @@ transactionsApp.get("/:id/tags", async (c) => {
 // POST /transactions/:id/tags
 transactionsApp.post("/:id/tags", async (c) => {
   const { id } = c.req.param();
-  const { tag_id } = await c.req.json<{ tag_id: string }>();
+  const { data: body, error } = await parseBody(
+    c.req.raw,
+    addTagToTransactionSchema,
+  );
+  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+
   const db = getDb(c);
   await db.insert(transactionTagMap).values({
     transactionId: id,
-    tagId: tag_id,
+    tagId: body.tag_id,
   });
   return c.json({ success: true }, 201);
 });
