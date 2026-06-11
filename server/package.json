@@ -2,7 +2,7 @@
   "name": "server-v2",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "dotenv -e .dev.vars -- wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
@@ -19,6 +19,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260610.1",
     "@types/pg": "^8.20.0",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.3",
     "wrangler": "^4.99.0"
