@@ -1,8 +1,12 @@
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from './schema';
-import type { AppEnv } from '../types/hono';
-import type { Context } from 'hono';
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schema";
+import type { AppEnv } from "../types/hono";
+import type { Context } from "hono";
 
 export function getDb(ctx: Context<AppEnv>) {
-  return drizzle(ctx.env.ledger_x_db, { schema });
+  const pool = new Pool({
+    connectionString: ctx.env.HYPERDRIVE.connectionString,
+  });
+  return drizzle(pool, { schema });
 }

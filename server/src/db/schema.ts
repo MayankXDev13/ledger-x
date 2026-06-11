@@ -1,103 +1,171 @@
 import {
-  sqliteTable,
+  pgTable,
   text,
   integer,
+  timestamp,
   index,
   primaryKey,
-} from "drizzle-orm/sqlite-core";
+  pgEnum,
+  uuid,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-export const customers = sqliteTable("customers", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  name: text("name").notNull(),
-  phone: text("phone"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-  deletedAt: integer("deleted_at", { mode: "timestamp" }),
-});
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "credit",
+  "debit",
+]);
 
-export const transactions = sqliteTable(
-  "transactions",
+export const customers = pgTable(
+  "customers",
   {
-    id: text("id").primaryKey(),
+    id: uuid("id").defaultRandom().primaryKey(),
 
-    userId: text("user_id").notNull(),
+    userId: uuid("user_id").notNull(),
 
-    customerId: text("customer_id")
-      .notNull()
-      .references(() => customers.id),
+    name: text("name").notNull(),
 
-    amount: integer("amount").notNull(),
+    phone: text("phone"),
 
-    type: text("type", {
-      enum: ["credit", "debit"],
-    }).notNull(),
+    createdAt: timestamp("created_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
 
-    note: text("note"),
+    updatedAt: timestamp("updated_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
 
-    createdAt: integer("created_at", {
-      mode: "timestamp",
-    }).notNull(),
-
-    updatedAt: integer("updated_at", {
-      mode: "timestamp",
-    }).notNull(),
-
-    deletedAt: integer("deleted_at", {
-      mode: "timestamp",
+    deletedAt: timestamp("deleted_at", {
+      mode: "date",
     }),
   },
-  (table) => ({
-    customerIdx: index("transaction_customer_idx").on(table.customerId),
-    userIdx: index("transaction_user_idx").on(table.userId),
+  (t) => ({
+    userIdx: index("customer_user_idx").on(t.userId),
+
+    userPhoneUnique: uniqueIndex("customer_user_phone_unique").on(
+      t.userId,
+      t.phone,
+    ),
   }),
 );
 
-export const transactionTags = sqliteTable("transaction_tags", {
-  id: text("id").primaryKey(),
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
 
-  userId: text("user_id").notNull(),
+    userId: uuid("user_id").notNull(),
 
-  name: text("name").notNull(),
-  color: text("color"),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, {
+        onDelete: "cascade",
+      }),
 
-  createdAt: integer("created_at", {
-    mode: "timestamp",
-  }).notNull(),
+    // Store amount in paise/cents
+    amount: integer("amount").notNull(),
 
-  updatedAt: integer("updated_at", {
-    mode: "timestamp",
-  }).notNull(),
-});
+    type: transactionTypeEnum("type").notNull(),
 
-export const transactionTagMap = sqliteTable(
+    note: text("note"),
+
+    createdAt: timestamp("created_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+
+    deletedAt: timestamp("deleted_at", {
+      mode: "date",
+    }),
+  },
+  (t) => ({
+    customerIdx: index("transaction_customer_idx").on(t.customerId),
+
+    userIdx: index("transaction_user_idx").on(t.userId),
+  }),
+);
+
+export const transactionTags = pgTable(
+  "transaction_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    userId: uuid("user_id").notNull(),
+
+    name: text("name").notNull(),
+
+    color: text("color"),
+
+    createdAt: timestamp("created_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+
+    deletedAt: timestamp("deleted_at", {
+      mode: "date",
+    }),
+  },
+  (t) => ({
+    userIdx: index("transaction_tag_user_idx").on(t.userId),
+
+    userNameUnique: uniqueIndex("transaction_tag_user_name_unique").on(
+      t.userId,
+      t.name,
+    ),
+  }),
+);
+
+export const transactionTagMap = pgTable(
   "transaction_tag_map",
   {
-    transactionId: text("transaction_id")
+    transactionId: uuid("transaction_id")
       .notNull()
       .references(() => transactions.id, {
         onDelete: "cascade",
       }),
 
-    tagId: text("tag_id")
+    tagId: uuid("tag_id")
       .notNull()
       .references(() => transactionTags.id, {
         onDelete: "cascade",
       }),
 
-    createdAt: integer("created_at", {
-      mode: "timestamp",
-    }).notNull(),
+    createdAt: timestamp("created_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
   },
-  (table) => ({
+  (t) => ({
     pk: primaryKey({
-      columns: [table.transactionId, table.tagId],
+      columns: [t.transactionId, t.tagId],
     }),
-    transactionIdx: index("transaction_tag_tx_idx").on(table.transactionId),
-    tagIdx: index("transaction_tag_tag_idx").on(table.tagId),
+
+    transactionIdx: index("transaction_tag_tx_idx").on(t.transactionId),
+
+    tagIdx: index("transaction_tag_tag_idx").on(t.tagId),
   }),
 );
+
+/* Relations */
 
 export const customersRelations = relations(customers, ({ many }) => ({
   transactions: many(transactions),
@@ -110,6 +178,7 @@ export const transactionsRelations = relations(
       fields: [transactions.customerId],
       references: [customers.id],
     }),
+
     transactionTagMap: many(transactionTagMap),
   }),
 );
@@ -128,6 +197,7 @@ export const transactionTagMapRelations = relations(
       fields: [transactionTagMap.transactionId],
       references: [transactions.id],
     }),
+
     tag: one(transactionTags, {
       fields: [transactionTagMap.tagId],
       references: [transactionTags.id],

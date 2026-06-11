@@ -1,9 +1,9 @@
-import type { User } from '@supabase/supabase-js';
+import type { User } from "@supabase/supabase-js";
 
 export type Bindings = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
-  ledger_x_db: D1Database;
+  HYPERDRIVE: Hyperdrive;
 };
 
 export type Variables = {

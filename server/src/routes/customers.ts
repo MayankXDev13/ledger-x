@@ -23,11 +23,11 @@ customersApp.get('/:id', async (c) => {
   const { id } = c.req.param();
   const db = getDb(c);
   const user = c.get('user');
-  const data = await db
+  const [data] = await db
     .select()
     .from(customers)
     .where(and(eq(customers.id, id), eq(customers.userId, user.id), isNull(customers.deletedAt)))
-    .get();
+    .limit(1);
   if (!data) return c.json({ error: 'Customer not found' }, 404);
   return c.json(data);
 });
@@ -47,7 +47,7 @@ customersApp.post('/', async (c) => {
     createdAt: now,
     updatedAt: now,
   });
-  const created = await db.select().from(customers).where(eq(customers.id, id)).get();
+  const [created] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
   return c.json(created, 201);
 });
 
@@ -61,7 +61,7 @@ customersApp.put('/:id', async (c) => {
     .update(customers)
     .set({ ...body, updatedAt: new Date() })
     .where(and(eq(customers.id, id), eq(customers.userId, user.id)));
-  const updated = await db.select().from(customers).where(eq(customers.id, id)).get();
+  const [updated] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
   if (!updated) return c.json({ error: 'Customer not found' }, 404);
   return c.json(updated);
 });

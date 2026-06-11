@@ -52,7 +52,7 @@ transactionsApp.get("/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user");
   const db = getDb(c);
-  const data = await db
+  const [data] = await db
     .select()
     .from(transactions)
     .where(
@@ -62,7 +62,7 @@ transactionsApp.get("/:id", async (c) => {
         isNull(transactions.deletedAt),
       ),
     )
-    .get();
+    .limit(1);
   if (!data) return c.json({ error: "Transaction not found" }, 404);
   return c.json(data);
 });
@@ -89,11 +89,11 @@ transactionsApp.post("/", async (c) => {
     createdAt: now,
     updatedAt: now,
   });
-  const created = await db
+  const [created] = await db
     .select()
     .from(transactions)
     .where(eq(transactions.id, id))
-    .get();
+    .limit(1);
   return c.json(created, 201);
 });
 
@@ -111,11 +111,11 @@ transactionsApp.put("/:id", async (c) => {
     .update(transactions)
     .set({ ...body, updatedAt: new Date() })
     .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)));
-  const updated = await db
+  const [updated] = await db
     .select()
     .from(transactions)
     .where(eq(transactions.id, id))
-    .get();
+    .limit(1);
   if (!updated) return c.json({ error: "Transaction not found" }, 404);
   return c.json(updated);
 });
@@ -160,11 +160,11 @@ transactionsApp.post("/transaction-tags", async (c) => {
     createdAt: now,
     updatedAt: now,
   });
-  const created = await db
+  const [created] = await db
     .select()
     .from(transactionTags)
     .where(eq(transactionTags.id, id))
-    .get();
+    .limit(1);
   return c.json(created, 201);
 });
 
@@ -180,11 +180,11 @@ transactionsApp.put("/transaction-tags/:id", async (c) => {
     .where(
       and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)),
     );
-  const updated = await db
+  const [updated] = await db
     .select()
     .from(transactionTags)
     .where(eq(transactionTags.id, id))
-    .get();
+    .limit(1);
   if (!updated) return c.json({ error: "Tag not found" }, 404);
   return c.json(updated);
 });
