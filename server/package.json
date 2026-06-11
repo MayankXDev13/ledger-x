@@ -11,11 +11,14 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.25"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260610.1",
     "drizzle-kit": "^0.31.10",
+    "typescript": "^6.0.3",
     "wrangler": "^4.99.0"
   }
 }
