@@ -1,8 +1,7 @@
 import { Hono } from "hono";
-import { eq, isNull, and, gte, lte, desc } from "drizzle-orm";
+import { eq, isNull, and, gte, lte, desc, count } from "drizzle-orm";
 import { getDb } from "../db";
 import { transactions, transactionTags, transactionTagMap } from "../db/schema";
-import { generateId } from "../lib/id";
 import type { AppEnv } from "../types/hono";
 
 const transactionsApp = new Hono<AppEnv>();
@@ -25,25 +24,25 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
   if (start) filters.push(gte(transactions.createdAt, new Date(start)));
   if (end) filters.push(lte(transactions.createdAt, new Date(end)));
 
-  const data = await db
-    .select()
-    .from(transactions)
-    .where(and(...filters))
-    .orderBy(desc(transactions.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  // Total count (separate query)
-  const total = await db
-    .select()
-    .from(transactions)
-    .where(and(...filters));
+  const [data, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(transactions)
+      .where(and(...filters))
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(transactions)
+      .where(and(...filters)),
+  ]);
 
   return c.json({
     data,
     page: parseInt(page, 10),
     pageSize: limit,
-    total: total.length,
+    total,
   });
 });
 
@@ -77,23 +76,16 @@ transactionsApp.post("/", async (c) => {
   }>();
   const user = c.get("user");
   const db = getDb(c);
-  const now = new Date();
-  const id = generateId();
-  await db.insert(transactions).values({
-    id,
-    userId: user.id,
-    customerId: body.customerId,
-    amount: body.amount,
-    type: body.type,
-    note: body.note ?? null,
-    createdAt: now,
-    updatedAt: now,
-  });
   const [created] = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.id, id))
-    .limit(1);
+    .insert(transactions)
+    .values({
+      userId: user.id,
+      customerId: body.customerId,
+      amount: body.amount,
+      type: body.type,
+      note: body.note,
+    })
+    .returning();
   return c.json(created, 201);
 });
 
@@ -107,15 +99,11 @@ transactionsApp.put("/:id", async (c) => {
   }>();
   const user = c.get("user");
   const db = getDb(c);
-  await db
+  const [updated] = await db
     .update(transactions)
     .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)));
-  const [updated] = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.id, id))
-    .limit(1);
+    .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
+    .returning();
   if (!updated) return c.json({ error: "Transaction not found" }, 404);
   return c.json(updated);
 });
@@ -150,21 +138,14 @@ transactionsApp.post("/transaction-tags", async (c) => {
   const body = await c.req.json<{ name: string; color?: string }>();
   const user = c.get("user");
   const db = getDb(c);
-  const now = new Date();
-  const id = generateId();
-  await db.insert(transactionTags).values({
-    id,
-    userId: user.id,
-    name: body.name,
-    color: body.color ?? null,
-    createdAt: now,
-    updatedAt: now,
-  });
   const [created] = await db
-    .select()
-    .from(transactionTags)
-    .where(eq(transactionTags.id, id))
-    .limit(1);
+    .insert(transactionTags)
+    .values({
+      userId: user.id,
+      name: body.name,
+      color: body.color,
+    })
+    .returning();
   return c.json(created, 201);
 });
 
@@ -174,17 +155,13 @@ transactionsApp.put("/transaction-tags/:id", async (c) => {
   const body = await c.req.json<{ name?: string; color?: string }>();
   const user = c.get("user");
   const db = getDb(c);
-  await db
+  const [updated] = await db
     .update(transactionTags)
     .set({ ...body, updatedAt: new Date() })
     .where(
       and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)),
-    );
-  const [updated] = await db
-    .select()
-    .from(transactionTags)
-    .where(eq(transactionTags.id, id))
-    .limit(1);
+    )
+    .returning();
   if (!updated) return c.json({ error: "Tag not found" }, 404);
   return c.json(updated);
 });
@@ -224,7 +201,6 @@ transactionsApp.post("/:id/tags", async (c) => {
   await db.insert(transactionTagMap).values({
     transactionId: id,
     tagId: tag_id,
-    createdAt: new Date(),
   });
   return c.json({ success: true }, 201);
 });

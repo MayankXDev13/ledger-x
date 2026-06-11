@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { eq, isNull, and } from 'drizzle-orm';
 import { getDb } from '../db';
 import { customers } from '../db/schema';
-import { generateId } from '../lib/id';
 import type { AppEnv } from '../types/hono';
 
 const customersApp = new Hono<AppEnv>();
@@ -18,7 +17,7 @@ customersApp.get('/', async (c) => {
   return c.json(data);
 });
 
-// GET /customers/:id - Get customer (with running balance via transactions sum)
+// GET /customers/:id - Get customer
 customersApp.get('/:id', async (c) => {
   const { id } = c.req.param();
   const db = getDb(c);
@@ -34,20 +33,17 @@ customersApp.get('/:id', async (c) => {
 
 // POST /customers - Create customer
 customersApp.post('/', async (c) => {
-  const body = await c.req.json<{ name: string; phone?: string }>();
+  const body = await c.req.json<{ name: string; phone: string }>();
   const user = c.get('user');
   const db = getDb(c);
-  const now = new Date();
-  const id = generateId();
-  await db.insert(customers).values({
-    id,
-    userId: user.id,
-    name: body.name,
-    phone: body.phone ?? null,
-    createdAt: now,
-    updatedAt: now,
-  });
-  const [created] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+  const [created] = await db
+    .insert(customers)
+    .values({
+      userId: user.id,
+      name: body.name,
+      phone: body.phone,
+    })
+    .returning();
   return c.json(created, 201);
 });
 
@@ -57,11 +53,11 @@ customersApp.put('/:id', async (c) => {
   const body = await c.req.json<{ name?: string; phone?: string }>();
   const user = c.get('user');
   const db = getDb(c);
-  await db
+  const [updated] = await db
     .update(customers)
     .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(customers.id, id), eq(customers.userId, user.id)));
-  const [updated] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+    .where(and(eq(customers.id, id), eq(customers.userId, user.id)))
+    .returning();
   if (!updated) return c.json({ error: 'Customer not found' }, 404);
   return c.json(updated);
 });

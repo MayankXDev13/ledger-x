@@ -20,25 +20,19 @@ export const customers = pgTable(
   "customers",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-
     userId: uuid("user_id").notNull(),
-
     name: text("name").notNull(),
-
-    phone: text("phone"),
-
+    phone: text("phone").notNull(),
     createdAt: timestamp("created_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     updatedAt: timestamp("updated_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     deletedAt: timestamp("deleted_at", {
       mode: "date",
     }),
@@ -57,41 +51,32 @@ export const transactions = pgTable(
   "transactions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-
     userId: uuid("user_id").notNull(),
-
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, {
         onDelete: "cascade",
       }),
-
     // Store amount in paise/cents
     amount: integer("amount").notNull(),
-
     type: transactionTypeEnum("type").notNull(),
-
     note: text("note"),
-
     createdAt: timestamp("created_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     updatedAt: timestamp("updated_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     deletedAt: timestamp("deleted_at", {
       mode: "date",
     }),
   },
   (t) => ({
     customerIdx: index("transaction_customer_idx").on(t.customerId),
-
     userIdx: index("transaction_user_idx").on(t.userId),
   }),
 );
@@ -100,25 +85,19 @@ export const transactionTags = pgTable(
   "transaction_tags",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-
     userId: uuid("user_id").notNull(),
-
     name: text("name").notNull(),
-
     color: text("color"),
-
     createdAt: timestamp("created_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     updatedAt: timestamp("updated_at", {
       mode: "date",
     })
       .defaultNow()
       .notNull(),
-
     deletedAt: timestamp("deleted_at", {
       mode: "date",
     }),
@@ -141,13 +120,11 @@ export const transactionTagMap = pgTable(
       .references(() => transactions.id, {
         onDelete: "cascade",
       }),
-
     tagId: uuid("tag_id")
       .notNull()
       .references(() => transactionTags.id, {
         onDelete: "cascade",
       }),
-
     createdAt: timestamp("created_at", {
       mode: "date",
     })
