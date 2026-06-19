@@ -183,7 +183,7 @@ export default function ProfilePage() {
             <Button
               type="submit"
               disabled={pwLoading}
-              className="bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
+              className="bg-linear-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
             >
               {pwLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Update password
