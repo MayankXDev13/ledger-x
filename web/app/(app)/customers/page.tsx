@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useCustomers, useDeleteCustomer } from "@/hooks/use-customers";
-import { CustomerDialog } from "@/components/customers/customer-dialog";
+import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
+import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export default function CustomersPage() {
   const filtered = customers?.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search)
+      c.phone.includes(search),
   );
 
   const handleEdit = (customer: Customer) => {
@@ -68,7 +68,7 @@ export default function CustomersPage() {
         </div>
         <Button
           onClick={() => setDialogOpen(true)}
-          className="gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20"
+          className="gap-2 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20"
         >
           <Plus className="w-4 h-4" />
           Add Customer
@@ -96,58 +96,47 @@ export default function CustomersPage() {
       ) : filtered && filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((customer) => (
-            <div
-              key={customer.id}
-              className="group relative flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card/80 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-300"
-            >
-              {/* Subtle glow on hover */}
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-cyan-500/0 to-emerald-500/0 group-hover:from-cyan-500/3 group-hover:to-emerald-500/3 transition-all duration-300" />
+            <Link href={`/customers/${customer.id}`} key={customer.id}>
+              <div className="group relative flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card/80 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-300">
+                {/* Subtle glow on hover */}
+                <div className="absolute inset-0 rounded-xl bg-linear-to-br from-cyan-500/0 to-emerald-500/0 group-hover:from-cyan-500/3 group-hover:to-emerald-500/3 transition-all duration-300" />
 
-              <div className="relative flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/20 flex items-center justify-center">
-                    <User className="w-5 h-5 text-cyan-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{customer.name}</h3>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                      <Phone className="w-3 h-3" />
-                      {customer.phone}
+                <div className="relative flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/20 flex items-center justify-center">
+                      <User className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        {customer.name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <Phone className="w-3 h-3" />
+                        {customer.phone}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-7 h-7 text-muted-foreground hover:text-foreground"
-                    onClick={() => handleEdit(customer)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-7 h-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeletingId(customer.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-7 h-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleEdit(customer)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-7 h-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeletingId(customer.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-
-              <div className="relative flex items-center justify-between mt-auto">
-                <Badge variant="outline" className="text-xs border-border/50 text-muted-foreground">
-                  ID: {customer.id.slice(0, 8)}…
-                </Badge>
-                <Link href={`/customers/${customer.id}`}>
-                  <Button variant="ghost" size="sm" className="h-7 gap-1 text-cyan-400 hover:text-cyan-300 px-2">
-                    View
-                    <ArrowRight className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (
@@ -159,13 +148,12 @@ export default function CustomersPage() {
             {search ? "No customers found" : "No customers yet"}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            {search ? "Try a different search term" : "Add your first customer to get started"}
+            {search
+              ? "Try a different search term"
+              : "Add your first customer to get started"}
           </p>
           {!search && (
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className="mt-4 gap-2"
-            >
+            <Button onClick={() => setDialogOpen(true)} className="mt-4 gap-2">
               <Plus className="w-4 h-4" />
               Add Customer
             </Button>

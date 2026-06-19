@@ -1,7 +1,7 @@
 "use client";
 
-import { useDashboardMetrics, useRecentTransactions } from "@/hooks/use-dashboard";
-import { useCustomers } from "@/hooks/use-customers";
+import { useDashboardMetrics, useRecentTransactions } from "@/hooks/useDashboard";
+import { useCustomers } from "@/hooks/useCustomers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +62,7 @@ function MetricCard({
       <div className={cn("absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity", gradient)} />
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", gradient.replace("bg-gradient-to-br", "bg-gradient-to-br"))}>
+        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", gradient.replace("bg-linear-to-br", "bg-linear-to-br"))}>
           <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center opacity-80", gradient)}>
             <Icon className="w-4 h-4 text-white" />
           </div>
@@ -102,10 +102,10 @@ export default function DashboardPage() {
   // Build simple chart data from recent transactions
   const chartData = recentTxns
     ? [...recentTxns].reverse().map((tx, i) => ({
-        name: format(new Date(tx.createdAt), "MMM d"),
-        amount: tx.type === "credit" ? tx.amount : -tx.amount,
-        type: tx.type,
-      }))
+      name: format(new Date(tx.createdAt), "MMM d"),
+      amount: tx.type === "credit" ? tx.amount : -tx.amount,
+      type: tx.type,
+    }))
     : [];
 
   return (

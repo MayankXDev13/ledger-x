@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useCreateCustomer, useUpdateCustomer } from "@/hooks/use-customers";
+import { useCreateCustomer, useUpdateCustomer } from "@/hooks/useCustomers";
 import {
   Dialog,
   DialogContent,
@@ -88,7 +88,7 @@ export function CustomerDialog({ open, onClose, customer }: CustomerDialogProps)
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
+              className="bg-linear-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
             >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isEditing ? "Save changes" : "Create customer"}

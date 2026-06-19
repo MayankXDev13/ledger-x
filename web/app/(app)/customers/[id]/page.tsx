@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useCustomer } from "@/hooks/use-customers";
+import { useCustomer } from "@/hooks/useCustomers";
 import {
   useCustomerTransactions,
   useCreateTransaction,
   useDeleteTransaction,
   useUpdateTransaction,
-} from "@/hooks/use-transactions";
-import { useTags } from "@/hooks/use-tags";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from "@/hooks/useTransactions";
+import { Card, CardContent, } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -147,7 +146,7 @@ function TransactionDialog({ open, onClose, customerId, transaction }: TxDialogP
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
+              className="bg-linear-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
             >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isEditing ? "Save" : "Create"}

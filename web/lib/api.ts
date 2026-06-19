@@ -3,14 +3,12 @@ import { supabase } from "./supabase";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
-
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
-
 
 apiClient.interceptors.request.use(async (config) => {
   const {
@@ -24,7 +22,6 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,9 +32,8 @@ apiClient.interceptors.response.use(
       error.message ||
       "An unexpected error occurred";
     return Promise.reject(new Error(message));
-  }
+  },
 );
-
 
 export const authApi = {
   me: () =>
@@ -46,13 +42,14 @@ export const authApi = {
       .then((r) => r.data),
 };
 
-
 export const dashboardApi = {
   metrics: () =>
     apiClient
-      .get<{ totalBalance: number; totalCustomers: number; monthlyNet: number }>(
-        "/dashboard/metrics"
-      )
+      .get<{
+        totalBalance: number;
+        totalCustomers: number;
+        monthlyNet: number;
+      }>("/dashboard/metrics")
       .then((r) => r.data),
 
   recentTransactions: () =>
@@ -61,10 +58,8 @@ export const dashboardApi = {
       .then((r) => r.data),
 };
 
-
 export const customersApi = {
-  list: () =>
-    apiClient.get<Customer[]>("/customers").then((r) => r.data),
+  list: () => apiClient.get<Customer[]>("/customers").then((r) => r.data),
 
   get: (id: string) =>
     apiClient.get<Customer>(`/customers/${id}`).then((r) => r.data),
@@ -79,16 +74,15 @@ export const customersApi = {
     apiClient.delete<void>(`/customers/${id}`).then((r) => r.data),
 };
 
-
 export const transactionsApi = {
   listByCustomer: (
     customerId: string,
-    params?: { page?: number; pageSize?: number; start?: string; end?: string }
+    params?: { page?: number; pageSize?: number; start?: string; end?: string },
   ) =>
     apiClient
       .get<PagedTransactions>(
         `/transactions/customers/${customerId}/transactions`,
-        { params }
+        { params },
       )
       .then((r) => r.data),
 
@@ -100,8 +94,7 @@ export const transactionsApi = {
     amount: number;
     type: "credit" | "debit";
     note?: string;
-  }) =>
-    apiClient.post<Transaction>("/transactions", data).then((r) => r.data),
+  }) => apiClient.post<Transaction>("/transactions", data).then((r) => r.data),
 
   update: (
     id: string,
@@ -110,14 +103,16 @@ export const transactionsApi = {
       amount?: number;
       type?: "credit" | "debit";
       note?: string;
-    }
+    },
   ) =>
     apiClient
       .put<Transaction>(`/transactions/${id}`, data)
       .then((response) => response.data),
 
   delete: (id: string) =>
-    apiClient.delete<void>(`/transactions/${id}`).then((response) => response.data),
+    apiClient
+      .delete<void>(`/transactions/${id}`)
+      .then((response) => response.data),
 
   getTags: (transactionId: string) =>
     apiClient
@@ -135,18 +130,17 @@ export const transactionsApi = {
       .then((r) => r.data),
 };
 
-
 export const tagsApi = {
   list: () =>
     apiClient.get<Tag[]>("/transaction-tags").then((response) => response.data),
 
   create: (data: { name: string; color: string }) =>
-    apiClient.post<Tag>("/transaction-tags", data).then((response) => response.data),
+    apiClient
+      .post<Tag>("/transaction-tags", data)
+      .then((response) => response.data),
 
   update: (id: string, data: { name?: string; color?: string }) =>
-    apiClient
-      .put<Tag>(`/transaction-tags/${id}`, data)
-      .then((r) => r.data),
+    apiClient.put<Tag>(`/transaction-tags/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
     apiClient.delete<void>(`/transaction-tags/${id}`).then((r) => r.data),

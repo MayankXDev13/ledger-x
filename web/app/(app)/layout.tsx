@@ -1,5 +1,5 @@
-import { AuthGuard } from "@/components/auth-guard";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AuthGuard } from "@/components/AuthGuard";
+import { AppSidebar } from "@/components/AppSidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

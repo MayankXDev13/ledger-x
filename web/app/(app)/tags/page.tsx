@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from "@/hooks/use-tags";
+import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from "@/hooks/useTags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
