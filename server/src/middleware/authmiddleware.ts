@@ -3,10 +3,7 @@ import { getSupabase } from "../lib/supabase";
 import type { AppEnv } from "../types/hono";
 
 export async function authMiddleware(ctx: Context<AppEnv>, next: Next) {
-  const authHeader = ctx.req.header("Authorization");
-
-  console.log(authHeader);
-  
+  const authHeader = ctx.req.header("Authorization");  
 
   if (!authHeader) {
     return ctx.json({ error: "Unauthorized" }, 401);
