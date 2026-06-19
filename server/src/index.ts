@@ -4,8 +4,21 @@ import authApp from "./routes/auth";
 import customersApp from "./routes/customers";
 import transactionsApp from "./routes/transactions";
 import dashboardApp from "./routes/dashboard";
+import { cors } from "hono/cors";
 
 const app = new Hono();
+
+// Cors
+app.use(
+  "*",
+  cors({
+    origin: "http://localhost:3000",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  }),
+);
+
 
 // Auth routes (no auth middleware needed)
 app.route("/auth", authApp);
