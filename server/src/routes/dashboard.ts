@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, isNull, and, gte, sum, desc } from "drizzle-orm";
+import { eq, isNull, and, gte, desc } from "drizzle-orm";
 import { getDb } from "../db";
 import { customers, transactions } from "../db/schema";
 import type { AppEnv } from "../types/hono";
@@ -16,10 +16,11 @@ dashboardApp.get("/metrics", async (c) => {
     .select()
     .from(customers)
     .where(and(eq(customers.userId, user.id), isNull(customers.deletedAt)));
+
   const totalCustomers = allCustomers.length;
 
-  // Total credit balance
-  const credits = await db
+  // Total credit
+  const creditTransactions = await db
     .select({ amount: transactions.amount })
     .from(transactions)
     .where(
@@ -29,10 +30,14 @@ dashboardApp.get("/metrics", async (c) => {
         isNull(transactions.deletedAt),
       ),
     );
-  const totalCredit = credits.reduce((s, r) => s + r.amount, 0);
 
-  // Total debit balance
-  const debits = await db
+  const totalCredit = creditTransactions.reduce(
+    (sum, transaction) => sum + transaction.amount,
+    0,
+  );
+
+  // Total debit
+  const debitTransactions = await db
     .select({ amount: transactions.amount })
     .from(transactions)
     .where(
@@ -42,7 +47,11 @@ dashboardApp.get("/metrics", async (c) => {
         isNull(transactions.deletedAt),
       ),
     );
-  const totalDebit = debits.reduce((s, r) => s + r.amount, 0);
+
+  const totalDebit = debitTransactions.reduce(
+    (sum, transaction) => sum + transaction.amount,
+    0,
+  );
 
   const totalBalance = totalCredit - totalDebit;
 
@@ -75,16 +84,21 @@ dashboardApp.get("/metrics", async (c) => {
     );
 
   const monthlyNet =
-    monthCredits.reduce((s, r) => s + r.amount, 0) -
-    monthDebits.reduce((s, r) => s + r.amount, 0);
+    monthCredits.reduce((sum, transaction) => sum + transaction.amount, 0) -
+    monthDebits.reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  return c.json({ totalBalance, totalCustomers, monthlyNet });
+  return c.json({
+    totalBalance,
+    totalCustomers,
+    monthlyNet,
+  });
 });
 
-// GET /dashboard/recent-transactions - latest 5 non-deleted transactions
+// GET /dashboard/recent-transactions
 dashboardApp.get("/recent-transactions", async (c) => {
   const user = c.get("user");
   const db = getDb(c);
+
   const data = await db
     .select()
     .from(transactions)
@@ -93,6 +107,7 @@ dashboardApp.get("/recent-transactions", async (c) => {
     )
     .orderBy(desc(transactions.createdAt))
     .limit(5);
+
   return c.json(data);
 });
 

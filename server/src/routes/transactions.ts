@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, isNull, and, gte, lte, desc, count } from "drizzle-orm";
+import { eq, isNull, and, gte, lte, desc, count, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { transactions, transactionTags, transactionTagMap } from "../db/schema";
 import type { AppEnv } from "../types/hono";
@@ -19,8 +19,10 @@ const transactionsApp = new Hono<AppEnv>();
 transactionsApp.get("/customers/:id/transactions", async (c) => {
   const { id } = c.req.param();
   const { start, end, page = "1", pageSize = "10" } = c.req.query();
+
   const user = c.get("user");
   const db = getDb(c);
+
   const limit = parseInt(pageSize, 10);
   const offset = (parseInt(page, 10) - 1) * limit;
 
@@ -29,10 +31,16 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
     eq(transactions.userId, user.id),
     isNull(transactions.deletedAt),
   ];
-  if (start) filters.push(gte(transactions.createdAt, new Date(start)));
-  if (end) filters.push(lte(transactions.createdAt, new Date(end)));
 
-  const [data, [{ total }]] = await Promise.all([
+  if (start) {
+    filters.push(gte(transactions.createdAt, new Date(start)));
+  }
+
+  if (end) {
+    filters.push(lte(transactions.createdAt, new Date(end)));
+  }
+
+  const [data, [{ total }], [{ totalAmount }]] = await Promise.all([
     db
       .select()
       .from(transactions)
@@ -40,8 +48,18 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
       .offset(offset),
+
     db
-      .select({ total: count() })
+      .select({
+        total: count(),
+      })
+      .from(transactions)
+      .where(and(...filters)),
+
+    db
+      .select({
+        totalAmount: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
       .from(transactions)
       .where(and(...filters)),
   ]);
@@ -51,6 +69,7 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
     page: parseInt(page, 10),
     pageSize: limit,
     total,
+    totalAmount,
   });
 });
 
