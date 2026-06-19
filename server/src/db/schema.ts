@@ -39,11 +39,6 @@ export const customers = pgTable(
   },
   (t) => ({
     userIdx: index("customer_user_idx").on(t.userId),
-
-    userPhoneUnique: uniqueIndex("customer_user_phone_unique").on(
-      t.userId,
-      t.phone,
-    ),
   }),
 );
 
