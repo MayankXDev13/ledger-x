@@ -56,7 +56,7 @@ export function AppSidebar() {
     <aside className="flex flex-col w-16 lg:w-64 min-h-screen bg-sidebar border-r border-sidebar-border shrink-0 transition-all duration-300">
       {/* Logo */}
       <div className="h-16 flex items-center gap-3 px-3 lg:px-5 border-b border-sidebar-border">
-        <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-md shadow-cyan-500/20">
+        <div className="w-9 h-9 shrink-0 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-md shadow-cyan-500/20">
           <TrendingUp className="w-4 h-4 text-slate-900" />
         </div>
         <span className="hidden lg:block text-lg font-bold text-sidebar-foreground tracking-tight">
@@ -102,7 +102,7 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-all group">
               <Avatar className="w-8 h-8 shrink-0 border border-cyan-500/30">
-                <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-emerald-500 text-slate-900 text-xs font-bold">
+                <AvatarFallback className="bg-linear-to-br from-cyan-500 to-emerald-500 text-slate-900 text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
