@@ -31,4 +31,18 @@ app.route("/customers", customersApp);
 app.route("/transactions", transactionsApp);
 app.route("/dashboard", dashboardApp);
 
+
+app.onError((err, c) => {
+  console.error("FULL ERROR:", err);
+
+  return c.json(
+    {
+      error: err.message,
+      cause: err.cause,
+      stack: err.stack,
+    },
+    500
+  );
+});
+
 export default app;

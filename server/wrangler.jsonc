@@ -3,11 +3,30 @@
 	"name": "server-v2",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-06-11",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"hyperdrive": [
 		{
 			"binding": "HYPERDRIVE",
 			"id": "d1abc4f5227847cfae066033bcd91344"
 		}
-	]
+	],
+	"routes": [
+		{
+			"pattern": "api.ledgex.mayankxdev.shop",
+			"zone_name": "mayankxdev.shop",
+			"custom_domain": true,
+			"enabled": true,
+			"previews_enabled": false
+		}
+	],
+	"vars": {
+		"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE": "postgresql://postgres.fqycuaaogarizwceznrn:iWkr1uAPNuFE8pjl@aws-1-ap-south-1.pooler.supabase.com:6543/postgres"
+	},
+	"observability": {
+		"logs": {
+			"enabled": true
+		}
+	}
 }

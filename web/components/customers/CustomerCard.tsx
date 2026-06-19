@@ -1,9 +1,26 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { User, Phone, Pencil, Trash2 } from "lucide-react";
-import { Customer } from "@/lib/api";
+import { Phone, Pencil, Trash2, ChevronRight } from "lucide-react";
+import type { Customer } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
-
+/* Deterministic avatar gradient */
+function getAvatarGradient(name: string) {
+  const gradients = [
+    "from-cyan-400 to-blue-500",
+    "from-emerald-400 to-teal-500",
+    "from-violet-400 to-purple-500",
+    "from-amber-400 to-orange-500",
+    "from-rose-400 to-pink-500",
+    "from-sky-400 to-cyan-500",
+  ];
+  const index =
+    name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
+    gradients.length;
+  return gradients[index];
+}
 
 interface CustomerCardProps {
   customer: Customer;
@@ -16,55 +33,67 @@ export default function CustomerCard({
   onEdit,
   onDelete,
 }: CustomerCardProps) {
+  const gradient = getAvatarGradient(customer.name);
+
   return (
-    <Link href={`/customers/${customer.id}`}>
-      <div className="group relative flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card/80 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-300">
-        {/* Subtle glow on hover */}
-        <div className="absolute inset-0 rounded-xl bg-linear-to-br from-cyan-500/0 to-emerald-500/0 group-hover:from-cyan-500/3 group-hover:to-emerald-500/3 transition-all duration-300" />
+    <Link href={`/customers/${customer.id}`} className="block group">
+      <div className="relative flex items-center gap-3.5 p-4 rounded-xl border border-border/60 bg-card hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-200 card-hover">
+        {/* Hover gradient overlay */}
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-cyan-500/0 to-emerald-500/0 group-hover:from-cyan-500/3 group-hover:to-emerald-500/2 transition-all duration-300 pointer-events-none" />
 
-        <div className="relative flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-cyan-400" />
-            </div>
+        {/* Avatar */}
+        <div
+          className={cn(
+            "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
+            gradient
+          )}
+        >
+          {customer.name.charAt(0).toUpperCase()}
+        </div>
 
-            <div>
-              <h3 className="font-semibold text-foreground">
-                {customer.name}
-              </h3>
-
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                <Phone className="w-3 h-3" />
-                {customer.phone}
-              </div>
-            </div>
+        {/* Info */}
+        <div className="relative flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+            {customer.name}
+          </h3>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+            <Phone className="w-3 h-3 shrink-0" />
+            <span className="truncate">{customer.phone}</span>
           </div>
+        </div>
 
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Actions — revealed on hover, chevron shown normally */}
+        <div className="relative shrink-0 flex items-center gap-1">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-150 -translate-x-2 group-hover:translate-x-0">
             <Button
               variant="ghost"
               size="icon"
-              className="w-7 h-7 text-muted-foreground hover:text-foreground"
+              className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 onEdit(customer);
               }}
+              aria-label={`Edit ${customer.name}`}
             >
               <Pencil className="w-3.5 h-3.5" />
             </Button>
-
             <Button
               variant="ghost"
               size="icon"
-              className="w-7 h-7 text-muted-foreground hover:text-destructive"
+              className="w-7 h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 onDelete(customer.id);
               }}
+              aria-label={`Delete ${customer.name}`}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
+
+          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors" />
         </div>
       </div>
     </Link>

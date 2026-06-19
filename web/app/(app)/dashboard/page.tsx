@@ -15,6 +15,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   RefreshCw,
+  Plus,
+  ChevronRight,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -31,6 +34,7 @@ import {
   Bar,
   Cell,
 } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -40,13 +44,21 @@ function formatCurrency(n: number) {
   }).format(n);
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/* ── Metric Card ── */
 function MetricCard({
   title,
   value,
   icon: Icon,
   trend,
   trendLabel,
-  gradient,
+  accentColor,
   loading,
 }: {
   title: string;
@@ -54,31 +66,80 @@ function MetricCard({
   icon: React.ElementType;
   trend?: "up" | "down" | "neutral";
   trendLabel?: string;
-  gradient: string;
+  accentColor: string; // e.g. "cyan" | "emerald" | "violet"
   loading?: boolean;
 }) {
+  const colorMap: Record<string, { bg: string; icon: string; ring: string }> = {
+    cyan: {
+      bg: "from-cyan-500/8 to-transparent",
+      icon: "bg-cyan-500/15 text-cyan-400",
+      ring: "border-cyan-500/20",
+    },
+    emerald: {
+      bg: "from-emerald-500/8 to-transparent",
+      icon: "bg-emerald-500/15 text-emerald-400",
+      ring: "border-emerald-500/20",
+    },
+    violet: {
+      bg: "from-violet-500/8 to-transparent",
+      icon: "bg-violet-500/15 text-violet-400",
+      ring: "border-violet-500/20",
+    },
+    amber: {
+      bg: "from-amber-500/8 to-transparent",
+      icon: "bg-amber-500/15 text-amber-400",
+      ring: "border-amber-500/20",
+    },
+  };
+  const colors = colorMap[accentColor] ?? colorMap.cyan;
+
   return (
-    <Card className="relative overflow-hidden border-border/50 bg-card/80 backdrop-blur hover:shadow-lg hover:shadow-black/20 transition-all duration-300 group">
-      <div className={cn("absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity", gradient)} />
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", gradient.replace("bg-linear-to-br", "bg-linear-to-br"))}>
-          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center opacity-80", gradient)}>
-            <Icon className="w-4 h-4 text-white" />
+    <div
+      className={cn(
+        "relative rounded-xl border bg-card overflow-hidden group card-hover",
+        colors.ring
+      )}
+    >
+      <div
+        className={cn(
+          "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+          colors.bg
+        )}
+      />
+      <div className="relative p-5">
+        <div className="flex items-start justify-between mb-3">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {title}
+          </p>
+          <div
+            className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center",
+              colors.icon
+            )}
+          >
+            <Icon className="w-4 h-4" />
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
+
         {loading ? (
-          <Skeleton className="h-8 w-32" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-3.5 w-20" />
+          </div>
         ) : (
-          <div className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">{value}</div>
+          <div>
+            <p className="text-2xl font-bold text-foreground tabular">{value}</p>
             {trendLabel && (
-              <div className={cn(
-                "flex items-center gap-1 text-xs font-medium",
-                trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-muted-foreground"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center gap-1 mt-1 text-xs font-medium",
+                  trend === "up"
+                    ? "text-emerald-400"
+                    : trend === "down"
+                      ? "text-red-400"
+                      : "text-muted-foreground"
+                )}
+              >
                 {trend === "up" ? (
                   <ArrowUpRight className="w-3 h-3" />
                 ) : trend === "down" ? (
@@ -89,8 +150,21 @@ function MetricCard({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── Custom Tooltip ── */
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl text-xs">
+      <p className="text-muted-foreground mb-1">{label}</p>
+      <p className="font-bold text-foreground">
+        {formatCurrency(Math.abs(payload[0].value))}
+      </p>
+    </div>
   );
 }
 
@@ -98,46 +172,77 @@ export default function DashboardPage() {
   const { data: metrics, isLoading: metricsLoading, refetch } = useDashboardMetrics();
   const { data: recentTxns, isLoading: txnsLoading } = useRecentTransactions();
   const { data: customers } = useCustomers();
+  const { user } = useAuth();
 
-  // Build simple chart data from recent transactions
+  const emailName = user?.email?.split("@")[0] ?? "there";
+
   const chartData = recentTxns
-    ? [...recentTxns].reverse().map((tx, i) => ({
-      name: format(new Date(tx.createdAt), "MMM d"),
-      amount: tx.type === "credit" ? tx.amount : -tx.amount,
-      type: tx.type,
-    }))
+    ? [...recentTxns].reverse().map((tx) => ({
+        name: format(new Date(tx.createdAt), "MMM d"),
+        amount: tx.type === "credit" ? tx.amount : -tx.amount,
+        type: tx.type,
+      }))
     : [];
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full fade-up">
+      {/* ─── Header ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-md bg-gradient-brand flex items-center justify-center">
+              <LayoutDashboard className="w-3.5 h-3.5 text-slate-900" />
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Overview
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            {getGreeting()},{" "}
+            <span className="text-gradient-cyan capitalize">{emailName}</span> 👋
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Your financial overview at a glance
+            Here&apos;s your financial overview for today.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          className="gap-2 border-border/50 hover:border-cyan-500/50 transition-all"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="gap-1.5 border-border/50 hover:border-cyan-500/40 text-xs h-8"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </Button>
+          <Link href="/customers">
+            <Button
+              size="sm"
+              className="gap-1.5 bg-gradient-brand text-slate-900 font-semibold text-xs h-8 shadow-sm shadow-cyan-500/20 hover:opacity-90"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Customer
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {/* ─── Metric Cards ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricCard
           title="Total Balance"
           value={metrics ? formatCurrency(metrics.totalBalance) : "—"}
           icon={DollarSign}
-          trend={metrics?.totalBalance && metrics.totalBalance > 0 ? "up" : "down"}
+          trend={
+            metrics?.totalBalance
+              ? metrics.totalBalance > 0
+                ? "up"
+                : "down"
+              : "neutral"
+          }
           trendLabel="Overall ledger balance"
-          gradient="from-cyan-500 to-cyan-600"
+          accentColor="cyan"
           loading={metricsLoading}
         />
         <MetricCard
@@ -146,182 +251,325 @@ export default function DashboardPage() {
           icon={Users}
           trend="neutral"
           trendLabel="Active customers"
-          gradient="from-violet-500 to-violet-600"
+          accentColor="violet"
           loading={metricsLoading}
         />
         <MetricCard
           title="Monthly Net"
           value={metrics ? formatCurrency(metrics.monthlyNet) : "—"}
           icon={Activity}
-          trend={metrics?.monthlyNet && metrics.monthlyNet > 0 ? "up" : "down"}
+          trend={
+            metrics?.monthlyNet
+              ? metrics.monthlyNet > 0
+                ? "up"
+                : "down"
+              : "neutral"
+          }
           trendLabel="This month's net flow"
-          gradient="from-emerald-500 to-emerald-600"
+          accentColor="emerald"
           loading={metricsLoading}
         />
       </div>
 
-      {/* Charts Row */}
+      {/* ─── Charts Row ─── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Area Chart */}
-        <Card className="xl:col-span-2 border-border/50 bg-card/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Recent Transaction Flow</CardTitle>
-            <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 bg-cyan-500/5">
-              Last 5 transactions
+        <Card className="xl:col-span-2 border-border/60 bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
+            <div>
+              <CardTitle className="text-sm font-semibold text-foreground">
+                Transaction Flow
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Recent activity trend
+              </p>
+            </div>
+            <Badge
+              variant="outline"
+              className="text-cyan-400 border-cyan-500/30 bg-cyan-500/5 text-[10px] font-semibold"
+            >
+              Last 5 entries
             </Badge>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4 px-2 pb-4">
             {txnsLoading ? (
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-52 w-full" />
             ) : chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+                >
                   <defs>
-                    <linearGradient id="colorCredit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                    <linearGradient
+                      id="colorFlowPos"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      background: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      fontSize: 12,
-                    }}
-                    formatter={(value) => [formatCurrency(Math.abs(Number(value) || 0)), "Amount"]}
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(255,255,255,0.04)"
+                    vertical={false}
                   />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={50}
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
+                    }
+                  />
+                  <RechartsTooltip content={<CustomTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="amount"
-                    stroke="#06b6d4"
+                    stroke="#06B6D4"
                     strokeWidth={2}
-                    fill="url(#colorCredit)"
-                    dot={{ fill: "#06b6d4", r: 4 }}
-                    activeDot={{ r: 6 }}
+                    fill="url(#colorFlowPos)"
+                    dot={{
+                      fill: "#06B6D4",
+                      r: 4,
+                      strokeWidth: 2,
+                      stroke: "var(--card)",
+                    }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                No recent transactions
+              <div className="h-52 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Activity className="w-8 h-8 opacity-30" />
+                <p className="text-sm">No transaction data yet</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Bar chart by type */}
-        <Card className="border-border/50 bg-card/80">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">By Transaction Type</CardTitle>
+        <Card className="border-border/60 bg-card">
+          <CardHeader className="pb-0 pt-4 px-5">
+            <CardTitle className="text-sm font-semibold text-foreground">
+              By Type
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Credit vs Debit breakdown
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4 px-2 pb-4">
             {txnsLoading ? (
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-52 w-full" />
             ) : chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      background: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      fontSize: 12,
-                    }}
-                    formatter={(value) => [formatCurrency(Math.abs(Number(value) || 0)), "Amount"]}
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(255,255,255,0.04)"
+                    vertical={false}
                   />
-                  <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                    tickFormatter={(v) => `₹${Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(0) + "k" : Math.abs(v)}`}
+                  />
+                  <RechartsTooltip content={<CustomTooltip />} />
+                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell
                         key={index}
-                        fill={entry.type === "credit" ? "#10b981" : "#ef4444"}
-                        fillOpacity={0.8}
+                        fill={entry.type === "credit" ? "#22C55E" : "#EF4444"}
+                        fillOpacity={0.85}
                       />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                No data
+              <div className="h-52 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <TrendingUp className="w-8 h-8 opacity-30" />
+                <p className="text-sm">No data</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Transactions Table */}
-      <Card className="border-border/50 bg-card/80">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-sm font-medium">Recent Transactions</CardTitle>
+      {/* ─── Recent Transactions ─── */}
+      <Card className="border-border/60 bg-card">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-5">
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Recent Transactions
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Latest activity across all customers
+            </p>
+          </div>
           <Link href="/customers">
-            <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-cyan-400 hover:text-cyan-300 gap-1 text-xs h-7"
+            >
               View all
-              <ArrowUpRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           {txnsLoading ? (
-            <div className="space-y-3">
+            <div className="divide-y divide-border/40">
               {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <div
+                  key={i}
+                  className="flex items-center gap-4 px-5 py-3.5"
+                >
+                  <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-2.5 w-32" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
               ))}
             </div>
           ) : recentTxns && recentTxns.length > 0 ? (
-            <div className="space-y-1">
+            <div className="divide-y divide-border/40">
               {recentTxns.map((tx) => {
                 const customer = customers?.find((c) => c.id === tx.customerId);
+                const isCredit = tx.type === "credit";
                 return (
-                  <div
+                  <Link
                     key={tx.id}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors group"
+                    href={`/customers/${tx.customerId}`}
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors group"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn(
+                    <div
+                      className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                        tx.type === "credit"
-                          ? "bg-emerald-500/15 text-emerald-400"
-                          : "bg-red-500/15 text-red-400"
-                      )}>
-                        {tx.type === "credit" ? (
-                          <TrendingUp className="w-4 h-4" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {customer?.name || tx.customerId}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {tx.note || tx.type} · {format(new Date(tx.createdAt), "MMM d, yyyy")}
-                        </p>
-                      </div>
+                        isCredit
+                          ? "bg-emerald-500/12 text-emerald-400"
+                          : "bg-red-500/12 text-red-400"
+                      )}
+                    >
+                      {isCredit ? (
+                        <TrendingUp className="w-4 h-4" />
+                      ) : (
+                        <TrendingDown className="w-4 h-4" />
+                      )}
                     </div>
-                    <span className={cn(
-                      "text-sm font-bold tabular-nums",
-                      tx.type === "credit" ? "text-emerald-400" : "text-red-400"
-                    )}>
-                      {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
-                    </span>
-                  </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+                        {customer?.name || "Unknown Customer"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.note || tx.type} ·{" "}
+                        {format(new Date(tx.createdAt), "MMM d, yyyy")}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular",
+                          isCredit ? "text-emerald-400" : "text-red-400"
+                        )}
+                      >
+                        {isCredit ? "+" : "−"}
+                        {formatCurrency(tx.amount)}
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors" />
+                    </div>
+                  </Link>
                 );
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No recent transactions
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+              <Activity className="w-8 h-8 opacity-30" />
+              <p className="text-sm">No recent transactions</p>
+              <Link href="/customers">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 gap-1.5 border-border/50"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add your first customer
+                </Button>
+              </Link>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* ─── Quick Access Customers ─── */}
+      {customers && customers.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Recent Customers
+            </h2>
+            <Link href="/customers">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-cyan-400 hover:text-cyan-300 gap-1 h-7"
+              >
+                All customers
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {customers.slice(0, 6).map((customer) => (
+              <Link
+                key={customer.id}
+                href={`/customers/${customer.id}`}
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-border/60 bg-card hover:border-cyan-500/30 hover:shadow-sm hover:shadow-cyan-500/5 transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/20 flex items-center justify-center text-sm font-bold text-cyan-400 shrink-0">
+                  {customer.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+                    {customer.name}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {customer.phone}
+                  </p>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

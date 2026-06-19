@@ -17,16 +17,25 @@ export function CustomerGrid({
 }: CustomerGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-36 rounded-xl" />
+          <div
+            key={i}
+            className="flex items-center gap-3.5 p-4 rounded-xl border border-border/60 bg-card animate-pulse"
+          >
+            <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
       {customers.map((customer) => (
         <CustomerCard
           key={customer.id}

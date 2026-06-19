@@ -1,29 +1,32 @@
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 
 interface CustomersHeaderProps {
   total: number;
   onAdd: () => void;
 }
 
-export function CustomersHeader({
-  total,
-  onAdd,
-}: CustomersHeaderProps) {
+export function CustomersHeader({ total, onAdd }: CustomersHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          Customers
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {total} total customers
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-sm shadow-cyan-500/20">
+          <Users className="w-4 h-4 text-slate-900" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
+            Customers
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {total > 0 ? `${total} customer${total !== 1 ? "s" : ""}` : "No customers yet"}
+          </p>
+        </div>
       </div>
 
       <Button
         onClick={onAdd}
-        className="gap-2 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold"
+        id="add-customer-btn"
+        className="gap-2 bg-gradient-brand text-slate-900 font-semibold shadow-sm shadow-cyan-500/20 hover:opacity-90 h-9"
       >
         <Plus className="w-4 h-4" />
         Add Customer

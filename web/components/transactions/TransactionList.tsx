@@ -5,7 +5,7 @@ import { EmptyTransactions } from "./EmptyTransactions";
 
 interface TransactionListProps {
   loading: boolean;
-  transactions: Transaction[];
+  transactions: (Transaction & { runningBalance?: number })[];
   onEdit: (tx: Transaction) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
@@ -20,12 +20,16 @@ export function TransactionList({
 }: TransactionListProps) {
   if (loading) {
     return (
-      <div className="p-6 space-y-3">
+      <div className="divide-y divide-border/40">
         {[...Array(5)].map((_, i) => (
-          <Skeleton
-            key={i}
-            className="h-14 rounded-lg"
-          />
+          <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+            <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-2.5 w-32" />
+            </div>
+            <Skeleton className="h-5 w-20" />
+          </div>
         ))}
       </div>
     );
@@ -36,22 +40,14 @@ export function TransactionList({
   }
 
   return (
-    <div>
-      {transactions.map((tx, index) => (
-        <div
+    <div className="divide-y divide-border/40">
+      {transactions.map((tx) => (
+        <TransactionItem
           key={tx.id}
-          className={
-            index !== 0
-              ? "border-t border-border/30"
-              : ""
-          }
-        >
-          <TransactionItem
-            transaction={tx}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        </div>
+          transaction={tx}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );
