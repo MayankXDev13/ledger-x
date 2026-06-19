@@ -39,6 +39,7 @@ export const customers = pgTable(
   },
   (t) => ({
     userIdx: index("customer_user_idx").on(t.userId),
+    deletedAtIdx: index("customer_deleted_at_idx").on(t.deletedAt),
   }),
 );
 
@@ -73,6 +74,8 @@ export const transactions = pgTable(
   (t) => ({
     customerIdx: index("transaction_customer_idx").on(t.customerId),
     userIdx: index("transaction_user_idx").on(t.userId),
+    typeIdx: index("transaction_type_idx").on(t.type),
+    deletedAtIdx: index("transaction_deleted_at_idx").on(t.deletedAt),
   }),
 );
 

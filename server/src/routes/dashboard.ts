@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, isNull, and, gte, desc } from "drizzle-orm";
+import { eq, isNull, and, gte, desc, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { customers, transactions } from "../db/schema";
 import type { AppEnv } from "../types/hono";
@@ -11,81 +11,68 @@ dashboardApp.get("/metrics", async (c) => {
   const user = c.get("user");
   const db = getDb(c);
 
-  // Total active customers
-  const allCustomers = await db
-    .select()
-    .from(customers)
-    .where(and(eq(customers.userId, user.id), isNull(customers.deletedAt)));
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
 
-  const totalCustomers = allCustomers.length;
-
-  // Total credit
-  const creditTransactions = await db
-    .select({ amount: transactions.amount })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, user.id),
-        eq(transactions.type, "credit"),
-        isNull(transactions.deletedAt),
+  const [
+    customerResult,
+    balanceResult,
+    monthlyResult,
+  ] = await Promise.all([
+    db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.userId, user.id),
+          isNull(customers.deletedAt),
+        ),
       ),
-    );
 
-  const totalCredit = creditTransactions.reduce(
-    (sum, transaction) => sum + transaction.amount,
-    0,
-  );
-
-  // Total debit
-  const debitTransactions = await db
-    .select({ amount: transactions.amount })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, user.id),
-        eq(transactions.type, "debit"),
-        isNull(transactions.deletedAt),
+    db
+      .select({
+        totalCredit:
+          sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' then ${transactions.amount} else 0 end), 0)`,
+        totalDebit:
+          sql<number>`coalesce(sum(case when ${transactions.type} = 'debit' then ${transactions.amount} else 0 end), 0)`,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+        ),
       ),
-    );
 
-  const totalDebit = debitTransactions.reduce(
-    (sum, transaction) => sum + transaction.amount,
-    0,
-  );
-
-  const totalBalance = totalCredit - totalDebit;
-
-  // Monthly net (current month credits - debits)
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const monthCredits = await db
-    .select({ amount: transactions.amount })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, user.id),
-        eq(transactions.type, "credit"),
-        isNull(transactions.deletedAt),
-        gte(transactions.createdAt, startOfMonth),
+    db
+      .select({
+        monthCredit:
+          sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' then ${transactions.amount} else 0 end), 0)`,
+        monthDebit:
+          sql<number>`coalesce(sum(case when ${transactions.type} = 'debit' then ${transactions.amount} else 0 end), 0)`,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+          gte(transactions.createdAt, startOfMonth),
+        ),
       ),
-    );
+  ]);
 
-  const monthDebits = await db
-    .select({ amount: transactions.amount })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, user.id),
-        eq(transactions.type, "debit"),
-        isNull(transactions.deletedAt),
-        gte(transactions.createdAt, startOfMonth),
-      ),
-    );
+  const totalCustomers = Number(customerResult[0]?.count ?? 0);
+
+  const totalBalance =
+    Number(balanceResult[0]?.totalCredit ?? 0) -
+    Number(balanceResult[0]?.totalDebit ?? 0);
 
   const monthlyNet =
-    monthCredits.reduce((sum, transaction) => sum + transaction.amount, 0) -
-    monthDebits.reduce((sum, transaction) => sum + transaction.amount, 0);
+    Number(monthlyResult[0]?.monthCredit ?? 0) -
+    Number(monthlyResult[0]?.monthDebit ?? 0);
 
   return c.json({
     totalBalance,
@@ -93,6 +80,7 @@ dashboardApp.get("/metrics", async (c) => {
     monthlyNet,
   });
 });
+
 
 // GET /dashboard/recent-transactions
 dashboardApp.get("/recent-transactions", async (c) => {
