@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
+import { TrendingUp } from "lucide-react";
 
 const navItems = [
   {
@@ -98,8 +99,8 @@ export function AppSidebar() {
             collapsed && "justify-center",
           )}
         >
-          <div className="w-8 h-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-            <FaArrowUp className="w-4 h-4 text-primary-foreground" />
+          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/25">
+            <TrendingUp className="w-5 h-5 text-white font-bold" />
           </div>
           {!collapsed && (
             <span className="text-base font-bold text-sidebar-foreground tracking-tight whitespace-nowrap">

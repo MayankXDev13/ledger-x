@@ -34,7 +34,9 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         <MobileBrandLogo />
         <div className="space-y-2">
           <h2 className="text-3xl font-bold text-foreground">Welcome back</h2>
-          <p className="text-muted-foreground">Sign in to your account to continue</p>
+          <p className="text-muted-foreground">
+            Sign in to your account to continue
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -80,7 +82,11 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -103,7 +109,10 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-brand hover:text-brand-light font-medium transition-colors">
+          <Link
+            href="/signup"
+            className="text-brand hover:text-accent font-medium transition-colors"
+          >
             Create one
           </Link>
         </p>
@@ -118,7 +127,9 @@ function MobileBrandLogo() {
       <div className="w-10 h-10 bg-gradient-brand rounded-lg flex items-center justify-center">
         <TrendingUp className="w-5 h-5 text-white" />
       </div>
-      <span className="text-xl font-bold text-foreground tracking-tight">Ledger-X</span>
+      <span className="text-xl font-bold text-foreground tracking-tight">
+        Ledger-X
+      </span>
     </div>
   );
 }

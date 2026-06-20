@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,37 +13,47 @@ import {
 
 interface DeleteCustomerDialogProps {
   open: boolean;
+  customerName: string;
   onClose: () => void;
   onConfirm: () => void;
 }
 
 export function DeleteCustomerDialog({
   open,
+  customerName,
   onClose,
   onConfirm,
 }: DeleteCustomerDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onClose}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Delete customer?
+            Delete {customerName}?
           </AlertDialogTitle>
 
           <AlertDialogDescription>
-            This will soft-delete the customer. You can
-            restore them later.
+            This customer will be hidden from active records.
+            All transactions will remain intact and the customer
+            can be restored later if needed.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>
+            Cancel
+          </AlertDialogCancel>
 
           <AlertDialogAction
-            className="bg-destructive text-destructive-foreground"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onConfirm}
           >
-            Delete
+            Delete Customer
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

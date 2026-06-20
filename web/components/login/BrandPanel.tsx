@@ -7,7 +7,7 @@ export function BrandPanel() {
     <div className="hidden lg:flex lg:flex-col lg:w-1/2 bg-gradient-brand p-12 justify-between relative overflow-hidden">
       <AnimatedBackground />
       <div className="relative z-10 flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-brand rounded-lg flex items-center justify-center shadow-lg shadow-primary/25">
+        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/25">
           <TrendingUp className="w-5 h-5 text-white font-bold" />
         </div>
         <span className="text-xl font-bold text-primary-foreground tracking-tight">
@@ -17,14 +17,16 @@ export function BrandPanel() {
 
       <div className="relative z-10 space-y-6">
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand-light text-xs font-medium">
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand/30 bg-primary/10 text-primary-foreground text-xs font-medium hover:bg-primary/20 transition-colors">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-light animate-pulse" />
             Finance Intelligence Platform
           </div>
+
           <h1 className="text-5xl font-bold text-primary-foreground leading-tight">
             Track every
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-brand">
+            <span className="text-transparent bg-clip-text bg-primary">
               transaction.
             </span>
           </h1>
@@ -42,7 +44,7 @@ export function BrandPanel() {
           ].map(({ value, label }) => (
             <div
               key={label}
-              className="p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 backdrop-blur"
+              className="p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 backdrop-blur hover:bg-slate-800/70 transition-colors cursor-pointer flex flex-col items-center justify-center hover:scale-[1.01] hover:shadow-lg hover:shadow-slate-900/50"
             >
               <div className="text-2xl font-bold text-white">{value}</div>
               <div className="text-xs text-slate-500 mt-1">{label}</div>
