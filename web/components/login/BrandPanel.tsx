@@ -4,27 +4,27 @@ import { TrendingUp } from "lucide-react";
 
 export function BrandPanel() {
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-1/2 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-12 justify-between relative overflow-hidden">
+    <div className="hidden lg:flex lg:flex-col lg:w-1/2 bg-gradient-brand p-12 justify-between relative overflow-hidden">
       <AnimatedBackground />
       <div className="relative z-10 flex items-center gap-3">
-        <div className="w-10 h-10 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/25">
-          <TrendingUp className="w-5 h-5 text-slate-900 font-bold" />
+        <div className="w-10 h-10 bg-gradient-brand rounded-lg flex items-center justify-center shadow-lg shadow-primary/25">
+          <TrendingUp className="w-5 h-5 text-white font-bold" />
         </div>
-        <span className="text-xl font-bold text-white tracking-tight">
+        <span className="text-xl font-bold text-primary-foreground tracking-tight">
           Ledger-X
         </span>
       </div>
 
       <div className="relative z-10 space-y-6">
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand-light text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-light animate-pulse" />
             Finance Intelligence Platform
           </div>
-          <h1 className="text-5xl font-bold text-white leading-tight">
+          <h1 className="text-5xl font-bold text-primary-foreground leading-tight">
             Track every
             <br />
-            <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-emerald-400">
+            <span className="text-transparent bg-clip-text bg-gradient-brand">
               transaction.
             </span>
           </h1>
@@ -61,9 +61,9 @@ export function BrandPanel() {
 function AnimatedBackground() {
   return (
     <>
-      <div className="absolute top-20 left-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-32 right-16 w-96 h-96 bg-emerald-500/8 rounded-full blur-3xl animate-pulse delay-1000" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-cyan-400/5 rounded-full blur-3xl" />
+      <div className="absolute top-20 left-20 w-64 h-64 bg-brand/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-32 right-16 w-96 h-96 bg-brand-light/8 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand/5 rounded-full blur-3xl" />
     </>
   );
 }

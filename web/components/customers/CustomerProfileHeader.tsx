@@ -171,7 +171,7 @@ export function CustomerProfileHeader({
                   className={cn(
                     "text-3xl sm:text-4xl font-bold tabular tracking-tight",
                     isReceivable
-                      ? "text-emerald-400"
+                      ? "text-brand-light"
                       : isPayable
                         ? "text-red-400"
                         : "text-muted-foreground"

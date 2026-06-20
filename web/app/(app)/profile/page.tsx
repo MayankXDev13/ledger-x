@@ -76,17 +76,17 @@ export default function ProfilePage() {
 
       {/* Profile Card */}
       <Card className="border-border/50 bg-card/80 overflow-hidden relative">
-        <div className="absolute inset-0 bg-linear-to-br from-cyan-500/3 to-emerald-500/3" />
+        <div className="absolute inset-0 bg-gradient-brand/3" />
         <CardContent className="relative pt-6">
           <div className="flex items-center gap-5">
             <div className="relative">
-              <Avatar className="w-20 h-20 border-2 border-cyan-500/30">
-                <AvatarFallback className="bg-linear-to-br from-cyan-500 to-emerald-500 text-slate-900 text-2xl font-bold">
+              <Avatar className="w-20 h-20 border-2 border-brand/30">
+                <AvatarFallback className="bg-gradient-brand text-primary-foreground text-2xl font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-full flex items-center justify-center border-2 border-background">
-                <TrendingUp className="w-3 h-3 text-slate-900" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-brand rounded-full flex items-center justify-center border-2 border-background">
+                <TrendingUp className="w-3 h-3 text-white" />
               </div>
             </div>
             <div className="space-y-1">
@@ -94,7 +94,7 @@ export default function ProfilePage() {
                 <h2 className="text-xl font-bold text-foreground">
                   {user?.email?.split("@")[0] || "User"}
                 </h2>
-                <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 text-xs" variant="outline">
+                <Badge className="bg-brand/15 text-brand-light border-brand/20 text-xs" variant="outline">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Verified
                 </Badge>
@@ -183,7 +183,7 @@ export default function ProfilePage() {
             <Button
               type="submit"
               disabled={pwLoading}
-              className="bg-linear-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold"
+              className="bg-gradient-brand text-primary-foreground font-semibold"
             >
               {pwLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Update password

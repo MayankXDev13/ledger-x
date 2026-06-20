@@ -88,7 +88,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20 transition-all hover:shadow-cyan-500/30 hover:scale-[1.01]"
+            className="w-full h-11 bg-gradient-brand hover:opacity-90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 hover:scale-[1.01]"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -103,7 +103,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-cyan-500 hover:text-cyan-400 font-medium transition-colors">
+          <Link href="/signup" className="text-brand hover:text-brand-light font-medium transition-colors">
             Create one
           </Link>
         </p>
@@ -115,8 +115,8 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 function MobileBrandLogo() {
   return (
     <div className="lg:hidden flex items-center gap-3 justify-center">
-      <div className="w-10 h-10 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center">
-        <TrendingUp className="w-5 h-5 text-slate-900" />
+      <div className="w-10 h-10 bg-gradient-brand rounded-lg flex items-center justify-center">
+        <TrendingUp className="w-5 h-5 text-white" />
       </div>
       <span className="text-xl font-bold text-foreground tracking-tight">Ledger-X</span>
     </div>

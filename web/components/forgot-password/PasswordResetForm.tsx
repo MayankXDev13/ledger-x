@@ -27,8 +27,8 @@ export function PasswordResetForm({
   if (isSent) {
     return (
       <div className="text-center space-y-6">
-        <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20">
-          <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+        <div className="w-20 h-20 bg-brand/10 rounded-full flex items-center justify-center mx-auto border border-brand/20">
+          <CheckCircle2 className="w-10 h-10 text-brand-light" />
         </div>
         <div className="space-y-2">
           <p className="text-foreground font-medium">Email sent!</p>
@@ -71,7 +71,7 @@ export function PasswordResetForm({
 
       <Button
         type="submit"
-        className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
+        className="w-full h-11 bg-gradient-brand hover:opacity-90 text-primary-foreground font-semibold transition-all"
       >
         Send reset link
       </Button>

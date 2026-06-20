@@ -103,9 +103,9 @@ export function CustomerAnalyticsCards({
       value: formatCurrency(totalCredit),
       sub: "Money received",
       icon: TrendingUp,
-      iconClass: "bg-emerald-500/15 text-emerald-400",
-      valueClass: "text-emerald-400",
-      bgClass: "bg-gradient-to-br from-emerald-500/5 to-transparent",
+      iconClass: "bg-brand/15 text-brand-light",
+      valueClass: "text-brand-light",
+      bgClass: "bg-gradient-to-br from-brand/5 to-transparent",
       loading,
     },
     {

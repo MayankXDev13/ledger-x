@@ -63,14 +63,14 @@ export function UpdatePasswordForm({ onSubmit }: UpdatePasswordFormProps) {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
-          className="h-11 bg-muted/30 border-border/50 focus:border-cyan-500/50 transition-all"
+          className="h-11 bg-muted/30 border-border/50 focus:border-brand/50 transition-all"
         />
       </div>
 
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
+        className="w-full h-11 bg-gradient-brand hover:opacity-90 text-primary-foreground font-semibold transition-all"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

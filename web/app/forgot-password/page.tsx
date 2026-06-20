@@ -5,8 +5,9 @@ import { supabase } from "@/lib/supabase";
 import { LogoSection } from "@/components/forgot-password/LogoSection";
 import { PasswordResetForm } from "@/components/forgot-password/PasswordResetForm";
 import { Button } from "@/components/ui/button";
-import { Link } from "next/link";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");

@@ -152,7 +152,7 @@ export default function TagsPage() {
         </div>
         <Button
           onClick={() => setDialogOpen(true)}
-          className="gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20"
+          className="gap-2 bg-gradient-brand hover:opacity-90 text-primary-foreground font-semibold shadow-lg shadow-primary/20"
         >
           <Plus className="w-4 h-4" />
           New Tag

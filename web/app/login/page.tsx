@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { BrandPanel } from "@/components/login/BrandPanel";
 import { LoginForm } from "@/components/login/LoginForm";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();

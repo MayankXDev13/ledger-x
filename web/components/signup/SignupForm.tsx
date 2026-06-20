@@ -92,7 +92,7 @@ export function SignupForm({ onSubmit }: SignupFormProps) {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="h-11 bg-muted/30 border-border/50 focus:border-cyan-500/50 transition-all"
+            className="h-11 bg-muted/30 border-border/50 focus:border-brand/50 transition-all"
           />
         </div>
 
@@ -101,7 +101,7 @@ export function SignupForm({ onSubmit }: SignupFormProps) {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.01]"
+          className="w-full h-11 bg-gradient-brand hover:opacity-90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01]"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -116,7 +116,7 @@ export function SignupForm({ onSubmit }: SignupFormProps) {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="text-cyan-500 hover:text-cyan-400 font-medium transition-colors">
+        <Link href="/login" className="text-brand hover:text-brand-light font-medium transition-colors">
           Sign in
         </Link>
       </p>

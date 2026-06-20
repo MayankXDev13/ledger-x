@@ -78,7 +78,7 @@ export default function CustomersPage() {
       {/* Mobile FAB */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40">
         <Button
-          className="w-full h-12 gap-2 bg-gradient-brand text-slate-900 font-bold text-sm shadow-lg shadow-cyan-500/20"
+          className="w-full h-12 gap-2 bg-gradient-brand text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20"
           onClick={() => {
             setEditingCustomer(null);
             setDialogOpen(true);

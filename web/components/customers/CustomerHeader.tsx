@@ -44,7 +44,7 @@ export function CustomerHeader({ customer, balance }: CustomerHeaderProps) {
             <div
               className={cn(
                 "text-2xl font-bold tabular-nums",
-                balance >= 0 ? "text-emerald-400" : "text-red-400",
+                balance >= 0 ? "text-brand-light" : "text-red-400",
               )}
             >
               {balance >= 0 ? "+" : ""}
