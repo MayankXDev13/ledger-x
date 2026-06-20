@@ -59,12 +59,14 @@ interface CustomerProfileHeaderProps {
   customer: Customer;
   balance: number;
   onAddTransaction: () => void;
+  onDelete: () => void;
 }
 
 export function CustomerProfileHeader({
   customer,
   balance,
   onAddTransaction,
+  onDelete,
 }: CustomerProfileHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
   const avatarGradient = getAvatarGradient(customer.name);
@@ -81,10 +83,10 @@ export function CustomerProfileHeader({
           className={cn(
             "absolute inset-0 opacity-[0.03] pointer-events-none",
             isReceivable
-              ? "bg-gradient-to-br from-emerald-400 to-cyan-400"
+              ? "bg-linear-to-br from-emerald-400 to-cyan-400"
               : isPayable
-                ? "bg-gradient-to-br from-red-400 to-orange-400"
-                : "bg-gradient-to-br from-zinc-400 to-zinc-500"
+                ? "bg-linear-to-br from-red-400 to-orange-400"
+                : "bg-linear-to-br from-zinc-400 to-zinc-500"
           )}
         />
         {/* Top accent line */}
@@ -92,10 +94,10 @@ export function CustomerProfileHeader({
           className={cn(
             "absolute top-0 left-0 right-0 h-px",
             isReceivable
-              ? "bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent"
+              ? "bg-linear-to-r from-transparent via-emerald-500/40 to-transparent"
               : isPayable
-                ? "bg-gradient-to-r from-transparent via-red-500/40 to-transparent"
-                : "bg-gradient-to-r from-transparent via-zinc-500/30 to-transparent"
+                ? "bg-linear-to-r from-transparent via-red-500/40 to-transparent"
+                : "bg-linear-to-r from-transparent via-zinc-500/30 to-transparent"
           )}
         />
 
@@ -106,7 +108,7 @@ export function CustomerProfileHeader({
               {/* Avatar */}
               <div
                 className={cn(
-                  "w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-lg text-white text-2xl font-bold select-none",
+                  "w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-linear-to-br flex items-center justify-center shrink-0 shadow-lg text-white text-2xl font-bold select-none",
                   avatarGradient
                 )}
                 style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
@@ -234,7 +236,10 @@ export function CustomerProfileHeader({
                       Send statement
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-xs text-destructive focus:text-destructive cursor-pointer">
+                    <DropdownMenuItem
+                      className="text-xs text-destructive focus:text-destructive cursor-pointer"
+                      onClick={onDelete}
+                    >
                       Delete customer
                     </DropdownMenuItem>
                   </DropdownMenuContent>

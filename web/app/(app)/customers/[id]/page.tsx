@@ -22,13 +22,14 @@ import {
 
 import { CustomerProfileHeader } from "@/components/customers/CustomerProfileHeader";
 import { CustomerAnalyticsCards } from "@/components/customers/CustomerAnalyticsCards";
+import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { TransactionPagination } from "@/components/transactions/TransactionPagination";
 import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransactionDialog";
 
-import { useCustomer } from "@/hooks/useCustomers";
+import { useCustomer, useDeleteCustomer } from "@/hooks/useCustomers";
 import {
   useCustomerTransactions,
   useDeleteTransaction,
@@ -46,6 +47,7 @@ export default function CustomerDetailPage() {
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">("all");
 
@@ -58,6 +60,7 @@ export default function CustomerDetailPage() {
   } = useCustomerTransactions(customerId, { page, pageSize });
 
   const deleteTransaction = useDeleteTransaction();
+  const deleteCustomer = useDeleteCustomer();
 
   const allTransactions = txns?.data ?? [];
 
@@ -130,6 +133,7 @@ export default function CustomerDetailPage() {
               setEditingTx(null);
               setTxDialogOpen(true);
             }}
+            onDelete={() => setDeletingCustomer(true)}
           />
         ) : (
           <div className="text-muted-foreground text-sm">
@@ -263,6 +267,16 @@ export default function CustomerDetailPage() {
           if (!deletingTxId) return;
           deleteTransaction.mutate(deletingTxId);
           setDeletingTxId(null);
+        }}
+      />
+
+      <DeleteCustomerDialog
+        open={deletingCustomer}
+        customerName={customer?.name ?? ""}
+        onClose={() => setDeletingCustomer(false)}
+        onConfirm={() => {
+          deleteCustomer.mutate(customerId);
+          setDeletingCustomer(false);
         }}
       />
     </div>

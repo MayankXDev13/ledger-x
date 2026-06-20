@@ -101,6 +101,7 @@ export default function CustomersPage() {
 
       <DeleteCustomerDialog
         open={!!deletingId}
+        customerName={customers?.find((c) => c.id === deletingId)?.name ?? ""}
         onClose={() => setDeletingId(null)}
         onConfirm={() => {
           if (!deletingId) return;
