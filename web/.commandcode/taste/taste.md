@@ -4,6 +4,7 @@
 
 # Design
 - Use orange-600 as the primary color. Confidence: 0.70
+- Use CSS variables from globals.css for color properties instead of hardcoded Tailwind color classes. Confidence: 0.70
 
 # icons
 - Replace lucide-react with react-icons. Confidence: 0.50
