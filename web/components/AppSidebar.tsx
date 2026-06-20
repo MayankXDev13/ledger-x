@@ -5,17 +5,17 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Users,
-  Tags,
-  TrendingUp,
-  User,
-  LogOut,
-  ChevronRight,
-  ChevronDown,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
+  FaChartBar,
+  FaUsers,
+  FaTags,
+  FaArrowUp,
+  FaUser,
+  FaSignOutAlt,
+  FaChevronRight,
+  FaChevronDown,
+  FaChevronLeft,
+  FaChevronRight as FaChevronRight2,
+} from "react-icons/fa";
 import {
   Tooltip,
   TooltipContent,
@@ -38,19 +38,19 @@ import { useCustomers } from "@/hooks/useCustomers";
 const navItems = [
   {
     href: "/dashboard",
-    icon: LayoutDashboard,
+    icon: FaChartBar,
     label: "Dashboard",
     exact: true,
   },
   {
     href: "/customers",
-    icon: Users,
+    icon: FaUsers,
     label: "Customers",
     exact: false,
   },
   {
     href: "/tags",
-    icon: Tags,
+    icon: FaTags,
     label: "Tags",
     exact: false,
   },
@@ -92,7 +92,7 @@ export function AppSidebar() {
       <div className="h-14 flex items-center justify-between px-3 border-b border-sidebar-border relative">
         <div className={cn("flex items-center gap-3 min-w-0", collapsed && "justify-center w-full")}>
           <div className="w-8 h-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-            <TrendingUp className="w-4 h-4 text-primary-foreground" />
+            <FaArrowUp className="w-4 h-4 text-primary-foreground" />
           </div>
           {!collapsed && (
             <span className="text-base font-bold text-sidebar-foreground tracking-tight whitespace-nowrap">
@@ -109,7 +109,7 @@ export function AppSidebar() {
                 className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all shrink-0 flex items-center justify-center cursor-pointer"
                 aria-label="Collapse sidebar"
               >
-                <PanelLeftClose className="w-4 h-4" />
+                <FaChevronLeft className="w-4 h-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Collapse</TooltipContent>
@@ -127,7 +127,7 @@ export function AppSidebar() {
                 className="w-8 h-8 rounded-lg border border-sidebar-border bg-sidebar text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-all cursor-pointer"
                 aria-label="Expand sidebar"
               >
-                <PanelLeftOpen className="w-4 h-4" />
+                <FaChevronRight2 className="w-4 h-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Expand</TooltipContent>
@@ -190,7 +190,7 @@ export function AppSidebar() {
                         </Badge>
                       )}
                       {active && (
-                        <ChevronRight className="w-3 h-3 opacity-40" />
+                        <FaChevronRight className="w-3 h-3 opacity-40" />
                       )}
                     </>
                   )}
@@ -230,7 +230,7 @@ export function AppSidebar() {
                 </div>
               )}
               {!collapsed && (
-                <ChevronDown className="w-3 h-3 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/50" />
+                <FaChevronDown className="w-3 h-3 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/50" />
               )}
             </button>
           </DropdownMenuTrigger>
@@ -245,7 +245,7 @@ export function AppSidebar() {
             </div>
             <DropdownMenuItem asChild>
               <Link href="/profile" className="cursor-pointer">
-                <User className="w-4 h-4 mr-2" />
+                <FaUser className="w-4 h-4 mr-2" />
                 Profile
               </Link>
             </DropdownMenuItem>
@@ -254,7 +254,7 @@ export function AppSidebar() {
               onClick={handleSignOut}
               className="text-destructive focus:text-destructive cursor-pointer"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <FaSignOutAlt className="w-4 h-4 mr-2" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   Dialog,
@@ -13,13 +15,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ArrowUpRight, ArrowDownRight, IndianRupee } from "lucide-react";
+import { FormError } from "@/components/ui/form-error";
+import { FaArrowUp, FaArrowDown, FaRupeeSign, FaSpinner } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 
 import {
   useCreateTransaction,
   useUpdateTransaction,
 } from "@/hooks/useTransactions";
+
+import { transactionSchema, type TransactionFormData } from "@/lib/validation";
 
 import type { Transaction } from "@/lib/api";
 
@@ -39,46 +44,36 @@ export function TransactionDialog({
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
 
-  const [amount, setAmount] = useState("");
-  const [type, setType] = useState<"credit" | "debit">("credit");
-  const [note, setNote] = useState("");
-
   const isEditing = !!transaction;
 
-  useEffect(() => {
-    if (transaction) {
-      setAmount(transaction.amount.toString());
-      setType(transaction.type);
-      setNote(transaction.note ?? "");
-    } else {
-      setAmount("");
-      setType("credit");
-      setNote("");
-    }
-  }, [transaction, open]);
+  const form = useForm({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: transaction
+      ? {
+          amount: transaction.amount,
+          transactionType: transaction.type,
+          note: transaction.note || "",
+        }
+      : {
+          amount: 0,
+          transactionType: "credit",
+          note: "",
+        },
+  });
 
-  const loading =
-    createTransaction.isPending || updateTransaction.isPending;
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const payload = {
-      amount: Number(amount),
-      type,
-      note: note.trim() || undefined,
-    };
-
+  const handleSubmit = async (data: TransactionFormData) => {
     try {
       if (isEditing) {
         await updateTransaction.mutateAsync({
-          id: transaction.id,
-          data: payload,
+          id: transaction!.id,
+          data,
         });
       } else {
         await createTransaction.mutateAsync({
           customerId,
-          ...payload,
+          amount: data.amount,
+          type: data.transactionType,
+          note: data.note,
         });
       }
 
@@ -88,36 +83,56 @@ export function TransactionDialog({
     }
   };
 
+  useEffect(() => {
+    if (transaction) {
+      form.reset({
+        amount: transaction.amount,
+        transactionType: transaction.type,
+        note: transaction.note || "",
+      });
+    } else {
+      form.reset({
+        amount: 0,
+        transactionType: "credit",
+        note: "",
+      });
+    }
+  }, [transaction, open, form]);
+
+  const loading =
+    createTransaction.isPending || updateTransaction.isPending;
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        if (!value) onClose();
-      }}
-    >
-      <DialogContent className="sm:max-w-sm border-border/60 bg-card">
-        {/* Accent top bar based on type */}
-        <div
-          className={cn(
-            "absolute top-0 left-0 right-0 h-px rounded-t-lg",
-            type === "credit"
-              ? "bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"
-              : "bg-gradient-to-r from-transparent via-red-500/50 to-transparent"
-          )}
-        />
+    <FormProvider {...form}>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!value) onClose();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm border-border/60 bg-card">
+          {/* Accent top bar based on type */}
+          <div
+            className={cn(
+              "absolute top-0 left-0 right-0 h-px rounded-t-lg",
+              form.watch("transactionType") === "credit"
+                ? "bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"
+                : "bg-gradient-to-r from-transparent via-red-500/50 to-transparent"
+            )}
+          />
 
-        <DialogHeader className="pb-2">
-          <DialogTitle className="text-base font-bold">
-            {isEditing ? "Edit Transaction" : "New Transaction"}
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground">
-            {isEditing
-              ? "Update the transaction details below"
-              : "Record a payment or receipt for this customer"}
-          </p>
-        </DialogHeader>
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base font-bold">
+              {isEditing ? "Edit Transaction" : "New Transaction"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground">
+              {isEditing
+                ? "Update the transaction details below"
+                : "Record a payment or receipt for this customer"}
+            </p>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 pt-1">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-1">
           {/* Type selector — pill style */}
           <div className="space-y-2">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -126,28 +141,28 @@ export function TransactionDialog({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setType("credit")}
+                onClick={() => form.setValue("transactionType", "credit")}
                 className={cn(
                   "flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-semibold transition-all",
-                  type === "credit"
+                  form.watch("transactionType") === "credit"
                     ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/10"
                     : "border-border/60 text-muted-foreground hover:border-emerald-500/30 hover:bg-emerald-500/5"
                 )}
               >
-                <ArrowUpRight className="w-4 h-4" />
+                <FaArrowUp className="w-4 h-4" />
                 Credit
               </button>
               <button
                 type="button"
-                onClick={() => setType("debit")}
+                onClick={() => form.setValue("transactionType", "debit")}
                 className={cn(
                   "flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-semibold transition-all",
-                  type === "debit"
+                  form.watch("transactionType") === "debit"
                     ? "bg-red-500/15 border-red-500/40 text-red-400 shadow-sm shadow-red-500/10"
                     : "border-border/60 text-muted-foreground hover:border-red-500/30 hover:bg-red-500/5"
                 )}
               >
-                <ArrowDownRight className="w-4 h-4" />
+                <FaArrowDown className="w-4 h-4" />
                 Debit
               </button>
             </div>
@@ -160,7 +175,7 @@ export function TransactionDialog({
             </Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md bg-muted flex items-center justify-center">
-                <IndianRupee className="w-3 h-3 text-muted-foreground" />
+                <FaRupeeSign className="w-3 h-3 text-muted-foreground" />
               </div>
               <Input
                 id="amount"
@@ -168,19 +183,19 @@ export function TransactionDialog({
                 min="0.01"
                 step="0.01"
                 placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
+                {...form.register("amount", { valueAsNumber: true })}
                 className={cn(
                   "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all",
-                  type === "credit" && amount
+                  form.watch("transactionType") === "credit" && form.getValues("amount") > 0
                     ? "text-emerald-400"
-                    : type === "debit" && amount
+                    : form.watch("transactionType") === "debit" && form.getValues("amount") > 0
                       ? "text-red-400"
-                      : ""
+                      : "",
+                  form.formState.errors.amount && "border-destructive"
                 )}
               />
             </div>
+            <FormError name="amount" />
           </div>
 
           {/* Note */}
@@ -194,10 +209,10 @@ export function TransactionDialog({
             <Input
               id="tx-note"
               placeholder="e.g. Monthly rent, Product sale…"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+              {...form.register("note")}
               className="h-10 bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all text-sm"
             />
+            <FormError name="note" />
           </div>
 
           {/* Footer */}
@@ -212,20 +227,21 @@ export function TransactionDialog({
             </Button>
             <Button
               type="submit"
-              disabled={loading || !amount}
+              disabled={loading || !form.formState.isValid}
               className={cn(
                 "flex-1 h-10 font-bold transition-all",
-                type === "credit"
+                form.watch("transactionType") === "credit"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90 shadow-sm shadow-emerald-500/20"
                   : "bg-gradient-to-r from-red-500 to-rose-500 text-white hover:opacity-90 shadow-sm shadow-red-500/20"
               )}
             >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditing ? "Update" : type === "credit" ? "Record Credit" : "Record Debit"}
+              {loading && <FaSpinner className="w-4 h-4 mr-2 animate-spin" />}
+              {isEditing ? "Update" : form.watch("transactionType") === "credit" ? "Record Credit" : "Record Debit"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+    </FormProvider>
   );
 }

@@ -3,14 +3,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowUpRight,
-  ArrowDownRight,
-  StickyNote,
-  Pencil,
-  Trash2,
-  Clock,
-  Wallet,
-} from "lucide-react";
+  FaArrowUp,
+  FaArrowDown,
+  FaStickyNote,
+  FaPencilAlt,
+  FaTrashAlt,
+  FaClock,
+  FaWallet,
+} from "react-icons/fa";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/api";
@@ -48,9 +48,9 @@ export function TransactionItem({
         )}
       >
         {isCredit ? (
-          <ArrowUpRight className="w-4 h-4" />
+          <FaArrowUp className="w-4 h-4" />
         ) : (
-          <ArrowDownRight className="w-4 h-4" />
+          <FaArrowDown className="w-4 h-4" />
         )}
       </div>
 
@@ -73,7 +73,7 @@ export function TransactionItem({
           {/* Note */}
           {transaction.note && (
             <span className="text-xs text-muted-foreground flex items-center gap-1 truncate max-w-[200px]">
-              <StickyNote className="w-3 h-3 shrink-0" />
+              <FaStickyNote className="w-3 h-3 shrink-0" />
               {transaction.note}
             </span>
           )}
@@ -82,12 +82,12 @@ export function TransactionItem({
         {/* Timestamp + running balance */}
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Clock className="w-3 h-3" />
+            <FaClock className="w-3 h-3" />
             {format(new Date(transaction.createdAt), "MMM d, yyyy • h:mm a")}
           </span>
           {transaction.runningBalance !== undefined && (
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Wallet className="w-3 h-3" />
+              <FaWallet className="w-3 h-3" />
               Balance after:{" "}
               <span
                 className={cn(
@@ -125,7 +125,7 @@ export function TransactionItem({
             onClick={() => onEdit(transaction)}
             aria-label="Edit transaction"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <FaPencilAlt className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
@@ -134,7 +134,7 @@ export function TransactionItem({
             onClick={() => onDelete(transaction.id)}
             aria-label="Delete transaction"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <FaTrashAlt className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>

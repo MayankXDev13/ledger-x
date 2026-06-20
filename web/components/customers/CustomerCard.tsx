@@ -39,12 +39,12 @@ export default function CustomerCard({
     <Link href={`/customers/${customer.id}`} className="block group">
       <div className="relative flex items-center gap-3.5 p-4 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 card-hover">
         {/* Hover gradient overlay */}
-        <div className="absolute inset-0 rounded-xl bg-linear-to-br from-primary/0 to-primary/0 group-hover:from-primary/3 group-hover:to-primary/2 transition-all duration-300 pointer-events-none" />
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/3 group-hover:to-primary/2 transition-all duration-300 pointer-events-none" />
 
         {/* Avatar */}
         <div
           className={cn(
-            "w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
+            "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
             gradient
           )}
         >
