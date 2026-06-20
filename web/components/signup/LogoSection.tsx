@@ -12,7 +12,7 @@ export function LogoSection({ title, subtitle, showLogo = true }: LogoSectionPro
   return (
     <div className="flex flex-col items-center gap-3">
       {showLogo && (
-        <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
+        <div className="w-12 h-12 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
           <TrendingUp className="w-6 h-6 text-slate-900" />
         </div>
       )}

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2 } from "lucide-react";
 
 interface PasswordResetFormProps {
   onSubmit: (email: string) => Promise<void>;
@@ -14,7 +12,11 @@ interface PasswordResetFormProps {
   email?: string;
 }
 
-export function PasswordResetForm({ onSubmit, isSent = false, email = "" }: PasswordResetFormProps) {
+export function PasswordResetForm({
+  onSubmit,
+  isSent = false,
+  email = "",
+}: PasswordResetFormProps) {
   const [formData, setFormData] = useState({ email: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +71,7 @@ export function PasswordResetForm({ onSubmit, isSent = false, email = "" }: Pass
 
       <Button
         type="submit"
-        className="w-full h-11 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
+        className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
       >
         Send reset link
       </Button>

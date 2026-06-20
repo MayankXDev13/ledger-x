@@ -70,7 +70,7 @@ export function UpdatePasswordForm({ onSubmit }: UpdatePasswordFormProps) {
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-11 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
+        className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold transition-all"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

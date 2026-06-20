@@ -8,7 +8,11 @@ interface LogoSectionProps {
   showLogo?: boolean;
 }
 
-export function LogoSection({ title, subtitle, showLogo = true }: LogoSectionProps) {
+export function LogoSection({
+  title,
+  subtitle,
+  showLogo = true,
+}: LogoSectionProps) {
   return (
     <div className="flex flex-col items-center gap-3">
       {showLogo && (

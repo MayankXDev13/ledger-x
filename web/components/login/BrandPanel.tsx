@@ -4,13 +4,15 @@ import { TrendingUp } from "lucide-react";
 
 export function BrandPanel() {
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-12 justify-between relative overflow-hidden">
+    <div className="hidden lg:flex lg:flex-col lg:w-1/2 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-12 justify-between relative overflow-hidden">
       <AnimatedBackground />
       <div className="relative z-10 flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/25">
+        <div className="w-10 h-10 bg-linear-to-br from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/25">
           <TrendingUp className="w-5 h-5 text-slate-900 font-bold" />
         </div>
-        <span className="text-xl font-bold text-white tracking-tight">Ledger-X</span>
+        <span className="text-xl font-bold text-white tracking-tight">
+          Ledger-X
+        </span>
       </div>
 
       <div className="relative z-10 space-y-6">
@@ -20,13 +22,15 @@ export function BrandPanel() {
             Finance Intelligence Platform
           </div>
           <h1 className="text-5xl font-bold text-white leading-tight">
-            Track every<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
+            Track every
+            <br />
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-emerald-400">
               transaction.
             </span>
           </h1>
           <p className="text-slate-400 text-lg leading-relaxed max-w-sm">
-            Manage customers, track balances, and gain financial insights with Ledger-X.
+            Manage customers, track balances, and gain financial insights with
+            Ledger-X.
           </p>
         </div>
 
@@ -36,7 +40,10 @@ export function BrandPanel() {
             { value: "0ms", label: "Latency" },
             { value: "100%", label: "Uptime" },
           ].map(({ value, label }) => (
-            <div key={label} className="p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 backdrop-blur">
+            <div
+              key={label}
+              className="p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 backdrop-blur"
+            >
               <div className="text-2xl font-bold text-white">{value}</div>
               <div className="text-xs text-slate-500 mt-1">{label}</div>
             </div>

@@ -101,7 +101,7 @@ export function SignupForm({ onSubmit }: SignupFormProps) {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-11 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.01]"
+          className="w-full h-11 bg-linear-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.01]"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
