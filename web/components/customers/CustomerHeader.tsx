@@ -19,12 +19,12 @@ interface CustomerHeaderProps {
 export function CustomerHeader({ customer, balance }: CustomerHeaderProps) {
   return (
     <Card className="border-border/50 bg-card/80 overflow-hidden relative">
-      <div className="absolute inset-0 bg-linear-to-br from-cyan-500/5 to-emerald-500/5" />
+      <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-primary/3" />
 
       <CardContent className="relative pt-6 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-linear-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-slate-900 text-xl font-bold">
+            <div className="w-14 h-14 rounded-xl bg-gradient-brand flex items-center justify-center shadow-lg shadow-primary/20 text-primary-foreground text-xl font-bold">
               {customer.name.charAt(0).toUpperCase()}
             </div>
 

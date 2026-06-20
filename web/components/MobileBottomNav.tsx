@@ -36,21 +36,21 @@ export function MobileBottomNav() {
               className={cn(
                 "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-150",
                 active
-                  ? "text-cyan-400"
+                  ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
               aria-current={active ? "page" : undefined}
             >
               <div className="relative">
-                <Icon className={cn("w-5 h-5", active && "drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]")} />
+                <Icon className={cn("w-5 h-5", active && "drop-shadow-[0_0_8px_var(--primary)]")} />
                 {active && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-400" />
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
                 )}
               </div>
               <span
                 className={cn(
                   "text-[10px] font-semibold",
-                  active ? "text-cyan-400" : "text-muted-foreground"
+                  active ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {label}

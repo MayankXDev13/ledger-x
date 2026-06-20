@@ -32,7 +32,7 @@ export function TransactionPagination({
           variant="outline"
           size="icon"
           className={cn(
-            "w-7 h-7 border-border/50 hover:border-cyan-500/40",
+            "w-7 h-7 border-border/50 hover:border-primary/40",
             page === 1 && "opacity-40"
           )}
           disabled={page === 1}
@@ -51,7 +51,7 @@ export function TransactionPagination({
           variant="outline"
           size="icon"
           className={cn(
-            "w-7 h-7 border-border/50 hover:border-cyan-500/40",
+            "w-7 h-7 border-border/50 hover:border-primary/40",
             page === totalPages && "opacity-40"
           )}
           disabled={page === totalPages}

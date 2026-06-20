@@ -125,15 +125,15 @@ export function CustomerAnalyticsCards({
       icon: Scale,
       iconClass:
         netBalance >= 0
-          ? "bg-cyan-500/15 text-cyan-400"
+          ? "bg-primary/15 text-primary"
           : "bg-amber-500/15 text-amber-400",
       valueClass:
         netBalance >= 0
-          ? "text-cyan-400"
+          ? "text-primary"
           : "text-amber-400",
       bgClass:
         netBalance >= 0
-          ? "bg-gradient-to-br from-cyan-500/5 to-transparent"
+          ? "bg-gradient-to-br from-primary/5 to-transparent"
           : "bg-gradient-to-br from-amber-500/5 to-transparent",
       loading,
     },

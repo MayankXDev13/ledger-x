@@ -56,19 +56,19 @@
   --card-foreground: oklch(0.15 0.01 240);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.01 240);
-  --primary: oklch(0.6 0.2 195);       /* cyan */
+  --primary: oklch(58.6% 0.253 17.585);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.94 0.01 195);
-  --secondary-foreground: oklch(0.2 0.01 195);
+  --secondary: oklch(0.94 0.01 17);
+  --secondary-foreground: oklch(0.2 0.01 17);
   --muted: oklch(0.94 0.005 240);
   --muted-foreground: oklch(0.5 0.01 240);
-  --accent: oklch(0.94 0.005 195);
-  --accent-foreground: oklch(0.2 0.01 195);
+  --accent: oklch(0.94 0.005 17);
+  --accent-foreground: oklch(0.2 0.01 17);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.88 0.005 240);
   --input: oklch(0.88 0.005 240);
-  --ring: oklch(0.6 0.2 195);
-  --chart-1: oklch(0.65 0.2 195);
+  --ring: oklch(58.6% 0.253 17.585);
+  --chart-1: oklch(58.6% 0.253 17.585);
   --chart-2: oklch(0.6 0.18 155);
   --chart-3: oklch(0.55 0.18 270);
   --chart-4: oklch(0.7 0.18 60);
@@ -76,49 +76,59 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.975 0.005 240);
   --sidebar-foreground: oklch(0.15 0.01 240);
-  --sidebar-primary: oklch(0.6 0.2 195);
+  --sidebar-primary: oklch(58.6% 0.253 17.585);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.93 0.01 195);
-  --sidebar-accent-foreground: oklch(0.2 0.01 195);
+  --sidebar-accent: oklch(0.93 0.01 17);
+  --sidebar-accent-foreground: oklch(0.2 0.01 17);
   --sidebar-border: oklch(0.88 0.005 240);
-  --sidebar-ring: oklch(0.6 0.2 195);
+  --sidebar-ring: oklch(58.6% 0.253 17.585);
+
+  /* Brand color tokens */
+  --brand: oklch(58.6% 0.253 17.585);
+  --brand-light: oklch(68% 0.2 17.585);
+  --brand-dark: oklch(48% 0.253 17.585);
 }
 
-/* ─── Dark Mode (Finance Professional: deep slate + cyan/emerald) ─── */
+/* ─── Dark Mode ─── */
 .dark {
-  --background: oklch(0.13 0.008 240);      /* Deep navy-slate */
-  --foreground: oklch(0.95 0.005 220);       /* Near-white */
-  --card: oklch(0.18 0.01 240);             /* Slightly lighter slate */
+  --background: oklch(0.13 0.008 240);
+  --foreground: oklch(0.95 0.005 220);
+  --card: oklch(0.18 0.01 240);
   --card-foreground: oklch(0.95 0.005 220);
   --popover: oklch(0.18 0.01 240);
   --popover-foreground: oklch(0.95 0.005 220);
-  --primary: oklch(0.72 0.2 195);           /* Bright cyan */
+  --primary: oklch(68% 0.2 17.585);
   --primary-foreground: oklch(0.1 0.01 240);
   --secondary: oklch(0.22 0.01 240);
   --secondary-foreground: oklch(0.95 0.005 220);
   --muted: oklch(0.21 0.01 240);
   --muted-foreground: oklch(0.6 0.01 220);
-  --accent: oklch(0.22 0.015 195);
-  --accent-foreground: oklch(0.9 0.01 195);
+  --accent: oklch(0.22 0.015 17);
+  --accent-foreground: oklch(0.9 0.01 17);
   --destructive: oklch(0.65 0.22 25);
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.72 0.2 195);
-  /* Chart colors: cyan → emerald → violet → amber → rose */
-  --chart-1: oklch(0.72 0.2 195);
+  --ring: oklch(68% 0.2 17.585);
+  /* Chart colors */
+  --chart-1: oklch(68% 0.2 17.585);
   --chart-2: oklch(0.65 0.2 155);
   --chart-3: oklch(0.6 0.18 270);
   --chart-4: oklch(0.72 0.18 60);
   --chart-5: oklch(0.65 0.22 25);
-  /* Sidebar: slightly different from main bg */
+  /* Sidebar */
   --sidebar: oklch(0.16 0.01 240);
   --sidebar-foreground: oklch(0.95 0.005 220);
-  --sidebar-primary: oklch(0.72 0.2 195);    /* Cyan highlight */
+  --sidebar-primary: oklch(68% 0.2 17.585);
   --sidebar-primary-foreground: oklch(0.1 0.01 240);
-  --sidebar-accent: oklch(0.21 0.012 195);
-  --sidebar-accent-foreground: oklch(0.9 0.01 195);
+  --sidebar-accent: oklch(0.21 0.012 17);
+  --sidebar-accent-foreground: oklch(0.9 0.01 17);
   --sidebar-border: oklch(1 0 0 / 6%);
-  --sidebar-ring: oklch(0.72 0.2 195);
+  --sidebar-ring: oklch(68% 0.2 17.585);
+
+  /* Brand color tokens */
+  --brand: oklch(68% 0.2 17.585);
+  --brand-light: oklch(75% 0.18 17.585);
+  --brand-dark: oklch(58.6% 0.253 17.585);
 }
 
 @layer base {
@@ -151,16 +161,19 @@
 
 /* ─── Custom Utilities ─── */
 @layer utilities {
-  .glow-cyan {
-    box-shadow: 0 0 20px oklch(0.72 0.2 195 / 20%);
+  .glow-primary {
+    box-shadow: 0 0 20px var(--primary, oklch(58.6% 0.253 17.585)) / 20%;
   }
   .glow-emerald {
     box-shadow: 0 0 20px oklch(0.65 0.2 155 / 20%);
   }
-  .text-gradient-cyan-emerald {
-    background: linear-gradient(to right, oklch(0.72 0.2 195), oklch(0.65 0.2 155));
+  .text-gradient-primary {
+    background: linear-gradient(to right, var(--brand), var(--brand-light));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+  .bg-gradient-brand {
+    background: linear-gradient(to right, var(--brand), var(--brand-light));
   }
 }

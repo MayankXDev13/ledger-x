@@ -6,20 +6,19 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Plus,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  Hash,
-  Download,
   Search,
-  SlidersHorizontal,
-  Calendar,
-  MoreHorizontal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { CustomerProfileHeader } from "@/components/customers/CustomerProfileHeader";
 import { CustomerAnalyticsCards } from "@/components/customers/CustomerAnalyticsCards";
@@ -48,6 +47,7 @@ export default function CustomerDetailPage() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">("all");
 
   const { data: customer, isLoading: customerLoading } =
     useCustomer(customerId);
@@ -86,13 +86,15 @@ export default function CustomerDetailPage() {
     })
     .reverse();
 
-  /* ─ Search filter ─ */
-  const filtered = txnsWithBalance.filter((tx) =>
-    search
+  /* ─ Search + type filter ─ */
+  const filtered = txnsWithBalance.filter((tx) => {
+    const matchesSearch = search
       ? tx.note?.toLowerCase().includes(search.toLowerCase()) ||
         tx.type.includes(search.toLowerCase())
-      : true
-  );
+      : true;
+    const matchesType = typeFilter === "all" || tx.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -111,7 +113,7 @@ export default function CustomerDetailPage() {
           {customerLoading ? (
             <Skeleton className="h-4 w-20" />
           ) : (
-            <span className="text-xs text-foreground font-medium truncate max-w-[120px]">
+            <span className="text-xs text-foreground font-medium truncate max-w-30">
               {customer?.name}
             </span>
           )}
@@ -168,44 +170,29 @@ export default function CustomerDetailPage() {
                   placeholder="Search transactions…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 h-8 text-xs w-40 sm:w-52 bg-muted/30 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all"
+                  className="pl-8 h-8 text-xs w-40 sm:w-52 bg-muted/30 border-border/50 focus:border-primary/50 focus:bg-background transition-all"
                 />
               </div>
 
-              {/* Filter button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs border-border/50 hover:border-cyan-500/40"
+              {/* Type filter */}
+              <Select
+                value={typeFilter}
+                onValueChange={(v) => setTypeFilter(v as "all" | "credit" | "debit")}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Filter</span>
-              </Button>
-
-              {/* Date range */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs border-border/50 hover:border-cyan-500/40 hidden sm:flex"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                Date
-              </Button>
-
-              {/* Export */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs border-border/50 hover:border-cyan-500/40 hidden sm:flex"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export
-              </Button>
+                <SelectTrigger className="h-8 w-24 sm:w-28 text-xs border-border/50 bg-muted/30">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="credit">Credit</SelectItem>
+                  <SelectItem value="debit">Debit</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Add transaction */}
               <Button
                 size="sm"
-                className="h-8 gap-1.5 text-xs bg-gradient-brand text-slate-900 font-semibold hover:opacity-90 shadow-sm shadow-cyan-500/20"
+                className="h-8 gap-1.5 text-xs bg-gradient-brand text-primary-foreground font-semibold hover:opacity-90 shadow-sm shadow-primary/20"
                 onClick={() => {
                   setEditingTx(null);
                   setTxDialogOpen(true);
@@ -247,7 +234,7 @@ export default function CustomerDetailPage() {
       {/* Mobile sticky Add Transaction */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40">
         <Button
-          className="w-full h-12 gap-2 bg-gradient-brand text-slate-900 font-bold text-sm shadow-lg shadow-cyan-500/20"
+          className="w-full h-12 gap-2 bg-gradient-brand text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20"
           onClick={() => {
             setEditingTx(null);
             setTxDialogOpen(true);

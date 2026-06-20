@@ -56,7 +56,7 @@ export function CustomerDialog({ open, onClose, customer }: CustomerDialogProps)
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-sm border-border/60 bg-card">
         {/* Top accent */}
-        <div className="absolute top-0 left-0 right-0 h-px rounded-t-lg bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px rounded-t-lg bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
         <DialogHeader className="pb-1">
           <DialogTitle className="text-base font-bold">
@@ -85,7 +85,7 @@ export function CustomerDialog({ open, onClose, customer }: CustomerDialogProps)
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="pl-9 h-10 bg-muted/20 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all"
+                className="pl-9 h-10 bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all"
               />
             </div>
           </div>
@@ -105,7 +105,7 @@ export function CustomerDialog({ open, onClose, customer }: CustomerDialogProps)
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                className="pl-9 h-10 bg-muted/20 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all"
+                className="pl-9 h-10 bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all"
                 type="tel"
               />
             </div>
@@ -123,7 +123,7 @@ export function CustomerDialog({ open, onClose, customer }: CustomerDialogProps)
             <Button
               type="submit"
               disabled={loading || !name || !phone}
-              className="flex-1 h-10 bg-gradient-brand text-slate-900 font-bold shadow-sm shadow-cyan-500/20 hover:opacity-90"
+              className="flex-1 h-10 bg-gradient-brand text-primary-foreground font-bold shadow-sm shadow-primary/20 hover:opacity-90"
             >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isEditing ? "Save Changes" : "Add Customer"}

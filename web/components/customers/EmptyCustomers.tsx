@@ -29,11 +29,11 @@ export function EmptyCustomers({ search, onAdd }: EmptyCustomersProps) {
     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
       {/* Illustration */}
       <div className="relative mb-6">
-        <div className="absolute inset-0 rounded-full bg-cyan-500/10 scale-[2] blur-2xl" />
+        <div className="absolute inset-0 rounded-full bg-primary/10 scale-[2] blur-2xl" />
         <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 border border-border flex items-center justify-center">
           <Users className="w-9 h-9 text-muted-foreground" />
           <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-brand flex items-center justify-center shadow-sm">
-            <TrendingUp className="w-3 h-3 text-slate-900" />
+            <TrendingUp className="w-3 h-3 text-primary-foreground" />
           </div>
         </div>
       </div>
@@ -47,7 +47,7 @@ export function EmptyCustomers({ search, onAdd }: EmptyCustomersProps) {
 
       <Button
         onClick={onAdd}
-        className="gap-2 bg-gradient-brand text-slate-900 font-semibold shadow-md shadow-cyan-500/20 hover:opacity-90"
+        className="gap-2 bg-gradient-brand text-primary-foreground font-semibold shadow-md shadow-primary/20 hover:opacity-90"
         id="add-first-customer"
       >
         <Plus className="w-4 h-4" />

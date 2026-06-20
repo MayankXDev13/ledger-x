@@ -172,7 +172,7 @@ export function TransactionDialog({
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 className={cn(
-                  "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all",
+                  "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all",
                   type === "credit" && amount
                     ? "text-emerald-400"
                     : type === "debit" && amount
@@ -196,7 +196,7 @@ export function TransactionDialog({
               placeholder="e.g. Monthly rent, Product sale…"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="h-10 bg-muted/20 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all text-sm"
+              className="h-10 bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all text-sm"
             />
           </div>
 

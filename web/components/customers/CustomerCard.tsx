@@ -37,14 +37,14 @@ export default function CustomerCard({
 
   return (
     <Link href={`/customers/${customer.id}`} className="block group">
-      <div className="relative flex items-center gap-3.5 p-4 rounded-xl border border-border/60 bg-card hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-200 card-hover">
+      <div className="relative flex items-center gap-3.5 p-4 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 card-hover">
         {/* Hover gradient overlay */}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-cyan-500/0 to-emerald-500/0 group-hover:from-cyan-500/3 group-hover:to-emerald-500/2 transition-all duration-300 pointer-events-none" />
+        <div className="absolute inset-0 rounded-xl bg-linear-to-br from-primary/0 to-primary/0 group-hover:from-primary/3 group-hover:to-primary/2 transition-all duration-300 pointer-events-none" />
 
         {/* Avatar */}
         <div
           className={cn(
-            "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
+            "w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
             gradient
           )}
         >
@@ -53,7 +53,7 @@ export default function CustomerCard({
 
         {/* Info */}
         <div className="relative flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+          <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {customer.name}
           </h3>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
@@ -93,7 +93,7 @@ export default function CustomerCard({
             </Button>
           </div>
 
-          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
         </div>
       </div>
     </Link>

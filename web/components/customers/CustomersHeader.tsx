@@ -10,8 +10,8 @@ export function CustomersHeader({ total, onAdd }: CustomersHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-sm shadow-cyan-500/20">
-          <Users className="w-4 h-4 text-slate-900" />
+        <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-sm shadow-primary/20">
+          <Users className="w-4 h-4 text-primary-foreground" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">
@@ -26,7 +26,7 @@ export function CustomersHeader({ total, onAdd }: CustomersHeaderProps) {
       <Button
         onClick={onAdd}
         id="add-customer-btn"
-        className="gap-2 bg-gradient-brand text-slate-900 font-semibold shadow-sm shadow-cyan-500/20 hover:opacity-90 h-9"
+        className="gap-2 bg-gradient-brand text-primary-foreground font-semibold shadow-sm shadow-primary/20 hover:opacity-90 h-9"
       >
         <Plus className="w-4 h-4" />
         Add Customer

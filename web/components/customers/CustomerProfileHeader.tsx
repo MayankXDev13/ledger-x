@@ -201,7 +201,7 @@ export function CustomerProfileHeader({
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  className="h-8 gap-1.5 text-xs bg-gradient-brand text-slate-900 font-bold shadow-sm shadow-cyan-500/20 hover:opacity-90"
+                  className="h-8 gap-1.5 text-xs bg-gradient-brand text-primary-foreground font-bold shadow-sm shadow-primary/20 hover:opacity-90"
                   onClick={onAddTransaction}
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -210,7 +210,7 @@ export function CustomerProfileHeader({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1.5 text-xs border-border/60 hover:border-cyan-500/40"
+                  className="h-8 gap-1.5 text-xs border-border/60 hover:border-primary/40"
                   onClick={() => setEditOpen(true)}
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -221,7 +221,7 @@ export function CustomerProfileHeader({
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-8 w-8 border-border/60 hover:border-cyan-500/40"
+                      className="h-8 w-8 border-border/60 hover:border-primary/40"
                     >
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </Button>

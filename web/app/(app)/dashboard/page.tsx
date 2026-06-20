@@ -71,9 +71,9 @@ function MetricCard({
 }) {
   const colorMap: Record<string, { bg: string; icon: string; ring: string }> = {
     cyan: {
-      bg: "from-cyan-500/8 to-transparent",
-      icon: "bg-cyan-500/15 text-cyan-400",
-      ring: "border-cyan-500/20",
+      bg: "from-primary/8 to-transparent",
+      icon: "bg-primary/15 text-primary",
+      ring: "border-primary/20",
     },
     emerald: {
       bg: "from-emerald-500/8 to-transparent",
@@ -102,7 +102,7 @@ function MetricCard({
     >
       <div
         className={cn(
-          "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+          "absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300",
           colors.bg
         )}
       />
@@ -191,7 +191,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-6 h-6 rounded-md bg-gradient-brand flex items-center justify-center">
-              <LayoutDashboard className="w-3.5 h-3.5 text-slate-900" />
+              <LayoutDashboard className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Overview
@@ -199,7 +199,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             {getGreeting()},{" "}
-            <span className="text-gradient-cyan capitalize">{emailName}</span> 👋
+            <span className="text-gradient-primary capitalize">{emailName}</span> 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Here&apos;s your financial overview for today.
@@ -211,7 +211,7 @@ export default function DashboardPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            className="gap-1.5 border-border/50 hover:border-cyan-500/40 text-xs h-8"
+            className="gap-1.5 border-border/50 hover:border-primary/40 text-xs h-8"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
@@ -219,7 +219,7 @@ export default function DashboardPage() {
           <Link href="/customers">
             <Button
               size="sm"
-              className="gap-1.5 bg-gradient-brand text-slate-900 font-semibold text-xs h-8 shadow-sm shadow-cyan-500/20 hover:opacity-90"
+              className="gap-1.5 bg-gradient-brand text-primary-foreground font-semibold text-xs h-8 shadow-sm shadow-primary/20 hover:opacity-90"
             >
               <Plus className="w-3.5 h-3.5" />
               Add Customer
@@ -286,7 +286,7 @@ export default function DashboardPage() {
             </div>
             <Badge
               variant="outline"
-              className="text-cyan-400 border-cyan-500/30 bg-cyan-500/5 text-[10px] font-semibold"
+              className="text-primary border-primary/30 bg-primary/5 text-[10px] font-semibold"
             >
               Last 5 entries
             </Badge>
@@ -308,8 +308,8 @@ export default function DashboardPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -336,11 +336,11 @@ export default function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="amount"
-                    stroke="#06B6D4"
+                    stroke="#DC2626"
                     strokeWidth={2}
                     fill="url(#colorFlowPos)"
                     dot={{
-                      fill: "#06B6D4",
+                      fill: "#DC2626",
                       r: 4,
                       strokeWidth: 2,
                       stroke: "var(--card)",
@@ -432,7 +432,7 @@ export default function DashboardPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-cyan-400 hover:text-cyan-300 gap-1 text-xs h-7"
+              className="text-primary hover:text-primary/80 gap-1 text-xs h-7"
             >
               View all
               <ChevronRight className="w-3.5 h-3.5" />
@@ -483,7 +483,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+                      <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                         {customer?.name || "Unknown Customer"}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -502,7 +502,7 @@ export default function DashboardPage() {
                         {isCredit ? "+" : "−"}
                         {formatCurrency(tx.amount)}
                       </span>
-                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors" />
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
                     </div>
                   </Link>
                 );
@@ -538,7 +538,7 @@ export default function DashboardPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-cyan-400 hover:text-cyan-300 gap-1 h-7"
+                className="text-xs text-primary hover:text-primary/80 gap-1 h-7"
               >
                 All customers
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -551,20 +551,20 @@ export default function DashboardPage() {
               <Link
                 key={customer.id}
                 href={`/customers/${customer.id}`}
-                className="flex items-center gap-3 p-3.5 rounded-xl border border-border/60 bg-card hover:border-cyan-500/30 hover:shadow-sm hover:shadow-cyan-500/5 transition-all group"
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm hover:shadow-primary/5 transition-all group"
               >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/20 flex items-center justify-center text-sm font-bold text-cyan-400 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
                   {customer.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-foreground truncate group-hover:text-cyan-400 transition-colors">
+                  <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                     {customer.name}
                   </p>
                   <p className="text-[10px] text-muted-foreground truncate">
                     {customer.phone}
                   </p>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-cyan-400/60 transition-colors shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
               </Link>
             ))}
           </div>

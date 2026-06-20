@@ -16,7 +16,7 @@ export function CustomerSearch({ value, onChange }: CustomerSearchProps) {
         placeholder="Search by name or phone…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-9 pr-9 h-9 bg-muted/20 border-border/50 focus:border-cyan-500/50 focus:bg-background transition-all placeholder:text-muted-foreground/50"
+        className="pl-9 pr-9 h-9 bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all placeholder:text-muted-foreground/50"
         aria-label="Search customers"
       />
       {value && (
