@@ -9,17 +9,13 @@ const dashboardApp = new Hono<AppEnv>();
 // GET /dashboard/metrics
 dashboardApp.get("/metrics", async (c) => {
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [
-    customerResult,
-    balanceResult,
-    monthlyResult,
-  ] = await Promise.all([
+  const [customerResult, balanceResult, monthlyResult] = await Promise.all([
     db
       .select({
         count: sql<number>`count(*)`,
@@ -28,39 +24,79 @@ dashboardApp.get("/metrics", async (c) => {
       .where(
         and(
           eq(customers.userId, user.id),
-          isNull(customers.deletedAt),
-        ),
+          isNull(customers.deletedAt)
+        )
       ),
 
     db
       .select({
-        totalCredit:
-          sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' then ${transactions.amount} else 0 end), 0)`,
-        totalDebit:
-          sql<number>`coalesce(sum(case when ${transactions.type} = 'debit' then ${transactions.amount} else 0 end), 0)`,
+        totalCredit: sql<number>`
+          coalesce(
+            sum(
+              case
+                when ${transactions.type} = 'credit'
+                then ${transactions.amount}
+                else 0
+              end
+            ),
+            0
+          )
+        `,
+        totalDebit: sql<number>`
+          coalesce(
+            sum(
+              case
+                when ${transactions.type} = 'debit'
+                then ${transactions.amount}
+                else 0
+              end
+            ),
+            0
+          )
+        `,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt)
+        )
+      ),
+
+    db
+      .select({
+        monthCredit: sql<number>`
+          coalesce(
+            sum(
+              case
+                when ${transactions.type} = 'credit'
+                then ${transactions.amount}
+                else 0
+              end
+            ),
+            0
+          )
+        `,
+        monthDebit: sql<number>`
+          coalesce(
+            sum(
+              case
+                when ${transactions.type} = 'debit'
+                then ${transactions.amount}
+                else 0
+              end
+            ),
+            0
+          )
+        `,
       })
       .from(transactions)
       .where(
         and(
           eq(transactions.userId, user.id),
           isNull(transactions.deletedAt),
-        ),
-      ),
-
-    db
-      .select({
-        monthCredit:
-          sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' then ${transactions.amount} else 0 end), 0)`,
-        monthDebit:
-          sql<number>`coalesce(sum(case when ${transactions.type} = 'debit' then ${transactions.amount} else 0 end), 0)`,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, user.id),
-          isNull(transactions.deletedAt),
-          gte(transactions.createdAt, startOfMonth),
-        ),
+          gte(transactions.createdAt, startOfMonth)
+        )
       ),
   ]);
 
@@ -81,17 +117,19 @@ dashboardApp.get("/metrics", async (c) => {
   });
 });
 
-
 // GET /dashboard/recent-transactions
 dashboardApp.get("/recent-transactions", async (c) => {
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
 
   const data = await db
     .select()
     .from(transactions)
     .where(
-      and(eq(transactions.userId, user.id), isNull(transactions.deletedAt)),
+      and(
+        eq(transactions.userId, user.id),
+        isNull(transactions.deletedAt)
+      )
     )
     .orderBy(desc(transactions.createdAt))
     .limit(5);

@@ -21,7 +21,7 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
   const { start, end, page = "1", pageSize = "10" } = c.req.query();
 
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
 
   const limit = parseInt(pageSize, 10);
   const offset = (parseInt(page, 10) - 1) * limit;
@@ -77,7 +77,7 @@ transactionsApp.get("/customers/:id/transactions", async (c) => {
 transactionsApp.get("/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const [data] = await db
     .select()
     .from(transactions)
@@ -102,7 +102,7 @@ transactionsApp.post("/", async (c) => {
   if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
 
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const [created] = await db
     .insert(transactions)
     .values({
@@ -126,7 +126,7 @@ transactionsApp.put("/:id", async (c) => {
   if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
 
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const [updated] = await db
     .update(transactions)
     .set({ ...body, updatedAt: new Date() })
@@ -140,7 +140,7 @@ transactionsApp.put("/:id", async (c) => {
 transactionsApp.delete("/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   await db
     .update(transactions)
     .set({ deletedAt: new Date() })
@@ -153,7 +153,7 @@ transactionsApp.delete("/:id", async (c) => {
 // GET /transaction-tags
 transactionsApp.get("/transaction-tags", async (c) => {
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const data = await db
     .select()
     .from(transactionTags)
@@ -167,7 +167,7 @@ transactionsApp.post("/transaction-tags", async (c) => {
   if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
 
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const [created] = await db
     .insert(transactionTags)
     .values({
@@ -186,7 +186,7 @@ transactionsApp.put("/transaction-tags/:id", async (c) => {
   if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
 
   const user = c.get("user");
-  const db = getDb(c);
+  const db = await getDb(c);
   const [updated] = await db
     .update(transactionTags)
     .set({ ...body, updatedAt: new Date() })
@@ -200,7 +200,7 @@ transactionsApp.put("/transaction-tags/:id", async (c) => {
 transactionsApp.delete("/transaction-tags/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user");
-  const db = getDb(c);
+  const db =  await getDb(c);
   await db
     .delete(transactionTags)
     .where(
@@ -214,7 +214,7 @@ transactionsApp.delete("/transaction-tags/:id", async (c) => {
 // GET /transactions/:id/tags
 transactionsApp.get("/:id/tags", async (c) => {
   const { id } = c.req.param();
-  const db = getDb(c);
+  const db = await getDb(c);
   const data = await db
     .select({ tag: transactionTags })
     .from(transactionTagMap)
@@ -232,7 +232,7 @@ transactionsApp.post("/:id/tags", async (c) => {
   );
   if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
 
-  const db = getDb(c);
+  const db = await getDb(c);
   await db.insert(transactionTagMap).values({
     transactionId: id,
     tagId: body.tag_id,
@@ -243,7 +243,7 @@ transactionsApp.post("/:id/tags", async (c) => {
 // DELETE /transactions/:id/tags/:tagId
 transactionsApp.delete("/:id/tags/:tagId", async (c) => {
   const { id, tagId } = c.req.param();
-  const db = getDb(c);
+  const db = await getDb(c);
   await db
     .delete(transactionTagMap)
     .where(

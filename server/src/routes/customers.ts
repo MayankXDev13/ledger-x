@@ -13,20 +13,23 @@ const customersApp = new Hono<AppEnv>();
 
 // GET /customers - List all non-deleted customers
 customersApp.get("/", async (ctx) => {
-  const db = getDb(ctx);
+  const db = await getDb(ctx);
   const user = ctx.get("user");
+
   const data = await db
     .select()
     .from(customers)
     .where(and(eq(customers.userId, user.id), isNull(customers.deletedAt)));
+
   return ctx.json(data);
 });
 
 // GET /customers/:id - Get customer
 customersApp.get("/:id", async (ctx) => {
   const { id } = ctx.req.param();
-  const db = getDb(ctx);
+  const db = await getDb(ctx);
   const user = ctx.get("user");
+
   const [data] = await db
     .select()
     .from(customers)
@@ -38,7 +41,11 @@ customersApp.get("/:id", async (ctx) => {
       ),
     )
     .limit(1);
-  if (!data) return ctx.json({ error: "Customer not found" }, 404);
+
+  if (!data) {
+    return ctx.json({ error: "Customer not found" }, 404);
+  }
+
   return ctx.json(data);
 });
 
@@ -48,10 +55,14 @@ customersApp.post("/", async (ctx) => {
     ctx.req.raw,
     createCustomerSchema,
   );
-  if (error) return ctx.json({ error: error.flatten().fieldErrors }, 400);
+
+  if (error) {
+    return ctx.json({ error: error.flatten().fieldErrors }, 400);
+  }
 
   const user = ctx.get("user");
-  const db = getDb(ctx);
+  const db = await getDb(ctx);
+
   const [created] = await db
     .insert(customers)
     .values({
@@ -60,26 +71,39 @@ customersApp.post("/", async (ctx) => {
       phone: body.phone,
     })
     .returning();
+
   return ctx.json(created, 201);
 });
 
 // PUT /customers/:id - Update customer
 customersApp.put("/:id", async (ctx) => {
   const { id } = ctx.req.param();
+
   const { data: body, error } = await parseBody(
     ctx.req.raw,
     updateCustomerSchema,
   );
-  if (error) return ctx.json({ error: error.flatten().fieldErrors }, 400);
+
+  if (error) {
+    return ctx.json({ error: error.flatten().fieldErrors }, 400);
+  }
 
   const user = ctx.get("user");
-  const db = getDb(ctx);
+  const db = await getDb(ctx);
+
   const [updated] = await db
     .update(customers)
-    .set({ ...body, updatedAt: new Date() })
+    .set({
+      ...body,
+      updatedAt: new Date(),
+    })
     .where(and(eq(customers.id, id), eq(customers.userId, user.id)))
     .returning();
-  if (!updated) return ctx.json({ error: "Customer not found" }, 404);
+
+  if (!updated) {
+    return ctx.json({ error: "Customer not found" }, 404);
+  }
+
   return ctx.json(updated);
 });
 
@@ -87,11 +111,16 @@ customersApp.put("/:id", async (ctx) => {
 customersApp.delete("/:id", async (ctx) => {
   const { id } = ctx.req.param();
   const user = ctx.get("user");
-  const db = getDb(ctx);
+  const db = await getDb(ctx);
+
   await db
     .update(customers)
-    .set({ deletedAt: new Date() })
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(and(eq(customers.id, id), eq(customers.userId, user.id)));
+
   return ctx.json({ success: true });
 });
 
