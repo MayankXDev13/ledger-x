@@ -199,7 +199,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             {getGreeting()},{" "}
-            <span className="text-gradient-primary capitalize">{emailName}</span> 👋
+            <span className="text-primary capitalize">{emailName}</span> 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Here&apos;s your financial overview for today.

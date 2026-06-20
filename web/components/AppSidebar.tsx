@@ -14,7 +14,6 @@ import {
   FaChevronRight,
   FaChevronDown,
   FaChevronLeft,
-  FaChevronRight as FaChevronRight2,
 } from "react-icons/fa";
 import {
   Tooltip,
@@ -69,9 +68,7 @@ export function AppSidebar() {
     router.push("/login");
   };
 
-  const initials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : "LX";
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : "LX";
 
   const emailName = user?.email?.split("@")[0] ?? "Account";
   const emailDomain = user?.email?.split("@")[1] ?? "";
@@ -84,13 +81,23 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col min-h-screen bg-sidebar border-r border-sidebar-border shrink-0 transition-all duration-300 ease-in-out relative",
-        collapsed ? "w-16" : "w-64"
+        "flex flex-col h-screen sticky top-0 bg-sidebar border-r border-sidebar-border shrink-0 transition-all duration-300 ease-in-out relative",
+        collapsed ? "w-16" : "w-64",
       )}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-3 border-b border-sidebar-border relative">
-        <div className={cn("flex items-center gap-3 min-w-0", collapsed && "justify-center w-full")}>
+      <div
+        className={cn(
+          "h-14 flex items-center border-b border-sidebar-border relative",
+          collapsed ? "justify-center" : "justify-between px-3",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-3 min-w-0",
+            collapsed && "justify-center",
+          )}
+        >
           <div className="w-8 h-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
             <FaArrowUp className="w-4 h-4 text-primary-foreground" />
           </div>
@@ -100,43 +107,40 @@ export function AppSidebar() {
             </span>
           )}
         </div>
-
-        {!collapsed && (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setCollapsed(true)}
-                className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all shrink-0 flex items-center justify-center cursor-pointer"
-                aria-label="Collapse sidebar"
-              >
-                <FaChevronLeft className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Collapse</TooltipContent>
-          </Tooltip>
-        )}
       </div>
 
-      {/* Expand button when collapsed - positioned outside the header for better alignment */}
-      {collapsed && (
-        <div className="flex justify-center py-2">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setCollapsed(false)}
-                className="w-8 h-8 rounded-lg border border-sidebar-border bg-sidebar text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-all cursor-pointer"
-                aria-label="Expand sidebar"
-              >
-                <FaChevronRight2 className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Expand</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
+      {/* Collapse/Expand toggle - outer middle edge */}
+      <div className="absolute top-1/2 -translate-y-1/2 right-0 z-10">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className={cn(
+                "flex items-center justify-center",
+                "w-5 h-10 rounded-r-md",
+                "bg-sidebar text-sidebar-foreground/30",
+                "hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                "transition-all duration-200 cursor-pointer",
+              )}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? (
+                <FaChevronRight className="w-2.5 h-2.5" />
+              ) : (
+                <FaChevronLeft className="w-2.5 h-2.5" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {collapsed ? "Expand" : "Collapse"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 px-2 space-y-0.5">
+      <nav
+        className={cn("flex-1 py-3 space-y-0.5", collapsed ? "px-0" : "px-2")}
+      >
         {/* Section label */}
         {!collapsed && (
           <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30 px-2 pb-1 pt-1">
@@ -157,7 +161,7 @@ export function AppSidebar() {
                     collapsed && "justify-center px-0",
                     active
                       ? "bg-primary/10 text-primary"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -169,20 +173,22 @@ export function AppSidebar() {
                   <Icon
                     className={cn(
                       "w-4 h-4 shrink-0",
-                      active ? "text-primary" : ""
+                      active ? "text-primary" : "",
                     )}
                   />
 
                   {!collapsed && (
                     <>
-                      <span className="text-sm font-medium flex-1">{label}</span>
+                      <span className="text-sm font-medium flex-1">
+                        {label}
+                      </span>
                       {isCustomers && customers && customers.length > 0 && (
                         <Badge
                           className={cn(
                             "text-[10px] px-1.5 py-0 h-4 font-semibold",
                             active
                               ? "bg-primary/20 text-primary border-primary/30"
-                              : "bg-muted text-muted-foreground border-border"
+                              : "bg-muted text-muted-foreground border-border",
                           )}
                           variant="outline"
                         >
@@ -196,7 +202,10 @@ export function AppSidebar() {
                   )}
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right" className={collapsed ? "" : "hidden"}>
+              <TooltipContent
+                side="right"
+                className={collapsed ? "" : "hidden"}
+              >
                 {label}
               </TooltipContent>
             </Tooltip>
@@ -205,13 +214,18 @@ export function AppSidebar() {
       </nav>
 
       {/* Profile section at bottom */}
-      <div className="p-2 border-t border-sidebar-border">
+      <div
+        className={cn(
+          "border-t border-sidebar-border",
+          collapsed ? "p-0" : "p-2",
+        )}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
                 "flex items-center gap-2.5 w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-all group text-left",
-                collapsed && "justify-center"
+                collapsed && "justify-center",
               )}
             >
               <Avatar className="w-7 h-7 shrink-0 border border-primary/30">
@@ -240,8 +254,12 @@ export function AppSidebar() {
             className="w-56"
           >
             <div className="px-2 py-1.5 border-b border-border mb-1">
-              <p className="text-xs font-semibold text-foreground">{emailName}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-xs font-semibold text-foreground">
+                {emailName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
             </div>
             <DropdownMenuItem asChild>
               <Link href="/profile" className="cursor-pointer">

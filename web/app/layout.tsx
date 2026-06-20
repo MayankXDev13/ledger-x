@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
+
+const sourceSans3 = Source_Sans_3({subsets:['latin'],variable:'--font-sans'});
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -37,13 +39,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        "h-full",
-        "antialiased",
-        geistSans.variable,
-        geistMono.variable,
-        "font-mono",
-        jetbrainsMono.variable
-      )}
+              "h-full",
+              "antialiased",
+              geistSans.variable,
+              geistMono.variable,
+              jetbrainsMono.variable
+            , "font-sans", sourceSans3.variable)}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
