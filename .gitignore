@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Turborepo
+.turbo/
+
+# Wrangler local state
+.wrangler/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Local secrets and env files
+.env
+.env.*
+!.env.example
+!.env.*.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+web-build/
+
+# Generated TypeScript artifacts
+next-env.d.ts
+*.tsbuildinfo
+
+# Logs and OS files
+*.log
+.DS_Store
