@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "server-v2",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "d1abc4f5227847cfae066033bcd91344"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "api.ledgex.mayankxdev.shop",
+      "zone_name": "mayankxdev.shop",
+      "custom_domain": true,
+      "enabled": true,
+      "previews_enabled": false
+    }
+  ],
+  "observability": {
+    "logs": {
+      "enabled": true
+    }
+  }
+}

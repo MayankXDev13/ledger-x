@@ -1,0 +1,12 @@
+# Copy this file to .dev.vars and fill in local values. Never commit .dev.vars.
+
+# Supabase project used for auth token verification (required by auth middleware).
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+
+# Local Postgres connection string used by wrangler dev for the HYPERDRIVE binding.
+# For production, the Hyperdrive binding is configured in wrangler.jsonc.
+CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=
+
+# Postgres connection string used by drizzle-kit (db:generate / db:migrate / db:studio).
+DATABASE_URL=
