@@ -37,10 +37,38 @@ export const addTagToTransactionSchema = z.object({
   tag_id: z.string().uuid("tag_id must be a valid UUID"),
 });
 
+const dateString = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date");
+
+export const transactionListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(10),
+    start: dateString.optional(),
+    end: dateString.optional(),
+  })
+  .refine(
+    (query) =>
+      !query.start ||
+      !query.end ||
+      new Date(query.start).getTime() <= new Date(query.end).getTime(),
+    {
+      message: "start must not be after end",
+      path: ["start"],
+    },
+  );
+
+export type TransactionListQuery = z.infer<typeof transactionListQuerySchema>;
+
+type ParseResult<T> =
+  | { data: T; error?: never }
+  | { data?: never; error: z.ZodError };
+
 export async function parseBody<T>(
   req: Request,
   schema: z.ZodType<T>,
-): Promise<{ data: T; error?: never } | { data?: never; error: z.ZodError }> {
+): Promise<ParseResult<T>> {
   let raw: unknown;
   try {
     raw = await req.json();
@@ -56,6 +84,15 @@ export async function parseBody<T>(
     };
   }
   const result = schema.safeParse(raw);
+  if (!result.success) return { error: result.error };
+  return { data: result.data };
+}
+
+export function parseQuery<T>(
+  query: Record<string, string>,
+  schema: z.ZodType<T>,
+): ParseResult<T> {
+  const result = schema.safeParse(query);
   if (!result.success) return { error: result.error };
   return { data: result.data };
 }

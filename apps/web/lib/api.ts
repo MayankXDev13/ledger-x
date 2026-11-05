@@ -1,5 +1,8 @@
 import axios from "axios";
 import { supabase } from "./supabase";
+import { toApiError } from "./api-error";
+
+export { ApiError, toApiError } from "./api-error";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
@@ -24,15 +27,7 @@ apiClient.interceptors.request.use(async (config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.response?.statusText ||
-      error.message ||
-      "An unexpected error occurred";
-    return Promise.reject(new Error(message));
-  },
+  (error) => Promise.reject(toApiError(error)),
 );
 
 export const authApi = {

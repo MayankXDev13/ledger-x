@@ -1,258 +1,365 @@
 import { Hono } from "hono";
-import { eq, isNull, and, gte, lte, desc, count, sql } from "drizzle-orm";
-import { getDb } from "../db";
-import { transactions, transactionTags, transactionTagMap } from "../db/schema";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lte,
+  sql,
+} from "drizzle-orm";
+import {
+  customers,
+  transactionTagMap,
+  transactionTags,
+  transactions,
+} from "../db/schema";
+import type { Db } from "../db";
 import type { AppEnv } from "../types/hono";
 import {
-  createTransactionSchema,
-  updateTransactionSchema,
-  createTagSchema,
-  updateTagSchema,
   addTagToTransactionSchema,
+  createTransactionSchema,
   parseBody,
+  parseQuery,
+  transactionListQuerySchema,
+  updateTransactionSchema,
 } from "../validators";
+import {
+  ApiError,
+  isUniqueViolation,
+  validationResponse,
+} from "../lib/errors";
 
 const transactionsApp = new Hono<AppEnv>();
 
-// GET /transactions/customers/:id/transactions
-// List transactions for a customer with pagination, date filter, excludes soft-deleted
-transactionsApp.get("/customers/:id/transactions", async (c) => {
-  const { id } = c.req.param();
-  const { start, end, page = "1", pageSize = "10" } = c.req.query();
+function transactionNotFound() {
+  return new ApiError(404, "Transaction not found");
+}
 
-  const user = c.get("user");
-  const db = await getDb(c);
-
-  const limit = parseInt(pageSize, 10);
-  const offset = (parseInt(page, 10) - 1) * limit;
-
-  const filters = [
-    eq(transactions.customerId, id),
-    eq(transactions.userId, user.id),
-    isNull(transactions.deletedAt),
-  ];
-
-  if (start) {
-    filters.push(gte(transactions.createdAt, new Date(start)));
-  }
-
-  if (end) {
-    filters.push(lte(transactions.createdAt, new Date(end)));
-  }
-
-  const [data, [{ total }], [{ totalAmount }]] = await Promise.all([
-    db
-      .select()
-      .from(transactions)
-      .where(and(...filters))
-      .orderBy(desc(transactions.createdAt))
-      .limit(limit)
-      .offset(offset),
-
-    db
-      .select({
-        total: count(),
-      })
-      .from(transactions)
-      .where(and(...filters)),
-
-    db
-      .select({
-        totalAmount: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
-      })
-      .from(transactions)
-      .where(and(...filters)),
-  ]);
-
-  return c.json({
-    data,
-    page: parseInt(page, 10),
-    pageSize: limit,
-    total,
-    totalAmount,
-  });
-});
-
-// GET /transactions/:id - Get single transaction
-transactionsApp.get("/:id", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db = await getDb(c);
-  const [data] = await db
-    .select()
+async function findOwnedTransaction(db: Db, userId: string, id: string) {
+  const [transaction] = await db
+    .select({ id: transactions.id })
     .from(transactions)
     .where(
       and(
         eq(transactions.id, id),
-        eq(transactions.userId, user.id),
+        eq(transactions.userId, userId),
         isNull(transactions.deletedAt),
       ),
     )
     .limit(1);
-  if (!data) return c.json({ error: "Transaction not found" }, 404);
-  return c.json(data);
-});
 
-// POST /transactions - Create transaction
-transactionsApp.post("/", async (c) => {
-  const { data: body, error } = await parseBody(
-    c.req.raw,
-    createTransactionSchema,
+  return transaction;
+}
+
+// GET /transactions/customers/:id/transactions
+// List transactions for a customer with pagination, date filter, excludes soft-deleted
+transactionsApp.get("/customers/:id/transactions", async (ctx) => {
+  const { id } = ctx.req.param();
+  const { data: query, error } = parseQuery(
+    ctx.req.query(),
+    transactionListQuerySchema,
   );
-  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+  if (error) return validationResponse(ctx, error);
 
-  const user = c.get("user");
-  const db = await getDb(c);
-  const [created] = await db
-    .insert(transactions)
-    .values({
-      userId: user.id,
-      customerId: body.customerId,
-      amount: body.amount,
-      type: body.type,
-      note: body.note,
-    })
-    .returning();
-  return c.json(created, 201);
-});
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+  const { page, pageSize, start, end } = query;
+  const offset = (page - 1) * pageSize;
 
-// PUT /transactions/:id - Update transaction
-transactionsApp.put("/:id", async (c) => {
-  const { id } = c.req.param();
-  const { data: body, error } = await parseBody(
-    c.req.raw,
-    updateTransactionSchema,
-  );
-  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+  const result = await withDb(ctx, async (db) => {
+    const filters = [
+      eq(transactions.customerId, id),
+      eq(transactions.userId, user.id),
+      isNull(transactions.deletedAt),
+    ];
 
-  const user = c.get("user");
-  const db = await getDb(c);
-  const [updated] = await db
-    .update(transactions)
-    .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
-    .returning();
-  if (!updated) return c.json({ error: "Transaction not found" }, 404);
-  return c.json(updated);
-});
+    if (start) {
+      filters.push(gte(transactions.createdAt, new Date(start)));
+    }
 
-// DELETE /transactions/:id - Soft delete
-transactionsApp.delete("/:id", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db = await getDb(c);
-  await db
-    .update(transactions)
-    .set({ deletedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)));
-  return c.json({ success: true });
-});
+    if (end) {
+      filters.push(lte(transactions.createdAt, new Date(end)));
+    }
 
-// ── Transaction Tags CRUD ─────────────────────────────────────────────────────
+    const [data, [{ total }], [{ totalAmount }]] = await Promise.all([
+      db
+        .select()
+        .from(transactions)
+        .where(and(...filters))
+        .orderBy(desc(transactions.createdAt))
+        .limit(pageSize)
+        .offset(offset),
 
-// GET /transaction-tags
-transactionsApp.get("/transaction-tags", async (c) => {
-  const user = c.get("user");
-  const db = await getDb(c);
-  const data = await db
-    .select()
-    .from(transactionTags)
-    .where(eq(transactionTags.userId, user.id));
-  return c.json(data);
-});
+      db
+        .select({
+          total: count(),
+        })
+        .from(transactions)
+        .where(and(...filters)),
 
-// POST /transaction-tags
-transactionsApp.post("/transaction-tags", async (c) => {
-  const { data: body, error } = await parseBody(c.req.raw, createTagSchema);
-  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+      db
+        .select({
+          totalAmount: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+        })
+        .from(transactions)
+        .where(and(...filters)),
+    ]);
 
-  const user = c.get("user");
-  const db = await getDb(c);
-  const [created] = await db
-    .insert(transactionTags)
-    .values({
-      userId: user.id,
-      name: body.name,
-      color: body.color,
-    })
-    .returning();
-  return c.json(created, 201);
-});
+    return {
+      data,
+      page,
+      pageSize,
+      total,
+      totalAmount,
+      start: start ?? null,
+      end: end ?? null,
+    };
+  });
 
-// PUT /transaction-tags/:id
-transactionsApp.put("/transaction-tags/:id", async (c) => {
-  const { id } = c.req.param();
-  const { data: body, error } = await parseBody(c.req.raw, updateTagSchema);
-  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
-
-  const user = c.get("user");
-  const db = await getDb(c);
-  const [updated] = await db
-    .update(transactionTags)
-    .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)))
-    .returning();
-  if (!updated) return c.json({ error: "Tag not found" }, 404);
-  return c.json(updated);
-});
-
-// DELETE /transaction-tags/:id
-transactionsApp.delete("/transaction-tags/:id", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db =  await getDb(c);
-  await db
-    .delete(transactionTags)
-    .where(
-      and(eq(transactionTags.id, id), eq(transactionTags.userId, user.id)),
-    );
-  return c.json({ success: true });
+  return ctx.json(result);
 });
 
 // ── Tags on a Transaction ─────────────────────────────────────────────────────
 
 // GET /transactions/:id/tags
-transactionsApp.get("/:id/tags", async (c) => {
-  const { id } = c.req.param();
-  const db = await getDb(c);
-  const data = await db
-    .select({ tag: transactionTags })
-    .from(transactionTagMap)
-    .innerJoin(transactionTags, eq(transactionTagMap.tagId, transactionTags.id))
-    .where(eq(transactionTagMap.transactionId, id));
-  return c.json(data.map((r) => r.tag));
+transactionsApp.get("/:id/tags", async (ctx) => {
+  const { id } = ctx.req.param();
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const data = await withDb(ctx, async (db) => {
+    const transaction = await findOwnedTransaction(db, user.id, id);
+    if (!transaction) throw transactionNotFound();
+
+    const rows = await db
+      .select({ tag: transactionTags })
+      .from(transactionTagMap)
+      .innerJoin(
+        transactionTags,
+        eq(transactionTagMap.tagId, transactionTags.id),
+      )
+      .where(
+        and(
+          eq(transactionTagMap.transactionId, id),
+          eq(transactionTags.userId, user.id),
+        ),
+      );
+
+    return rows.map((row) => row.tag);
+  });
+
+  return ctx.json(data);
 });
 
 // POST /transactions/:id/tags
-transactionsApp.post("/:id/tags", async (c) => {
-  const { id } = c.req.param();
+transactionsApp.post("/:id/tags", async (ctx) => {
+  const { id } = ctx.req.param();
   const { data: body, error } = await parseBody(
-    c.req.raw,
+    ctx.req.raw,
     addTagToTransactionSchema,
   );
-  if (error) return c.json({ error: error.flatten().fieldErrors }, 400);
+  if (error) return validationResponse(ctx, error);
 
-  const db = await getDb(c);
-  await db.insert(transactionTagMap).values({
-    transactionId: id,
-    tagId: body.tag_id,
-  });
-  return c.json({ success: true }, 201);
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  try {
+    await withDb(ctx, async (db) => {
+      const transaction = await findOwnedTransaction(db, user.id, id);
+      if (!transaction) throw transactionNotFound();
+
+      const [tag] = await db
+        .select({ id: transactionTags.id })
+        .from(transactionTags)
+        .where(
+          and(
+            eq(transactionTags.id, body.tag_id),
+            eq(transactionTags.userId, user.id),
+          ),
+        )
+        .limit(1);
+
+      if (!tag) throw new ApiError(404, "Tag not found");
+
+      await db.insert(transactionTagMap).values({
+        transactionId: id,
+        tagId: body.tag_id,
+      });
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new ApiError(409, "Tag already added to transaction");
+    }
+    throw err;
+  }
+
+  return ctx.json({ success: true }, 201);
 });
 
 // DELETE /transactions/:id/tags/:tagId
-transactionsApp.delete("/:id/tags/:tagId", async (c) => {
-  const { id, tagId } = c.req.param();
-  const db = await getDb(c);
-  await db
-    .delete(transactionTagMap)
-    .where(
-      and(
-        eq(transactionTagMap.transactionId, id),
-        eq(transactionTagMap.tagId, tagId),
-      ),
-    );
-  return c.json({ success: true });
+transactionsApp.delete("/:id/tags/:tagId", async (ctx) => {
+  const { id, tagId } = ctx.req.param();
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  await withDb(ctx, async (db) => {
+    const transaction = await findOwnedTransaction(db, user.id, id);
+    if (!transaction) throw transactionNotFound();
+
+    const [tag] = await db
+      .select({ id: transactionTags.id })
+      .from(transactionTags)
+      .where(
+        and(
+          eq(transactionTags.id, tagId),
+          eq(transactionTags.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (!tag) throw new ApiError(404, "Tag not found");
+
+    await db
+      .delete(transactionTagMap)
+      .where(
+        and(
+          eq(transactionTagMap.transactionId, id),
+          eq(transactionTagMap.tagId, tagId),
+        ),
+      );
+  });
+
+  return ctx.json({ success: true });
+});
+
+// GET /transactions/:id - Get single transaction
+transactionsApp.get("/:id", async (ctx) => {
+  const { id } = ctx.req.param();
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const data = await withDb(ctx, (db) =>
+    db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.id, id),
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+        ),
+      )
+      .limit(1),
+  );
+
+  if (!data[0]) {
+    throw transactionNotFound();
+  }
+
+  return ctx.json(data[0]);
+});
+
+// POST /transactions - Create transaction
+transactionsApp.post("/", async (ctx) => {
+  const { data: body, error } = await parseBody(
+    ctx.req.raw,
+    createTransactionSchema,
+  );
+  if (error) return validationResponse(ctx, error);
+
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const created = await withDb(ctx, async (db) => {
+    const [customer] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.id, body.customerId),
+          eq(customers.userId, user.id),
+          isNull(customers.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!customer) throw new ApiError(404, "Customer not found");
+
+    const [transaction] = await db
+      .insert(transactions)
+      .values({
+        userId: user.id,
+        customerId: body.customerId,
+        amount: body.amount,
+        type: body.type,
+        note: body.note,
+      })
+      .returning();
+
+    return transaction;
+  });
+
+  return ctx.json(created, 201);
+});
+
+// PUT /transactions/:id - Update transaction
+transactionsApp.put("/:id", async (ctx) => {
+  const { id } = ctx.req.param();
+  const { data: body, error } = await parseBody(
+    ctx.req.raw,
+    updateTransactionSchema,
+  );
+  if (error) return validationResponse(ctx, error);
+
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const updated = await withDb(ctx, async (db) => {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ ...body, updatedAt: new Date() })
+      .where(
+        and(
+          eq(transactions.id, id),
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+        ),
+      )
+      .returning();
+
+    return transaction;
+  });
+
+  if (!updated) throw transactionNotFound();
+
+  return ctx.json(updated);
+});
+
+// DELETE /transactions/:id - Soft delete
+transactionsApp.delete("/:id", async (ctx) => {
+  const { id } = ctx.req.param();
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const deleted = await withDb(ctx, (db) =>
+    db
+      .update(transactions)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(transactions.id, id),
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+        ),
+      )
+      .returning({ id: transactions.id }),
+  );
+
+  if (deleted.length === 0) throw transactionNotFound();
+
+  return ctx.json({ success: true });
 });
 
 export default transactionsApp;

@@ -4,6 +4,11 @@
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 
+# Comma-separated browser origins allowed by CORS.
+# Defaults to http://localhost:3000 when unset. In production, set this to the
+# deployed web custom domain (and any other trusted browser origin).
+TRUSTED_ORIGINS=http://localhost:3000
+
 # Local Postgres connection string used by wrangler dev for the HYPERDRIVE binding.
 # For production, the Hyperdrive binding is configured in wrangler.jsonc.
 CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=

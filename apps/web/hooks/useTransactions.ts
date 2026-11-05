@@ -7,7 +7,9 @@ import { toast } from "sonner";
 export const transactionKeys = {
   all: ["transactions"] as const,
   byCustomer: (customerId: string, params?: object) =>
-    [...transactionKeys.all, "customer", customerId, params] as const,
+    params
+      ? ([...transactionKeys.all, "customer", customerId, params] as const)
+      : ([...transactionKeys.all, "customer", customerId] as const),
   detail: (id: string) => [...transactionKeys.all, "detail", id] as const,
   tags: (id: string) => [...transactionKeys.all, "tags", id] as const,
 };

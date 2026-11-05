@@ -24,7 +24,7 @@ The repository SHALL host the Expo mobile app at `apps/app`, the Next.js web app
 - **AND** the mobile app no longer occupies the root `app/` path
 
 ### Requirement: Root task pipeline
-The root SHALL expose turbo-driven `dev`, `build`, `lint`, and `typecheck` tasks that run across workspaces from the repository root, and the API workspace SHALL provide its own db scripts (generate, migrate) and wrangler typegen.
+The root SHALL expose turbo-driven `dev`, `build`, `lint`, `typecheck`, and `test` tasks that run across workspaces from the repository root, and the API workspace SHALL provide its own db scripts (generate, migrate) and wrangler typegen.
 
 #### Scenario: Root-only build and checks
 - **WHEN** a developer runs `bun run build`, `bun run lint`, and `bun run typecheck` from the repository root
@@ -34,6 +34,11 @@ The root SHALL expose turbo-driven `dev`, `build`, `lint`, and `typecheck` tasks
 #### Scenario: Root dev server workflow
 - **WHEN** a developer runs the root `dev` task
 - **THEN** the web and API dev servers start together, and the mobile app's Expo start remains available from `apps/app`
+
+#### Scenario: Root contract test run
+- **WHEN** a developer runs `bun run test` from the repository root
+- **THEN** the API workspace's contract tests run without requiring a live Supabase project or Postgres instance
+- **AND** a failing contract test fails the root task
 
 ### Requirement: Restored feature code compiles
 The recreated `apps/web` and `apps/api` SHALL include the feature modules restored from git history — web: auth, dashboard, customers, tags, and profile pages with their data hooks and api/supabase/validation utilities; api: auth, customers, transactions, and dashboard routes with auth middleware, Drizzle schema, and existing migrations — and the pipeline SHALL pass with them in place.

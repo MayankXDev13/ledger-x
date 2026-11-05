@@ -1,27 +1,20 @@
-import { Context, Next } from "hono";
-import { getSupabase } from "../lib/supabase";
+import type { Context, Next } from "hono";
 import type { AppEnv } from "../types/hono";
 
 export async function authMiddleware(ctx: Context<AppEnv>, next: Next) {
-  const authHeader = ctx.req.header("Authorization");  
+  const authHeader = ctx.req.header("Authorization");
+  const match = authHeader?.match(/^Bearer\s+(.+)$/i);
 
-  if (!authHeader) {
+  if (!match) {
     return ctx.json({ error: "Unauthorized" }, 401);
   }
 
-  const token = authHeader.replace("Bearer ", "");
+  const user = await ctx.get("deps").verifyToken(ctx, match[1].trim());
 
-  const supabase = getSupabase(ctx);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token);
-
-  if (error || !user) {
+  if (!user) {
     return ctx.json({ error: "Invalid token" }, 401);
   }
 
   ctx.set("user", user);
-
   await next();
 }
