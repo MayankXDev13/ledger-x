@@ -14,12 +14,7 @@ export type AuditAction =
   | "customer.delete"
   | "transaction.create"
   | "transaction.update"
-  | "transaction.delete"
-  | "tag.create"
-  | "tag.update"
-  | "tag.delete"
-  | "tag.associate"
-  | "tag.dissociate";
+  | "transaction.delete";
 
 export async function writeAudit(
   ctx: Context<AppEnv>,

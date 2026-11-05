@@ -11,14 +11,11 @@ import {
 } from "drizzle-orm";
 import {
   customers,
-  transactionTagMap,
-  transactionTags,
   transactions,
 } from "../db/schema";
 import type { Db } from "../db";
 import type { AppEnv } from "../types/hono";
 import {
-  addTagToTransactionSchema,
   createTransactionSchema,
   parseBody,
   parseQuery,
@@ -27,7 +24,6 @@ import {
 } from "../validators";
 import {
   ApiError,
-  isUniqueViolation,
   validationResponse,
 } from "../lib/errors";
 
@@ -119,119 +115,6 @@ transactionsApp.get("/customers/:id/transactions", async (ctx) => {
   });
 
   return ctx.json(result);
-});
-
-// ── Tags on a Transaction ─────────────────────────────────────────────────────
-
-// GET /transactions/:id/tags
-transactionsApp.get("/:id/tags", async (ctx) => {
-  const { id } = ctx.req.param();
-  const user = ctx.get("user");
-  const { withDb } = ctx.get("deps");
-
-  const data = await withDb(ctx, async (db) => {
-    const transaction = await findOwnedTransaction(db, user.id, id);
-    if (!transaction) throw transactionNotFound();
-
-    const rows = await db
-      .select({ tag: transactionTags })
-      .from(transactionTagMap)
-      .innerJoin(
-        transactionTags,
-        eq(transactionTagMap.tagId, transactionTags.id),
-      )
-      .where(
-        and(
-          eq(transactionTagMap.transactionId, id),
-          eq(transactionTags.userId, user.id),
-        ),
-      );
-
-    return rows.map((row) => row.tag);
-  });
-
-  return ctx.json(data);
-});
-
-// POST /transactions/:id/tags
-transactionsApp.post("/:id/tags", async (ctx) => {
-  const { id } = ctx.req.param();
-  const { data: body, error } = await parseBody(
-    ctx.req.raw,
-    addTagToTransactionSchema,
-  );
-  if (error) return validationResponse(ctx, error);
-
-  const user = ctx.get("user");
-  const { withDb } = ctx.get("deps");
-
-  try {
-    await withDb(ctx, async (db) => {
-      const transaction = await findOwnedTransaction(db, user.id, id);
-      if (!transaction) throw transactionNotFound();
-
-      const [tag] = await db
-        .select({ id: transactionTags.id })
-        .from(transactionTags)
-        .where(
-          and(
-            eq(transactionTags.id, body.tag_id),
-            eq(transactionTags.userId, user.id),
-          ),
-        )
-        .limit(1);
-
-      if (!tag) throw new ApiError(404, "Tag not found");
-
-      await db.insert(transactionTagMap).values({
-        transactionId: id,
-        tagId: body.tag_id,
-      });
-    });
-  } catch (err) {
-    if (isUniqueViolation(err)) {
-      throw new ApiError(409, "Tag already added to transaction");
-    }
-    throw err;
-  }
-
-  return ctx.json({ success: true }, 201);
-});
-
-// DELETE /transactions/:id/tags/:tagId
-transactionsApp.delete("/:id/tags/:tagId", async (ctx) => {
-  const { id, tagId } = ctx.req.param();
-  const user = ctx.get("user");
-  const { withDb } = ctx.get("deps");
-
-  await withDb(ctx, async (db) => {
-    const transaction = await findOwnedTransaction(db, user.id, id);
-    if (!transaction) throw transactionNotFound();
-
-    const [tag] = await db
-      .select({ id: transactionTags.id })
-      .from(transactionTags)
-      .where(
-        and(
-          eq(transactionTags.id, tagId),
-          eq(transactionTags.userId, user.id),
-        ),
-      )
-      .limit(1);
-
-    if (!tag) throw new ApiError(404, "Tag not found");
-
-    await db
-      .delete(transactionTagMap)
-      .where(
-        and(
-          eq(transactionTagMap.transactionId, id),
-          eq(transactionTagMap.tagId, tagId),
-        ),
-      );
-  });
-
-  return ctx.json({ success: true });
 });
 
 // GET /transactions/:id - Get single transaction

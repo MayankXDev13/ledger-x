@@ -23,20 +23,6 @@ export const updateTransactionSchema = z.object({
   note: z.string().optional(),
 });
 
-export const createTagSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  color: z.string().optional(),
-});
-
-export const updateTagSchema = z.object({
-  name: z.string().min(1).optional(),
-  color: z.string().optional(),
-});
-
-export const addTagToTransactionSchema = z.object({
-  tag_id: z.string().uuid("tag_id must be a valid UUID"),
-});
-
 export const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters"),

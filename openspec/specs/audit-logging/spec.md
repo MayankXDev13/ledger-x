@@ -22,7 +22,7 @@ The system SHALL record signup, login, logout, password-reset request, password 
 
 ### Requirement: Data mutations are audited
 
-The system SHALL record create, update, and delete operations on customers, transactions, tags, and tag associations with actor, entity type, entity id, action, timestamp, and before/after summary where applicable. Reads SHALL NOT create audit entries.
+The system SHALL record create, update, and delete operations on customers and transactions with actor, entity type, entity id, action, timestamp, and before/after summary where applicable. Reads SHALL NOT create audit entries.
 
 #### Scenario: Customer update is traceable
 

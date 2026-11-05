@@ -109,7 +109,6 @@ describe("authentication", () => {
     for (const path of [
       "/customers",
       "/transactions/customers/customer-1/transactions",
-      "/transaction-tags",
       "/dashboard/metrics",
     ]) {
       const response = await requestApp(app, path);

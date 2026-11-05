@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import {
   FaChartBar,
   FaUsers,
-  FaTags,
   FaArrowUp,
   FaUser,
   FaSignOutAlt,
@@ -46,12 +45,6 @@ const navItems = [
     href: "/customers",
     icon: FaUsers,
     label: "Customers",
-    exact: false,
-  },
-  {
-    href: "/tags",
-    icon: FaTags,
-    label: "Tags",
     exact: false,
   },
 ];

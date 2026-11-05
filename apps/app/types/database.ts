@@ -271,24 +271,6 @@ export interface Database {
 
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 export type LedgerEntry = Database["public"]["Tables"]["ledger_entries"]["Row"];
-export type ContactTag = Database["public"]["Tables"]["contact_tags"]["Row"];
-export type ContactTagMap =
-  Database["public"]["Tables"]["contact_tag_map"]["Row"];
-export type TransactionTag =
-  Database["public"]["Tables"]["transaction_tags"]["Row"];
-export type TransactionTagMap =
-  Database["public"]["Tables"]["transaction_tag_map"]["Row"];
-
-export interface TagTotal {
-  tag_id: string;
-  tag_name: string;
-  tag_color: string;
-  total_amount: number;
-}
-
-export interface ContactWithTags extends Contact {
-  tags: ContactTag[];
-}
 
 export type TransactionType = "credit" | "debit";
 
@@ -340,17 +322,6 @@ function getStartOfYear(): string {
   const now = new Date();
   return new Date(now.getFullYear(), 0, 1).toISOString();
 }
-
-export const TAG_COLORS = [
-  "#3B82F6", // Blue
-  "#10B981", // Green
-  "#F59E0B", // Amber
-  "#EF4444", // Red
-  "#8B5CF6", // Purple
-  "#EC4899", // Pink
-  "#06B6D4", // Cyan
-  "#84CC16", // Lime
-] as const;
 
 export interface DashboardMetrics {
   totalBalance: number;

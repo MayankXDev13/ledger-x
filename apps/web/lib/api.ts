@@ -106,37 +106,6 @@ export const transactionsApi = {
     apiClient
       .delete<void>(`/transactions/${id}`)
       .then((response) => response.data),
-
-  getTags: (transactionId: string) =>
-    apiClient
-      .get<Tag[]>(`/transactions/${transactionId}/tags`)
-      .then((response) => response.data),
-
-  addTag: (transactionId: string, tagId: string) =>
-    apiClient
-      .post<void>(`/transactions/${transactionId}/tags`, { tag_id: tagId })
-      .then((r) => r.data),
-
-  removeTag: (transactionId: string, tagId: string) =>
-    apiClient
-      .delete<void>(`/transactions/${transactionId}/tags/${tagId}`)
-      .then((r) => r.data),
-};
-
-export const tagsApi = {
-  list: () =>
-    apiClient.get<Tag[]>("/transaction-tags").then((response) => response.data),
-
-  create: (data: { name: string; color: string }) =>
-    apiClient
-      .post<Tag>("/transaction-tags", data)
-      .then((response) => response.data),
-
-  update: (id: string, data: { name?: string; color?: string }) =>
-    apiClient.put<Tag>(`/transaction-tags/${id}`, data).then((r) => r.data),
-
-  delete: (id: string) =>
-    apiClient.delete<void>(`/transaction-tags/${id}`).then((r) => r.data),
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -158,13 +127,6 @@ export interface Transaction {
   createdAt: string;
   updatedAt?: string | null;
   deletedAt?: string | null;
-}
-
-export interface Tag {
-  id: string;
-  userId: string;
-  name: string;
-  color: string;
 }
 
 export interface PagedTransactions {

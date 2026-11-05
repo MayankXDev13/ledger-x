@@ -18,8 +18,6 @@ import { supabase } from "@/lib/supabase";
 import {
   Contact,
   LedgerEntry,
-  TagTotal,
-  TransactionTag,
 } from "@/types/database";
 import { format } from "date-fns";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
@@ -27,9 +25,7 @@ import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog"
 import {
   updateTransaction,
   deleteTransaction,
-  getTransactionTagTotals,
 } from "@/lib/transactions";
-import { getUserTransactionTags } from "@/lib/transaction-tags";
 import { formatCurrency } from "@/types/database";
 
 interface BalanceData {
@@ -43,8 +39,8 @@ export default function CustomerDetailsScreen() {
   const insets = useSafeAreaInsets();
 
   const [contact, setContact] = useState<Contact | null>(null);
-  const [entriesWithTags, setEntriesWithTags] = useState<
-    (LedgerEntry & { tags?: TransactionTag[]; running_balance?: number })[]
+  const [entries, setEntries] = useState<
+    (LedgerEntry & { running_balance?: number })[]
   >([]);
   const [balance, setBalance] = useState<BalanceData>({
     total_credit: 0,
@@ -58,13 +54,6 @@ export default function CustomerDetailsScreen() {
     useState<LedgerEntry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
-
-  const [tagTotals, setTagTotals] = useState<TagTotal[]>([]);
-  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(
-    null,
-  );
-  const [showTagFilter, setShowTagFilter] = useState(false);
-  const [transactionTags, setTransactionTags] = useState<TransactionTag[]>([]);
 
   /* -------------------- DATA -------------------- */
 
@@ -84,10 +73,6 @@ export default function CustomerDetailsScreen() {
     // Fetch balance first so we can compute running balances reliably
     const startingBalance = await fetchBalance();
     await fetchTransactions(startingBalance ?? undefined);
-    await fetchTagTotals();
-    if (contactData?.user_id) {
-      await fetchTransactionTags(contactData.user_id);
-    }
 
     setLoading(false);
   };
@@ -101,22 +86,14 @@ export default function CustomerDetailsScreen() {
       .eq("contact_id", id)
       .order("created_at", { ascending: false });
 
-    const entriesWithTagsData = await Promise.all(
-      (data || []).map(async (entry: LedgerEntry) => {
-        const { getTransactionTags } = await import("@/lib/transaction-tags");
-        const tags = await getTransactionTags(entry.id);
-        return { ...entry, tags };
-      }),
-    );
-
     // Compute running (post-transaction) balance for each entry.
-    // entriesWithTagsData is ordered newest -> oldest (created_at descending)
+    // data is ordered newest -> oldest (created_at descending)
     let running =
       typeof startingBalanceParam === "number"
         ? startingBalanceParam
         : (balance.balance ?? 0);
 
-    const withRunning = entriesWithTagsData.map((entry) => {
+    const withRunning = (data || []).map((entry: LedgerEntry) => {
       const entryWithRunning = { ...entry, running_balance: running };
       const amt = Number(entry.amount || 0);
       // Reverse the effect so the next (older) entry gets its post-transaction balance
@@ -130,7 +107,7 @@ export default function CustomerDetailsScreen() {
       return entryWithRunning;
     });
 
-    setEntriesWithTags(withRunning);
+    setEntries(withRunning);
   };
 
   const fetchBalance = async (): Promise<number | null> => {
@@ -146,18 +123,6 @@ export default function CustomerDetailsScreen() {
     }
 
     return null;
-  };
-
-  const fetchTagTotals = async () => {
-    if (!id) return;
-    const totals = await getTransactionTagTotals(id);
-    setTagTotals(totals);
-  };
-
-  const fetchTransactionTags = async (userId: string) => {
-    if (!userId) return;
-    const tags = await getUserTransactionTags(userId);
-    setTransactionTags(tags);
   };
 
   useEffect(() => {
@@ -225,16 +190,10 @@ export default function CustomerDetailsScreen() {
     );
   }
 
-  const filteredEntries = selectedTagFilter
-    ? entriesWithTags.filter((entry) =>
-        entry.tags?.some((tag) => tag.id === selectedTagFilter),
-      )
-    : entriesWithTags;
-
   const renderEntry = ({
     item,
   }: {
-    item: LedgerEntry & { tags?: TransactionTag[]; running_balance?: number };
+    item: LedgerEntry & { running_balance?: number };
   }) => (
     <Pressable
       style={styles.entryCard}
@@ -268,21 +227,6 @@ export default function CustomerDetailsScreen() {
           </Text>
         )}
         {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
-        {item.tags && item.tags.length > 0 && (
-          <View style={styles.entryTags}>
-            {item.tags.map((tag) => (
-              <View
-                key={tag.id}
-                style={[styles.entryTag, { backgroundColor: tag.color + "30" }]}
-              >
-                <View
-                  style={[styles.entryTagDot, { backgroundColor: tag.color }]}
-                />
-                <Text style={styles.entryTagText}>{tag.name}</Text>
-              </View>
-            ))}
-          </View>
-        )}
       </View>
       <Ionicons name="chevron-forward" size={18} color="#666" />
     </Pressable>
@@ -358,99 +302,13 @@ export default function CustomerDetailsScreen() {
         </Pressable>
       </View>
 
-      {/* TAG TOTALS */}
-      {tagTotals.length > 0 && (
-        <View style={styles.tagTotalsContainer}>
-          <Text style={styles.tagTotalsTitle}>💰 Tag Totals</Text>
-          <View style={styles.tagTotalsList}>
-            {tagTotals.map((total) => (
-              <View
-                key={total.tag_id}
-                style={[
-                  styles.tagTotalItem,
-                  { backgroundColor: total.tag_color + "30" },
-                ]}
-              >
-                <Text style={styles.tagTotalName}>{total.tag_name}</Text>
-                <Text style={styles.tagTotalAmount}>
-                  {formatCurrency(total.total_amount)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* TAG FILTER */}
-      <View style={styles.tagFilterContainer}>
-        <Pressable
-          style={styles.tagFilterButton}
-          onPress={() => setShowTagFilter(!showTagFilter)}
-        >
-          <Text style={styles.tagFilterText}>
-            Filter:{" "}
-            {selectedTagFilter
-              ? transactionTags.find((t) => t.id === selectedTagFilter)?.name ||
-                "Tag"
-              : "All"}
-          </Text>
-          <Ionicons
-            name={showTagFilter ? "chevron-up" : "chevron-down"}
-            size={20}
-            color="#FFFFFF"
-          />
-        </Pressable>
-
-        {showTagFilter && (
-          <View style={styles.tagFilterDropdown}>
-            <Pressable
-              style={styles.tagFilterOption}
-              onPress={() => {
-                setSelectedTagFilter(null);
-                setShowTagFilter(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.tagFilterOptionText,
-                  !selectedTagFilter && styles.tagFilterOptionTextSelected,
-                ]}
-              >
-                All Transactions
-              </Text>
-            </Pressable>
-            {transactionTags.map((tag) => (
-              <Pressable
-                key={tag.id}
-                style={styles.tagFilterOption}
-                onPress={() => {
-                  setSelectedTagFilter(tag.id);
-                  setShowTagFilter(false);
-                }}
-              >
-                <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
-                <Text
-                  style={[
-                    styles.tagFilterOptionText,
-                    selectedTagFilter === tag.id &&
-                      styles.tagFilterOptionTextSelected,
-                  ]}
-                >
-                  {tag.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </View>
-
       {/* TRANSACTIONS */}
       <View style={styles.txHeader}>
         <Text style={styles.txTitle}>Transactions</Text>
       </View>
 
       <FlatList
-        data={filteredEntries}
+        data={entries}
         renderItem={renderEntry}
         keyExtractor={(i) => i.id}
         contentContainerStyle={[
@@ -461,11 +319,7 @@ export default function CustomerDetailsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {selectedTagFilter
-              ? "No transactions with this tag"
-              : "No transactions yet"}
-          </Text>
+          <Text style={styles.emptyText}>No transactions yet</Text>
         }
       />
 
@@ -594,73 +448,6 @@ const styles = StyleSheet.create({
   credit: { color: "#10B981", fontWeight: "600" },
   debit: { color: "#EF4444", fontWeight: "600" },
 
-  tagTotalsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-
-  tagTotalsTitle: { color: "#888", fontSize: 12, marginBottom: 8 },
-
-  tagTotalsList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-
-  tagTotalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-
-  tagTotalName: { color: "#fff", fontSize: 13, fontWeight: "500" },
-
-  tagTotalAmount: { color: "#ccc", fontSize: 13 },
-
-  tagFilterContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-
-  tagFilterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#1F1F1F",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-
-  tagFilterText: { color: "#fff", fontSize: 14 },
-
-  tagFilterDropdown: {
-    backgroundColor: "#1F1F1F",
-    borderRadius: 10,
-    marginTop: 6,
-    padding: 8,
-  },
-
-  tagFilterOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    gap: 8,
-  },
-
-  tagFilterOptionText: { color: "#888", fontSize: 14 },
-
-  tagFilterOptionTextSelected: {
-    color: "#3B82F6",
-    fontWeight: "600",
-  },
-
-  tagDot: { width: 8, height: 8, borderRadius: 4 },
-
   txHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -684,21 +471,6 @@ const styles = StyleSheet.create({
   entryDate: { color: "#777", marginTop: 2 },
   entryBalance: { color: "#888", marginTop: 4, fontSize: 13 },
   entryNote: { color: "#666", fontStyle: "italic", marginTop: 4 },
-
-  entryTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
-
-  entryTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
-  },
-
-  entryTagDot: { width: 6, height: 6, borderRadius: 3 },
-
-  entryTagText: { color: "#ccc", fontSize: 11 },
 
   emptyText: { color: "#666", textAlign: "center", paddingVertical: 40 },
 });
