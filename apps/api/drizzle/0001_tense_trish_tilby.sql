@@ -1,1 +1,1 @@
-DROP INDEX "customer_user_phone_unique";
+DROP INDEX IF EXISTS "customer_user_phone_unique";

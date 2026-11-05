@@ -37,6 +37,38 @@ export const addTagToTransactionSchema = z.object({
   tag_id: z.string().uuid("tag_id must be a valid UUID"),
 });
 
+export const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export const requestResetSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(1),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const auditQuerySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 const dateString = z
   .string()
   .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date");

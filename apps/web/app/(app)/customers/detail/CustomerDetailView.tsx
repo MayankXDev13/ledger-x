@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -37,9 +37,9 @@ import {
 
 import type { Transaction } from "@/lib/api";
 
-export default function CustomerDetailPage() {
-  const params = useParams();
-  const customerId = params.id as string;
+export function CustomerDetailView() {
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("id") ?? "";
 
   const [page, setPage] = useState(1);
   const pageSize = 10;

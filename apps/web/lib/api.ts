@@ -1,5 +1,5 @@
 import axios from "axios";
-import { supabase } from "./supabase";
+import { getToken } from "./auth";
 import { toApiError } from "./api-error";
 
 export { ApiError, toApiError } from "./api-error";
@@ -13,13 +13,11 @@ export const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use(async (config) => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+apiClient.interceptors.request.use((config) => {
+  const token = getToken();
 
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;

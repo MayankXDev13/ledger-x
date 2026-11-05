@@ -12,10 +12,16 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:migrate:neon": "bun scripts/db-migrate.ts",
+    "backup:supabase": "bash scripts/backup-supabase-to-r2.sh",
+    "backup:verify": "bash scripts/verify-backup.sh",
+    "env:verify": "bash scripts/verify-env.sh",
+    "import:supabase": "bun scripts/import-supabase-to-neon.ts",
+    "smoke": "bash scripts/smoke.sh"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.1",
+    "better-auth": "1.7.17",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.25",
     "pg": "^8.21.0",

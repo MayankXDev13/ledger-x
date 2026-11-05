@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { signup } from "@/lib/auth";
 import { LogoSection } from "@/components/signup/LogoSection";
 import { SignupForm } from "@/components/signup/SignupForm";
 import { toast } from "sonner";
@@ -12,12 +12,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Account created! Check your email to confirm.");
-      router.push("/login");
+    try {
+      await signup(email, password);
+      toast.success("Account created!");
+      router.push("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Signup failed");
     }
   };
 

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as ExpoLinking from "expo-linking";
-import { supabase } from "@/lib/supabase";
+import { requestPasswordReset } from "@/lib/auth-session";
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -32,22 +32,14 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     setError(null);
 
-    const redirectTo = ExpoLinking.createURL("/auth/reset-password");
-    console.log(redirectTo);
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email,
-      { redirectTo },
-    );
-
-    if (resetError) {
-      setError(resetError.message);
+    try {
+      await requestPasswordReset(email);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSent(true);
-    setLoading(false);
   };
 
   return (

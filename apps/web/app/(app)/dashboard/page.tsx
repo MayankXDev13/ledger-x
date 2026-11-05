@@ -464,7 +464,7 @@ export default function DashboardPage() {
                 return (
                   <Link
                     key={tx.id}
-                    href={`/customers/${tx.customerId}`}
+                    href={`/customers/detail?id=${tx.customerId}`}
                     className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors group"
                   >
                     <div

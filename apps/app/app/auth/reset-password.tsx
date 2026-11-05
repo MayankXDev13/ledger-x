@@ -9,11 +9,11 @@ import {
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { useLinkingURL } from "expo-linking";
-import { supabase } from "@/lib/supabase";
+import { resetPassword } from "@/lib/auth-session";
 
 type VerificationState =
   | { status: "verifying" }
-  | { status: "verified" }
+  | { status: "verified"; email: string; token: string }
   | { status: "error"; message: string };
 
 export default function ResetPasswordScreen() {
@@ -48,10 +48,10 @@ export default function ResetPasswordScreen() {
 
         const parsed = Linking.parse(url);
 
-        const access_token = parsed.queryParams?.access_token as string;
-        const refresh_token = parsed.queryParams?.refresh_token as string;
+        const email = parsed.queryParams?.email as string;
+        const token = parsed.queryParams?.token as string;
 
-        if (!access_token || !refresh_token) {
+        if (!email || !token) {
           setVerification({
             status: "error",
             message: "Reset link is invalid or expired.",
@@ -59,20 +59,7 @@ export default function ResetPasswordScreen() {
           return;
         }
 
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-
-        if (error) {
-          setVerification({
-            status: "error",
-            message: error.message,
-          });
-          return;
-        }
-
-        setVerification({ status: "verified" });
+        setVerification({ status: "verified", email, token });
       } catch (err: any) {
         setVerification({
           status: "error",
@@ -113,26 +100,14 @@ export default function ResetPasswordScreen() {
     setLoading(true);
     setFormError(null);
 
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-      setFormError(sessionError?.message ?? "Your reset link has expired.");
+    try {
+      await resetPassword(verification.email, verification.token, newPassword);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Reset failed.");
       setLoading(false);
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (error) {
-      setFormError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    await supabase.auth.signOut();
     router.replace("/auth/login");
   };
 

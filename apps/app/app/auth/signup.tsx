@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
-import { supabase } from "@/lib/supabase";
+import { signUp } from "@/lib/auth-session";
 
 export default function SignupScreen() {
   const [email, setEmail] = useState("");
@@ -56,18 +56,14 @@ export default function SignupScreen() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) {
-      setError(authError.message);
+    try {
+      await signUp(email, password);
+      router.replace("/home");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed");
       setLoading(false);
       return;
     }
-
-    router.replace("/home");
   };
 
   return (

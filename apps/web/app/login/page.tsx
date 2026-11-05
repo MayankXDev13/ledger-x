@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { login } from "@/lib/auth";
 import { BrandPanel } from "@/components/login/BrandPanel";
 import { LoginForm } from "@/components/login/LoginForm";
 import Link from "next/link";
@@ -13,11 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-    } else {
+    try {
+      await login(email, password);
       router.push("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Login failed");
     }
   };
 

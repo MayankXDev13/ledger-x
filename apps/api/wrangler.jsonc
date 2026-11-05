@@ -7,18 +7,33 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "d1abc4f5227847cfae066033bcd91344"
+      "id": "232bda38d68648548fe846467f1806ab"
     }
   ],
-  "routes": [
+  // NOTE: Hyperdrive query caching is disabled at the config level
+  // (wrangler hyperdrive update <id> --caching-disabled) because cached
+  // session reads would accept revoked tokens. wrangler.jsonc has no
+  // per-binding caching key.
+  "r2_buckets": [
     {
-      "pattern": "api.ledgex.mayankxdev.shop",
-      "zone_name": "mayankxdev.shop",
-      "custom_domain": true,
-      "enabled": true,
-      "previews_enabled": false
+      "binding": "BACKUP_BUCKET",
+      "bucket_name": "ledgerx-backups"
     }
   ],
+  "vars": {
+    "TRUSTED_ORIGINS": "http://localhost:3000,https://ledgerx-613.pages.dev"
+  },
+  // Custom domain re-enabled once mayankxdev.shop is on this Cloudflare account
+  // (deploy failed with: zone "mayankxdev.shop" does not exist on your account).
+  // "routes": [
+  //   {
+  //     "pattern": "api.ledgex.mayankxdev.shop",
+  //     "zone_name": "mayankxdev.shop",
+  //     "custom_domain": true,
+  //     "enabled": true,
+  //     "previews_enabled": false
+  //   }
+  // ],
   "observability": {
     "logs": {
       "enabled": true

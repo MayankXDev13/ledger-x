@@ -3,7 +3,7 @@ import { Text, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
+import { signOut } from "@/lib/auth-session";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
@@ -15,7 +15,7 @@ export default function ProfileScreen() {
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
-    await supabase.auth.signOut();
+    await signOut();
     router.replace("/auth/login");
   };
 
