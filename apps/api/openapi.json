@@ -3,7 +3,7 @@
   "info": {
     "title": "Ledger-X API",
     "version": "1.0.0",
-    "description": "Auto‑generated OpenAPI specification for the Ledger‑X server routes."
+    "description": "Auto\u2011generated OpenAPI specification for the Ledger\u2011X server routes."
   },
   "servers": [
     {
@@ -23,21 +23,31 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": { "type": "string" },
-                    "email": { "type": "string", "format": "email" }
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
                   },
-                  "required": ["id", "email"]
+                  "required": [
+                    "id",
+                    "email"
+                  ]
                 }
               }
             }
           },
-          "401": { "description": "Unauthenticated" }
+          "401": {
+            "description": "Unauthenticated"
+          }
         }
       }
     },
     "/customers": {
       "get": {
-        "summary": "List all non‑deleted customers",
+        "summary": "List all non\u2011deleted customers",
         "responses": {
           "200": {
             "description": "Array of customers",
@@ -45,7 +55,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Customer" }
+                  "items": {
+                    "$ref": "#/components/schemas/Customer"
+                  }
                 }
               }
             }
@@ -58,7 +70,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/NewCustomer" }
+              "schema": {
+                "$ref": "#/components/schemas/NewCustomer"
+              }
             }
           }
         },
@@ -67,11 +81,15 @@
             "description": "Customer created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Customer" }
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" }
+          "400": {
+            "description": "Invalid request"
+          }
         }
       }
     },
@@ -81,7 +99,9 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "get": {
@@ -91,11 +111,15 @@
             "description": "Customer object",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Customer" }
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
               }
             }
           },
-          "404": { "description": "Customer not found" }
+          "404": {
+            "description": "Customer not found"
+          }
         }
       },
       "put": {
@@ -104,7 +128,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateCustomer" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomer"
+              }
             }
           }
         },
@@ -113,19 +139,29 @@
             "description": "Customer updated",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Customer" }
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" },
-          "404": { "description": "Customer not found" }
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
         }
       },
       "delete": {
-        "summary": "Soft‑delete a customer",
+        "summary": "Soft\u2011delete a customer",
         "responses": {
-          "200": { "description": "Deletion successful" },
-          "404": { "description": "Customer not found" }
+          "200": {
+            "description": "Deletion successful"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
         }
       }
     },
@@ -137,7 +173,9 @@
             "description": "Metrics payload",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Metrics" }
+                "schema": {
+                  "$ref": "#/components/schemas/Metrics"
+                }
               }
             }
           }
@@ -146,7 +184,7 @@
     },
     "/dashboard/recent-transactions": {
       "get": {
-        "summary": "Get latest 5 non‑deleted transactions",
+        "summary": "Get latest 5 non\u2011deleted transactions",
         "responses": {
           "200": {
             "description": "Array of transactions",
@@ -154,7 +192,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Transaction" }
+                  "items": {
+                    "$ref": "#/components/schemas/Transaction"
+                  }
                 }
               }
             }
@@ -168,27 +208,41 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         },
         {
           "name": "page",
           "in": "query",
-          "schema": { "type": "integer", "default": 1 }
+          "schema": {
+            "type": "integer",
+            "default": 1
+          }
         },
         {
           "name": "pageSize",
           "in": "query",
-          "schema": { "type": "integer", "default": 10 }
+          "schema": {
+            "type": "integer",
+            "default": 10
+          }
         },
         {
           "name": "start",
           "in": "query",
-          "schema": { "type": "string", "format": "date-time" }
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
         {
           "name": "end",
           "in": "query",
-          "schema": { "type": "string", "format": "date-time" }
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       ],
       "get": {
@@ -198,7 +252,9 @@
             "description": "Paginated list of transactions",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PagedTransactions" }
+                "schema": {
+                  "$ref": "#/components/schemas/PagedTransactions"
+                }
               }
             }
           }
@@ -211,7 +267,9 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "get": {
@@ -221,11 +279,15 @@
             "description": "Transaction object",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Transaction" }
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
               }
             }
           },
-          "404": { "description": "Transaction not found" }
+          "404": {
+            "description": "Transaction not found"
+          }
         }
       },
       "put": {
@@ -234,7 +296,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateTransaction" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransaction"
+              }
             }
           }
         },
@@ -243,17 +307,27 @@
             "description": "Transaction updated",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Transaction" }
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" },
-          "404": { "description": "Transaction not found" }
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Transaction not found"
+          }
         }
       },
       "delete": {
-        "summary": "Soft‑delete a transaction",
-        "responses": { "200": { "description": "Deletion successful" } }
+        "summary": "Soft\u2011delete a transaction",
+        "responses": {
+          "200": {
+            "description": "Deletion successful"
+          }
+        }
       }
     },
     "/transactions": {
@@ -263,7 +337,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/NewTransaction" }
+              "schema": {
+                "$ref": "#/components/schemas/NewTransaction"
+              }
             }
           }
         },
@@ -272,11 +348,15 @@
             "description": "Transaction created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Transaction" }
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" }
+          "400": {
+            "description": "Invalid request"
+          }
         }
       }
     },
@@ -290,7 +370,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Tag" }
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
                 }
               }
             }
@@ -303,7 +385,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/NewTag" }
+              "schema": {
+                "$ref": "#/components/schemas/NewTag"
+              }
             }
           }
         },
@@ -312,11 +396,15 @@
             "description": "Tag created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Tag" }
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" }
+          "400": {
+            "description": "Invalid request"
+          }
         }
       }
     },
@@ -326,7 +414,9 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "put": {
@@ -335,7 +425,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateTag" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTag"
+              }
             }
           }
         },
@@ -344,19 +436,29 @@
             "description": "Tag updated",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Tag" }
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
               }
             }
           },
-          "400": { "description": "Invalid request" },
-          "404": { "description": "Tag not found" }
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Tag not found"
+          }
         }
       },
       "delete": {
         "summary": "Delete a tag",
         "responses": {
-          "200": { "description": "Deletion successful" },
-          "404": { "description": "Tag not found" }
+          "200": {
+            "description": "Deletion successful"
+          },
+          "404": {
+            "description": "Tag not found"
+          }
         }
       }
     },
@@ -366,7 +468,9 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "get": {
@@ -378,7 +482,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Tag" }
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
                 }
               }
             }
@@ -391,13 +497,19 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/AddTagToTransaction" }
+              "schema": {
+                "$ref": "#/components/schemas/AddTagToTransaction"
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Tag added" },
-          "400": { "description": "Invalid request" }
+          "201": {
+            "description": "Tag added"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
         }
       }
     },
@@ -407,18 +519,206 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         },
         {
           "name": "tagId",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "delete": {
         "summary": "Remove a tag from a transaction",
-        "responses": { "200": { "description": "Tag removed" } }
+        "responses": {
+          "200": {
+            "description": "Tag removed"
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "summary": "Better Auth signup (email/password), returns session token",
+        "responses": {
+          "201": {
+            "description": "Better Auth signup (email/password), returns session token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Better Auth login, returns session token",
+        "responses": {
+          "200": {
+            "description": "Better Auth login, returns session token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke current session",
+        "responses": {
+          "200": {
+            "description": "Revoke current session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/auth/request-reset": {
+      "post": {
+        "summary": "Request password reset (migrated users)",
+        "responses": {
+          "200": {
+            "description": "Request password reset (migrated users)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Complete password reset with emailed token",
+        "responses": {
+          "200": {
+            "description": "Complete password reset with emailed token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "summary": "Change password, revokes other sessions",
+        "responses": {
+          "200": {
+            "description": "Change password, revokes other sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/audit-logs": {
+      "get": {
+        "summary": "List own audit entries (paginated)",
+        "responses": {
+          "200": {
+            "description": "Audit entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
       }
     }
   },
@@ -427,43 +727,86 @@
       "Customer": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "userId": { "type": "string" },
-          "name": { "type": "string" },
-          "phone": { "type": "string" },
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
           "deletedAt": {
             "type": "string",
             "format": "date-time",
             "nullable": true
           }
         },
-        "required": ["id", "userId", "name", "phone"]
+        "required": [
+          "id",
+          "userId",
+          "name",
+          "phone"
+        ]
       },
       "NewCustomer": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "phone": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
         },
-        "required": ["name", "phone"]
+        "required": [
+          "name",
+          "phone"
+        ]
       },
       "UpdateCustomer": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "phone": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
         }
       },
       "Transaction": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "userId": { "type": "string" },
-          "customerId": { "type": "string" },
-          "amount": { "type": "number" },
-          "type": { "type": "string", "enum": ["credit", "debit"] },
-          "note": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" },
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit",
+              "debit"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
@@ -475,78 +818,165 @@
             "nullable": true
           }
         },
-        "required": ["id", "userId", "customerId", "amount", "type"]
+        "required": [
+          "id",
+          "userId",
+          "customerId",
+          "amount",
+          "type"
+        ]
       },
       "NewTransaction": {
         "type": "object",
         "properties": {
-          "customerId": { "type": "string" },
-          "amount": { "type": "number" },
-          "type": { "type": "string", "enum": ["credit", "debit"] },
-          "note": { "type": "string" }
+          "customerId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit",
+              "debit"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
         },
-        "required": ["customerId", "amount", "type"]
+        "required": [
+          "customerId",
+          "amount",
+          "type"
+        ]
       },
       "UpdateTransaction": {
         "type": "object",
         "properties": {
-          "customerId": { "type": "string" },
-          "amount": { "type": "number" },
-          "type": { "type": "string", "enum": ["credit", "debit"] },
-          "note": { "type": "string" }
+          "customerId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit",
+              "debit"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
         }
       },
       "Tag": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "userId": { "type": "string" },
-          "name": { "type": "string" },
-          "color": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
         },
-        "required": ["id", "userId", "name", "color"]
+        "required": [
+          "id",
+          "userId",
+          "name",
+          "color"
+        ]
       },
       "NewTag": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "color": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
         },
-        "required": ["name", "color"]
+        "required": [
+          "name",
+          "color"
+        ]
       },
       "UpdateTag": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "color": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
         }
       },
       "AddTagToTransaction": {
         "type": "object",
-        "properties": { "tag_id": { "type": "string" } },
-        "required": ["tag_id"]
+        "properties": {
+          "tag_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag_id"
+        ]
       },
       "Metrics": {
         "type": "object",
         "properties": {
-          "totalBalance": { "type": "number" },
-          "totalCustomers": { "type": "integer" },
-          "monthlyNet": { "type": "number" }
+          "totalBalance": {
+            "type": "number"
+          },
+          "totalCustomers": {
+            "type": "integer"
+          },
+          "monthlyNet": {
+            "type": "number"
+          }
         },
-        "required": ["totalBalance", "totalCustomers", "monthlyNet"]
+        "required": [
+          "totalBalance",
+          "totalCustomers",
+          "monthlyNet"
+        ]
       },
       "PagedTransactions": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Transaction" }
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
           },
-          "page": { "type": "integer" },
-          "pageSize": { "type": "integer" },
-          "total": { "type": "integer" }
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
         },
-        "required": ["data", "page", "pageSize", "total"]
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total"
+        ]
       }
     }
   }

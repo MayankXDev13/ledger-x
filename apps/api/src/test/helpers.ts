@@ -1,9 +1,9 @@
 import type { Hono } from "hono";
-import type { User } from "@supabase/supabase-js";
 import type { Db, WithDb } from "../db";
 import type {
   AppDependencies,
   AppEnv,
+  AuthUser,
   Bindings,
   VerifyToken,
 } from "../types/hono";
@@ -197,10 +197,10 @@ class DeleteChain implements PromiseLike<Row[]> {
 export const testUser = {
   id: "user-1",
   email: "user@example.com",
-} as User;
+} as AuthUser;
 
 export function fakeVerifyToken(
-  user: User | null = testUser,
+  user: AuthUser | null = testUser,
   validToken = "valid-token",
 ): VerifyToken {
   return async (_ctx, token) => (token === validToken ? user : null);
@@ -232,8 +232,6 @@ export function requestApp(
   env: Partial<Bindings> = {},
 ) {
   return app.request(path, init, {
-    SUPABASE_URL: "https://example.supabase.co",
-    SUPABASE_ANON_KEY: "anon",
     HYPERDRIVE: {} as Hyperdrive,
     TRUSTED_ORIGINS: "http://localhost:3000",
     ...env,

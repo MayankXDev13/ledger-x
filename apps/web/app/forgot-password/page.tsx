@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { requestPasswordReset } from "@/lib/auth";
 import { LogoSection } from "@/components/forgot-password/LogoSection";
 import { PasswordResetForm } from "@/components/forgot-password/PasswordResetForm";
 import { Button } from "@/components/ui/button";
@@ -16,15 +16,14 @@ export default function ForgotPasswordPage() {
 
   const handleReset = async (email: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
+    try {
+      await requestPasswordReset(email);
       setSent(true);
       setEmail(email);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -8,11 +8,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { supabase } from "@/lib/supabase";
+import { changePassword, getSessionUser } from "@/lib/auth-session";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function UpdatePasswordScreen() {
-  const { session } = useAuth();
+  useAuth();
   const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -56,33 +56,24 @@ export default function UpdatePasswordScreen() {
   };
 
   const onSubmit = async () => {
-    if (!validateForm() || !session?.user.email) return;
+    if (!validateForm()) return;
 
     setLoading(true);
     setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: session.user.email,
-      password: currentPassword,
-    });
-
-    if (signInError) {
-      setCurrentPasswordError("Current password is incorrect");
+    try {
+      await changePassword(currentPassword, newPassword);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Password change failed";
+      if (message.toLowerCase().includes("current password")) {
+        setCurrentPasswordError("Current password is incorrect");
+      } else {
+        setError(message);
+      }
       setLoading(false);
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setError(updateError.message);
-      setLoading(false);
-      return;
-    }
-
-    await supabase.auth.signOut();
     router.replace("/auth/login");
   };
 

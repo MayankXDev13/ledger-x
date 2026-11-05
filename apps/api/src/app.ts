@@ -6,8 +6,9 @@ import customersApp from "./routes/customers";
 import transactionsApp from "./routes/transactions";
 import tagsApp from "./routes/tags";
 import dashboardApp from "./routes/dashboard";
+import auditLogsApp from "./routes/audit-logs";
 import { withDb as defaultWithDb } from "./db";
-import { verifyToken as defaultVerifyToken } from "./lib/supabase";
+import { verifyToken as defaultVerifyToken } from "./lib/auth";
 import { ApiError } from "./lib/errors";
 import type { AppDependencies, AppEnv, Bindings } from "./types/hono";
 
@@ -53,8 +54,11 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use("/transaction-tags/*", authMiddleware);
   app.use("/dashboard/*", authMiddleware);
   app.use("/auth/me", authMiddleware);
+  app.use("/auth/logout", authMiddleware);
+  app.use("/audit-logs/*", authMiddleware);
 
   app.route("/auth", authApp);
+  app.route("/audit-logs", auditLogsApp);
   app.route("/customers", customersApp);
   app.route("/transactions", transactionsApp);
   app.route("/transaction-tags", tagsApp);

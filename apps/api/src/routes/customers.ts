@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { and, eq, isNull } from "drizzle-orm";
 import { customers } from "../db/schema";
 import type { AppEnv } from "../types/hono";
+import { writeAudit } from "../lib/audit";
 import {
   createCustomerSchema,
   parseBody,
@@ -79,6 +80,13 @@ customersApp.post("/", async (ctx) => {
     return customer;
   });
 
+  await writeAudit(ctx, {
+    actorUserId: user.id,
+    action: "customer.create",
+    entityType: "customer",
+    entityId: created.id,
+  });
+
   return ctx.json(created, 201);
 });
 
@@ -116,6 +124,14 @@ customersApp.put("/:id", async (ctx) => {
   if (!updated) {
     throw new ApiError(404, "Customer not found");
   }
+
+  await writeAudit(ctx, {
+    actorUserId: user.id,
+    action: "customer.update",
+    entityType: "customer",
+    entityId: id,
+    metadata: { ...body },
+  });
 
   return ctx.json(updated);
 });
