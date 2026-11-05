@@ -3,13 +3,11 @@ import { View, Text, FlatList, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { LedgerEntry, TransactionTag } from "@/types/database";
+import { LedgerEntry } from "@/types/database";
 import { format } from "date-fns";
-import { getTransactionTags } from "@/lib/transaction-tags";
 
 interface EntryWithTags extends LedgerEntry {
   contacts?: { name: string; phone: string };
-  tags?: TransactionTag[];
 }
 
 export default function LedgerScreen() {
@@ -32,13 +30,7 @@ export default function LedgerScreen() {
     if (error) {
       console.error("Error fetching entries:", error);
     } else {
-      const entriesWithTags = await Promise.all(
-        (data || []).map(async (entry) => {
-          const tags = await getTransactionTags(entry.id);
-          return { ...entry, tags } as EntryWithTags;
-        }),
-      );
-      setEntries(entriesWithTags);
+      setEntries((data || []) as EntryWithTags[]);
     }
     setLoading(false);
   }, [session]);
@@ -72,23 +64,6 @@ export default function LedgerScreen() {
           <Text className="text-[#888888] text-xs mt-1 italic">
             {item.note}
           </Text>
-        )}
-        {item.tags && item.tags.length > 0 && (
-          <View className="flex-row gap-1 mt-2 flex-wrap">
-            {item.tags.map((tag) => (
-              <View
-                key={tag.id}
-                className="flex-row items-center px-2 py-0.5 rounded-full gap-1"
-                style={{ backgroundColor: tag.color + "30" }}
-              >
-                <View
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: tag.color }}
-                />
-                <Text className="text-[#CCCCCC] text-xs">{tag.name}</Text>
-              </View>
-            ))}
-          </View>
         )}
       </View>
       <Text

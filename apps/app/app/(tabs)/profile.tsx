@@ -40,26 +40,6 @@ export default function ProfileScreen() {
 
       <View className="px-6 gap-4">
         <Pressable
-          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-brand-card border-brand-border"
-          onPress={() => router.push("/tags/manage")}
-        >
-          <Ionicons name="pricetags-outline" size={20} color="#ffffff" />
-          <Text className="text-white text-base font-semibold">
-            Manage Customer Tags
-          </Text>
-        </Pressable>
-
-        <Pressable
-          className="flex-row items-center justify-center py-4 rounded-xl gap-3 border bg-brand-card border-brand-border"
-          onPress={() => router.push("/transaction-tags/manage")}
-        >
-          <Ionicons name="wallet-outline" size={20} color="#ffffff" />
-          <Text className="text-white text-base font-semibold">
-            Manage Transaction Tags
-          </Text>
-        </Pressable>
-
-        <Pressable
           className={`flex-row items-center justify-center py-4 rounded-xl gap-3 ${isLoggingOut ? "opacity-50" : "bg-white"}`}
           onPress={() => router.push("/auth/update-password")}
           disabled={isLoggingOut}

@@ -9,13 +9,10 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { ContactTag } from "@/types/database";
-import { TagSelector } from "@/components/TagSelector";
-import { TagManagementModal } from "@/components/TagManagementModal";
 
 export default function AddCustomerScreen() {
   const insets = useSafeAreaInsets();
@@ -26,25 +23,6 @@ export default function AddCustomerScreen() {
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
-  const [availableTags, setAvailableTags] = useState<ContactTag[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
-
-  useEffect(() => {
-    if (session?.user) {
-      fetchTags();
-    }
-  }, [session]);
-
-  const fetchTags = async () => {
-    if (!session?.user) return;
-    const { data } = await supabase
-      .from("contact_tags")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .order("name");
-    setAvailableTags(data || []);
-  };
 
   const validateForm = () => {
     let valid = true;
@@ -84,8 +62,6 @@ export default function AddCustomerScreen() {
         .eq("phone", phone.trim())
         .single();
 
-      let contactData;
-
       if (existingContact && !existingContact.deleted_at) {
         setError("A customer with this phone number already exists");
         setLoading(false);
@@ -93,25 +69,18 @@ export default function AddCustomerScreen() {
       }
 
       if (existingContact && existingContact.deleted_at) {
-        const { data: restoredContact, error: restoreError } = await supabase
+        const { error: restoreError } = await supabase
           .from("contacts")
           .update({ name: name.trim(), deleted_at: null })
-          .eq("id", existingContact.id)
-          .select()
-          .single();
+          .eq("id", existingContact.id);
 
         if (restoreError) throw restoreError;
-        contactData = restoredContact;
       } else {
-        const { data: newContact, error: insertError } = await supabase
-          .from("contacts")
-          .insert({
-            user_id: session.user.id,
-            name: name.trim(),
-            phone: phone.trim(),
-          })
-          .select()
-          .single();
+        const { error: insertError } = await supabase.from("contacts").insert({
+          user_id: session.user.id,
+          name: name.trim(),
+          phone: phone.trim(),
+        });
 
         if (insertError) {
           if (insertError.code === "23505") {
@@ -122,17 +91,7 @@ export default function AddCustomerScreen() {
           setLoading(false);
           return;
         }
-        contactData = newContact;
       }
-
-      if (selectedTags.length > 0) {
-        const tagMappings = selectedTags.map((tag) => ({
-          contact_id: contactData.id,
-          tag_id: tag.id,
-        }));
-        await supabase.from("contact_tag_map").insert(tagMappings);
-      }
-
       router.back();
     } catch (err) {
       setError("An unexpected error occurred");
@@ -191,13 +150,6 @@ export default function AddCustomerScreen() {
             )}
           </View>
 
-          <TagSelector
-            selectedTags={selectedTags}
-            onTagsChange={setSelectedTags}
-            availableTags={availableTags}
-            onManageTags={() => setShowTagModal(true)}
-          />
-
           {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
           <View className="flex-row gap-4 mt-4">
@@ -223,17 +175,6 @@ export default function AddCustomerScreen() {
           </View>
         </View>
       </View>
-
-      <TagManagementModal
-        visible={showTagModal}
-        onClose={() => {
-          setShowTagModal(false);
-          fetchTags();
-        }}
-        tags={availableTags}
-        onTagsChange={setAvailableTags}
-        userId={session?.user?.id || ""}
-      />
 
       <StatusBar style="auto" />
     </KeyboardAvoidingView>

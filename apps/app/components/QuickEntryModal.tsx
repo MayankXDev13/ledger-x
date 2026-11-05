@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,14 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
-import { Contact, TransactionTag } from "@/types/database";
-import {
-  getUserTransactionTags,
-  replaceTransactionTags,
-} from "@/lib/transaction-tags";
-import { TransactionTagSelector } from "@/components/TransactionTagSelector";
-import { TransactionTagManagementModal } from "@/components/TransactionTagManagementModal";
+import { Contact } from "@/types/database";
 
 interface QuickEntryModalProps {
   visible: boolean;
@@ -35,7 +28,6 @@ export function QuickEntryModal({
   type,
   onEntryAdded,
 }: QuickEntryModalProps) {
-  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
@@ -46,9 +38,6 @@ export function QuickEntryModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [availableTags, setAvailableTags] = useState<TransactionTag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<TransactionTag[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
 
   const fetchContacts = async () => {
     setLoading(true);
@@ -67,18 +56,11 @@ export function QuickEntryModal({
     setLoading(false);
   };
 
-  const fetchTags = useCallback(async () => {
-    if (!session?.user) return;
-    const tags = await getUserTransactionTags(session.user.id);
-    setAvailableTags(tags);
-  }, [session]);
-
   useEffect(() => {
     if (visible) {
       fetchContacts();
-      fetchTags();
     }
-  }, [visible, fetchTags]);
+  }, [visible]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -104,7 +86,7 @@ export function QuickEntryModal({
     setSubmitting(true);
     setError(null);
 
-    const { data: entryData, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from("ledger_entries")
       .insert({
         contact_id: selectedContact.id,
@@ -121,11 +103,6 @@ export function QuickEntryModal({
       return;
     }
 
-    if (selectedTags.length > 0) {
-      const tagIds = selectedTags.map((t) => t.id);
-      await replaceTransactionTags(entryData.id, tagIds);
-    }
-
     setSubmitting(false);
     handleClose();
     onEntryAdded?.();
@@ -136,7 +113,6 @@ export function QuickEntryModal({
     setAmount("");
     setNote("");
     setSearchQuery("");
-    setSelectedTags([]);
     setError(null);
     onClose();
   };
@@ -253,13 +229,6 @@ export function QuickEntryModal({
             multiline
           />
 
-          <TransactionTagSelector
-            selectedTags={selectedTags}
-            onTagsChange={setSelectedTags}
-            availableTags={availableTags}
-            onManageTags={() => setShowTagModal(true)}
-          />
-
           <Pressable
             className={`py-4 rounded-lg items-center ${!selectedContact || !amount || submitting ? "opacity-50" : ""}`}
             onPress={handleSubmit}
@@ -274,17 +243,6 @@ export function QuickEntryModal({
             )}
           </Pressable>
         </View>
-
-        <TransactionTagManagementModal
-          visible={showTagModal}
-          onClose={() => {
-            setShowTagModal(false);
-            fetchTags();
-          }}
-          tags={availableTags}
-          onTagsChange={setAvailableTags}
-          userId={session?.user?.id || ""}
-        />
       </KeyboardAvoidingView>
     </Modal>
   );

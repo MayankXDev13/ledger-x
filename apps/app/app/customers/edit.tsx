@@ -16,11 +16,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Contact, ContactTag } from "@/types/database";
-import { TagSelector } from "@/components/TagSelector";
-import { TagManagementModal } from "@/components/TagManagementModal";
+import { Contact } from "@/types/database";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import { getUserTags, getContactTags, replaceContactTags } from "@/lib/tags";
 
 export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,9 +30,6 @@ export default function EditCustomerScreen() {
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
-  const [availableTags, setAvailableTags] = useState<ContactTag[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [originalPhone, setOriginalPhone] = useState("");
 
@@ -61,14 +55,6 @@ export default function EditCustomerScreen() {
       setName(contactData.name);
       setPhone(contactData.phone);
       setOriginalPhone(contactData.phone);
-
-      const contactTags = await getContactTags(id);
-      setSelectedTags(contactTags);
-
-      if (session?.user) {
-        const userTags = await getUserTags(session.user.id);
-        setAvailableTags(userTags);
-      }
     } catch (err) {
       setError("Failed to load customer");
     } finally {
@@ -137,9 +123,6 @@ export default function EditCustomerScreen() {
         setSaving(false);
         return;
       }
-
-      const tagIds = selectedTags.map((t) => t.id);
-      await replaceContactTags(id as string, tagIds);
 
       router.back();
     } catch (err) {
@@ -221,13 +204,6 @@ export default function EditCustomerScreen() {
             {phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
           </View>
 
-          <TagSelector
-            selectedTags={selectedTags}
-            onTagsChange={setSelectedTags}
-            availableTags={availableTags}
-            onManageTags={() => setShowTagModal(true)}
-          />
-
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <View style={styles.buttonContainer}>
@@ -262,19 +238,6 @@ export default function EditCustomerScreen() {
           </View>
         </View>
       </ScrollView>
-
-      <TagManagementModal
-        visible={showTagModal}
-        onClose={() => {
-          setShowTagModal(false);
-          if (session?.user) {
-            getUserTags(session.user.id).then(setAvailableTags);
-          }
-        }}
-        tags={availableTags}
-        onTagsChange={setAvailableTags}
-        userId={session?.user?.id || ""}
-      />
 
       <DeleteConfirmationDialog
         visible={showDeleteConfirm}

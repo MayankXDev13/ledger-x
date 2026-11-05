@@ -6,28 +6,6 @@ Defines the HTTP contract and browser-facing runtime behavior that lets the Next
 
 ## Requirements
 
-### Requirement: Canonical tag endpoints
-
-Tag CRUD SHALL be served at `/transaction-tags` and `/transaction-tags/:id`, and transaction-tag associations SHALL be served at `/transactions/:id/tags` and `/transactions/:id/tags/:tagId`. Tag routes SHALL NOT be shadowed by the `/transactions/:id` route. Creating a tag whose name already exists for the user SHALL return `409`.
-
-#### Scenario: List tags reaches the tag collection
-- **WHEN** an authenticated client sends `GET /transaction-tags`
-- **THEN** the API returns the requesting user's tags
-- **AND** the request is not interpreted as `GET /transactions/:id`
-
-#### Scenario: Tag lifecycle uses top-level paths
-- **WHEN** an authenticated client creates, updates, or deletes a tag through `/transaction-tags`
-- **THEN** the operation applies to that user's tag and returns the corresponding success or error response
-
-#### Scenario: Duplicate tag name is rejected
-- **WHEN** an authenticated client creates or renames a tag to a name that already exists for that user
-- **THEN** the API responds `409` with the JSON error envelope
-- **AND** the existing tag is unchanged
-
-#### Scenario: Transaction tag associations stay under transactions
-- **WHEN** an authenticated client adds or removes a tag for a transaction through `/transactions/:id/tags`
-- **THEN** the association changes for that transaction without affecting other users' data
-
 ### Requirement: Bearer authentication on protected routes
 
 Every non-public API route SHALL require a valid Better Auth session token in the `Authorization: Bearer <token>` header. Missing or invalid tokens SHALL return `401` with the JSON error envelope, and authentication SHALL complete before a protected handler runs.
@@ -51,7 +29,7 @@ Every non-public API route SHALL require a valid Better Auth session token in th
 
 ### Requirement: Ownership enforcement across related resources
 
-Every customer, transaction, tag, and tag-association operation SHALL be scoped to the authenticated user. A transaction SHALL only reference a customer owned by the caller, and a tag association SHALL only reference a transaction and a tag owned by the caller.
+Every customer and transaction operation SHALL be scoped to the authenticated user. A transaction SHALL only reference a customer owned by the caller.
 
 #### Scenario: Cross-user customer reference is rejected
 - **WHEN** an authenticated client creates a transaction with a `customerId` owned by another user
@@ -59,19 +37,23 @@ Every customer, transaction, tag, and tag-association operation SHALL be scoped 
 - **AND** no transaction is created
 
 #### Scenario: Cross-user transaction tags are hidden
-- **WHEN** an authenticated client requests or changes tags for a transaction owned by another user
-- **THEN** the API responds `404` with the JSON error envelope
+- **WHEN** an authenticated client requests any removed `/transactions/:id/tags` path, including for a transaction owned by another user
+- **THEN** the API responds `404` with the JSON error envelope (feature removed)
 - **AND** no tag data or association is exposed or changed
 
 #### Scenario: Cross-user tag reference is rejected
-- **WHEN** an authenticated client attaches a tag owned by another user to one of their own transactions
-- **THEN** the API responds `404` with the JSON error envelope
+- **WHEN** an authenticated client attempts any removed tag-attach operation, including with a tag owned by another user
+- **THEN** the API responds `404` with the JSON error envelope (feature removed)
 - **AND** no association is created
 
 #### Scenario: Cross-user mutation is rejected
-- **WHEN** an authenticated client updates or deletes a customer, transaction, or tag owned by another user
+- **WHEN** an authenticated client updates or deletes a customer or transaction owned by another user
 - **THEN** the API responds `404` with the JSON error envelope
 - **AND** the resource is unchanged
+
+#### Scenario: Removed tag paths return 404
+- **WHEN** an authenticated client requests any removed `/transaction-tags*` or `/transactions/:id/tags*` path
+- **THEN** the API responds `404` with the JSON error envelope
 
 ### Requirement: Configurable trusted origins
 
@@ -174,5 +156,5 @@ The repository SHALL provide automated API contract tests that run without a liv
 - **THEN** the API contract tests run and pass without external services
 
 #### Scenario: Regressions are caught
-- **WHEN** a tag route is shadowed, an unauthenticated request reaches a handler, or a database client is left open
+- **WHEN** an unauthenticated request reaches a handler, or a database client is left open
 - **THEN** the contract suite fails

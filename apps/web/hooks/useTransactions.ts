@@ -11,7 +11,6 @@ export const transactionKeys = {
       ? ([...transactionKeys.all, "customer", customerId, params] as const)
       : ([...transactionKeys.all, "customer", customerId] as const),
   detail: (id: string) => [...transactionKeys.all, "detail", id] as const,
-  tags: (id: string) => [...transactionKeys.all, "tags", id] as const,
 };
 
 export function useCustomerTransactions(
@@ -30,14 +29,6 @@ export function useTransaction(id: string) {
     queryKey: transactionKeys.detail(id),
     queryFn: () => transactionsApi.get(id),
     enabled: !!id,
-  });
-}
-
-export function useTransactionTags(transactionId: string) {
-  return useQuery({
-    queryKey: transactionKeys.tags(transactionId),
-    queryFn: () => transactionsApi.getTags(transactionId),
-    enabled: !!transactionId,
   });
 }
 
@@ -82,32 +73,6 @@ export function useDeleteTransaction() {
       qc.invalidateQueries({ queryKey: transactionKeys.all });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Transaction deleted");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-}
-
-export function useAddTagToTransaction() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ transactionId, tagId }: { transactionId: string; tagId: string }) =>
-      transactionsApi.addTag(transactionId, tagId),
-    onSuccess: (_, { transactionId }) => {
-      qc.invalidateQueries({ queryKey: transactionKeys.tags(transactionId) });
-      toast.success("Tag added");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-}
-
-export function useRemoveTagFromTransaction() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ transactionId, tagId }: { transactionId: string; tagId: string }) =>
-      transactionsApi.removeTag(transactionId, tagId),
-    onSuccess: (_, { transactionId }) => {
-      qc.invalidateQueries({ queryKey: transactionKeys.tags(transactionId) });
-      toast.success("Tag removed");
     },
     onError: (err: Error) => toast.error(err.message),
   });
