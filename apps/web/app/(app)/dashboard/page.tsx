@@ -35,6 +35,7 @@ import {
   Cell,
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
+import { deriveFirstName } from "@/lib/name";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -174,7 +175,9 @@ export default function DashboardPage() {
   const { data: customers } = useCustomers();
   const { user } = useAuth();
 
-  const emailName = user?.email?.split("@")[0] ?? "there";
+  // Real first name from the Google identity, falling back to the email
+  // local-part, then "there" as the greeting placeholder.
+  const firstName = user ? deriveFirstName(user.name, user.email) : "there";
 
   const chartData = recentTxns
     ? [...recentTxns].reverse().map((tx) => ({
@@ -199,7 +202,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             {getGreeting()},{" "}
-            <span className="text-primary capitalize">{emailName}</span> 👋
+            <span className="text-primary capitalize">{firstName}</span> 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Here&apos;s your financial overview for today.
