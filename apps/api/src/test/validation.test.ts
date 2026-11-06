@@ -70,6 +70,7 @@ describe("transaction query validation", () => {
     const transaction = { id: "tx-1", amount: 100, type: "credit" };
     db.queueSelect(transaction);
     db.queueSelect({ total: 1 });
+    db.queueSelect({ totalCredit: 100, totalDebit: 0 });
     db.queueSelect({ totalAmount: 100 });
 
     const response = await request(
@@ -86,6 +87,8 @@ describe("transaction query validation", () => {
       page: 2,
       pageSize: 5,
       total: 1,
+      totalCredit: 100,
+      totalDebit: 0,
       totalAmount: 100,
       start: "2026-01-01",
       end: "2026-01-31",

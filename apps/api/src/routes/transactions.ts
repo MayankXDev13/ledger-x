@@ -9,6 +9,7 @@ import {
   lte,
   sql,
 } from "drizzle-orm";
+import { getTableColumns } from "drizzle-orm";
 import {
   customers,
   transactions,
@@ -64,6 +65,10 @@ transactionsApp.get("/customers/:id/transactions", async (ctx) => {
   const { page, pageSize, start, end } = query;
   const offset = (page - 1) * pageSize;
 
+  // Signed amount: +amount for credit, −amount for debit. Powers the
+  // running-balance window below.
+  const signedAmount = sql<number>`CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE -${transactions.amount} END`;
+
   const result = await withDb(ctx, async (db) => {
     const filters = [
       eq(transactions.customerId, id),
@@ -79,36 +84,64 @@ transactionsApp.get("/customers/:id/transactions", async (ctx) => {
       filters.push(lte(transactions.createdAt, new Date(end)));
     }
 
-    const [data, [{ total }], [{ totalAmount }]] = await Promise.all([
-      db
-        .select()
-        .from(transactions)
-        .where(and(...filters))
-        .orderBy(desc(transactions.createdAt))
-        .limit(pageSize)
-        .offset(offset),
+    const [rows, [{ total }], [{ totalCredit, totalDebit }], [{ totalAmount }]] =
+      await Promise.all([
+        // Page rows (newest first). The running balance is a window over the
+        // FULL filtered set in chronological order — window functions evaluate
+        // before ORDER BY/LIMIT, so rows on page 2+ still carry their true
+        // cumulative post-transaction balances. The id tiebreak keeps the
+        // window order and the display order identical.
+        db
+          .select({
+            ...getTableColumns(transactions),
+            runningBalance: sql<number>`SUM(${signedAmount}) OVER (ORDER BY ${transactions.createdAt} ASC, ${transactions.id} ASC)`,
+          })
+          .from(transactions)
+          .where(and(...filters))
+          .orderBy(desc(transactions.createdAt), desc(transactions.id))
+          .limit(pageSize)
+          .offset(offset),
 
-      db
-        .select({
-          total: count(),
-        })
-        .from(transactions)
-        .where(and(...filters)),
+        db
+          .select({
+            total: count(),
+          })
+          .from(transactions)
+          .where(and(...filters)),
 
-      db
-        .select({
-          totalAmount: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
-        })
-        .from(transactions)
-        .where(and(...filters)),
-    ]);
+        // Whole-customer aggregates over the same filters — no LIMIT/OFFSET,
+        // so summary cards stay correct regardless of the requested page.
+        db
+          .select({
+            totalCredit: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+            totalDebit: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+          })
+          .from(transactions)
+          .where(and(...filters)),
+
+        db
+          .select({
+            totalAmount: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+          })
+          .from(transactions)
+          .where(and(...filters)),
+      ]);
+
+    // node-postgres returns SUM(numeric) as a string — coerce so the JSON
+    // contract stays numeric for every consumer.
+    const toNumber = (value: unknown) => Number(value ?? 0);
 
     return {
-      data,
+      data: rows.map((row) => ({
+        ...row,
+        runningBalance: toNumber(row.runningBalance),
+      })),
       page,
       pageSize,
       total,
-      totalAmount,
+      totalCredit: toNumber(totalCredit),
+      totalDebit: toNumber(totalDebit),
+      totalAmount: toNumber(totalAmount),
       start: start ?? null,
       end: end ?? null,
     };

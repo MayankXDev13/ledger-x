@@ -62,35 +62,20 @@ export function CustomerDetailView() {
   const deleteTransaction = useDeleteTransaction();
   const deleteCustomer = useDeleteCustomer();
 
-  const allTransactions = txns?.data ?? [];
+  const pageTransactions = txns?.data ?? [];
 
-  /* ─ Analytics ─ */
-  const totalCredit = allTransactions
-    .filter((t) => t.type === "credit")
-    .reduce((s, t) => s + t.amount, 0);
-
-  const totalDebit = allTransactions
-    .filter((t) => t.type === "debit")
-    .reduce((s, t) => s + t.amount, 0);
+  /* ─ Analytics: whole-customer aggregates from the server, independent of
+     the visible page. Guards keep older API responses rendering instead of
+     NaN during the rollout window. ─ */
+  const totalCredit = Number(txns?.totalCredit ?? 0);
+  const totalDebit = Number(txns?.totalDebit ?? 0);
 
   const balance = totalCredit - totalDebit;
   const totalPages = txns ? Math.ceil(txns.total / pageSize) : 1;
 
-  /* ─ Running balances ─ */
-  let runningBalance = 0;
-  const txnsWithBalance = [...allTransactions]
-    .reverse()
-    .map((tx) => {
-      runningBalance =
-        tx.type === "credit"
-          ? runningBalance + tx.amount
-          : runningBalance - tx.amount;
-      return { ...tx, runningBalance };
-    })
-    .reverse();
-
-  /* ─ Search + type filter ─ */
-  const filtered = txnsWithBalance.filter((tx) => {
+  /* ─ Search + type filter (client-side over the loaded page; each row
+     already carries its server-computed cumulative running balance) ─ */
+  const filtered = pageTransactions.filter((tx) => {
     const matchesSearch = search
       ? tx.note?.toLowerCase().includes(search.toLowerCase()) ||
         tx.type.includes(search.toLowerCase())

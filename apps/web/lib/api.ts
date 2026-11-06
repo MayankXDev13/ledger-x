@@ -127,6 +127,8 @@ export interface Transaction {
   createdAt: string;
   updatedAt?: string | null;
   deletedAt?: string | null;
+  /** Cumulative post-transaction balance over the customer's full history. */
+  runningBalance?: number;
 }
 
 export interface PagedTransactions {
@@ -134,4 +136,10 @@ export interface PagedTransactions {
   page: number;
   pageSize: number;
   total: number;
+  /** Whole-customer sums over the active filters, independent of pagination. */
+  totalCredit: number;
+  totalDebit: number;
+  totalAmount: number;
+  start?: string | null;
+  end?: string | null;
 }
