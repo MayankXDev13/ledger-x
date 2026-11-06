@@ -14,18 +14,18 @@
 
 ## 3. Web: sidebar identity chip and hover card
 
-- [ ] 3.1 In `components/AppSidebar.tsx`, replace initials avatar with `Avatar` + `AvatarImage` (initials fallback), and the email-local-part label with first name (collapsed state keeps the avatar-only chip).
-- [ ] 3.2 Replace the bottom `DropdownMenu` with an identity card (shadcn `HoverCard`, open-controlled) that opens on hover and on click/focus: large avatar, full name, email on the line below, separator, destructive Sign out button using the existing `handleSignOut` flow (toast + redirect `/login`).
-- [ ] 3.3 Handle slow/absent image inside the card: `AvatarImage` failure shows initials; missing name shows the email local-part; no empty states.
+- [x] 3.1 In `components/AppSidebar.tsx`, replace initials avatar with `Avatar` + `AvatarImage` (initials fallback), and the email-local-part label with first name (collapsed state keeps the avatar-only chip).
+- [x] 3.2 Replace the bottom `DropdownMenu` with an identity card (shadcn `HoverCard`, open-controlled) that opens on hover and on click/focus: large avatar, full name, email on the line below, separator, destructive Sign out button using the existing `handleSignOut` flow (toast + redirect `/login`).
+- [x] 3.3 Handle slow/absent image inside the card: `AvatarImage` failure shows initials; missing name shows the email local-part; no empty states.
 
 ## 4. Web: replace mobile settings link and remove /profile
 
-- [ ] 4.1 In `components/MobileBottomNav.tsx`, replace the `Settings → /profile` item with an account item showing the avatar (image, initials fallback) and first name, stateful-free `<Link>`-less custom button; still highlight-active while open.
-- [ ] 4.2 Add a bottom `Sheet` account view: profile image, name, email, Sign out (reuse `handleSignOut` equivalent — call `signOut` from `useAuth`, toast, redirect to `/login`).
-- [ ] 4.3 Delete `apps/web/app/(app)/profile/page.tsx` and grep the app for any remaining `/profile` references or links (none should remain).
+- [x] 4.1 In `components/MobileBottomNav.tsx`, replace the `Settings → /profile` item with an account item showing the avatar (image, initials fallback) and first name, stateful-free `<Link>`-less custom button; still highlight-active while open.
+- [x] 4.2 Add a bottom `Sheet` account view: profile image, name, email, Sign out (reuse `handleSignOut` equivalent — call `signOut` from `useAuth`, toast, redirect to `/login`).
+- [x] 4.3 Delete `apps/web/app/(app)/profile/page.tsx` and grep the app for any remaining `/profile` references or links (none should remain).
 
 ## 5. Verification
 
-- [ ] 5.1 `bun run typecheck` and `bun run lint` pass at the repo root.
-- [ ] 5.2 Run `bun run test` (full repo) and confirm all suites pass without external services.
+- [x] 5.1 `bun run typecheck` and `bun run lint` pass at the repo root.
+- [x] 5.2 Run `bun run test` (full repo) and confirm all suites pass without external services.
 - [ ] 5.3 Manual browser sanity (dev run): after Google sign-in the chip shows avatar+first name; hover opens card with image/name/email; sign out works from it; mobile shim or simulated small viewport: account item opens sheet, sign out works; navigating to `/profile` no longer finds a route.

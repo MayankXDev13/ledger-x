@@ -8,7 +8,7 @@ Defines the HTTP contract and browser-facing runtime behavior that lets the Next
 
 ### Requirement: Bearer authentication on protected routes
 
-Every non-public API route SHALL require a valid Better Auth session token in the `Authorization: Bearer <token>` header. Missing or invalid tokens SHALL return `401` with the JSON error envelope, and authentication SHALL complete before a protected handler runs.
+Every non-public API route SHALL require a valid Better Auth session token in the `Authorization: Bearer <token>` header. Missing or invalid tokens SHALL return `401` with the JSON error envelope, and authentication SHALL complete before a protected handler runs. `GET /auth/me` SHALL return `200` with the authenticated user's `id`, `email`, `name`, and `image` from the Better Auth user record; absent `name`/`image` values SHALL be returned as `null`, never fabricated.
 
 #### Scenario: Missing token is rejected
 - **WHEN** a client calls a protected route without an `Authorization` header
@@ -21,7 +21,7 @@ Every non-public API route SHALL require a valid Better Auth session token in th
 
 #### Scenario: Authenticated identity is available to handlers
 - **WHEN** a client calls `/auth/me` with a valid token
-- **THEN** the API responds `200` with the authenticated user's `id` and `email`
+- **THEN** the API responds `200` with the authenticated user's `id`, `email`, `name`, and `image`
 
 #### Scenario: Supabase token is rejected after cutover
 - **WHEN** a client calls a protected route with a pre-migration Supabase access token
