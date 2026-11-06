@@ -197,6 +197,8 @@ class DeleteChain implements PromiseLike<Row[]> {
 export const testUser = {
   id: "user-1",
   email: "user@example.com",
+  name: "Test User",
+  image: "https://example.com/avatar.png",
 } as AuthUser;
 
 export function fakeVerifyToken(

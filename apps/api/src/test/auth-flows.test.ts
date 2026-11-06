@@ -7,90 +7,71 @@ import {
   requestApp,
 } from "./helpers";
 
-async function passwordHash(password: string): Promise<string> {
-  const data = new TextEncoder().encode(`ledgerx:${password}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0")
-  ).join("");
-}
-
-function json(path: string, body: unknown, db: FakeDb, init?: RequestInit) {
+function post(path: string, body: unknown, db: FakeDb, init?: RequestInit) {
   return requestApp(makeTestApp({ withDb: fakeWithDb(db) }), path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
     ...init,
   });
 }
 
-describe("auth flows", () => {
-  it("signs up a new user and returns a session token", async () => {
+describe("removed password flows", () => {
+  const removed = [
+    ["/auth/signup", { email: "new@example.com", password: "password123" }],
+    ["/auth/login", { email: "user@example.com", password: "password123" }],
+    ["/auth/request-reset", { email: "user@example.com" }],
+    [
+      "/auth/reset-password",
+      { email: "user@example.com", token: "token", newPassword: "password123" },
+    ],
+    [
+      "/auth/change-password",
+      { currentPassword: "old", newPassword: "password123" },
+    ],
+  ] as const;
+
+  it.each(removed)("returns 410 with the JSON envelope for %s", async (path, body) => {
     const db = new FakeDb();
-    db.queueSelect();
-    db.queueInsert({ id: "new-user", email: "new@example.com" });
 
-    const response = await json(
-      "/auth/signup",
-      { email: "new@example.com", password: "password123" },
-      db,
-    );
+    const response = await post(path, body, db);
 
-    expect(response.status).toBe(201);
-    const body = (await response.json()) as { email: string; token: string };
-    expect(body.email).toBe("new@example.com");
-    expect(typeof body.token).toBe("string");
-  });
-
-  it("rejects duplicate signup", async () => {
-    const db = new FakeDb();
-    db.queueSelect({ id: "existing", email: "dup@example.com" });
-
-    const response = await json(
-      "/auth/signup",
-      { email: "dup@example.com", password: "password123" },
-      db,
-    );
-
-    expect(response.status).toBe(409);
-  });
-
-  it("logs in with correct password", async () => {
-    const db = new FakeDb();
-    db.queueSelect({ id: "user-1", email: "user@example.com" });
-    db.queueSelect({
-      id: "acc-1",
-      userId: "user-1",
-      password: await passwordHash("correct-horse"),
+    expect(response.status).toBe(410);
+    expect(await response.json()).toEqual({
+      error: "Password authentication is removed. Use Google sign-in.",
     });
+    expect(db.insertCalls).toBe(0);
+    expect(db.updateCalls).toBe(0);
+    expect(db.deleteCalls).toBe(0);
+  });
 
-    const response = await json(
+  it("issues no session from removed endpoints", async () => {
+    const db = new FakeDb();
+
+    const response = await post(
       "/auth/login",
-      { email: "user@example.com", password: "correct-horse" },
+      { email: "user@example.com", password: "password123" },
       db,
     );
+
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body["token"]).toBeUndefined();
+  });
+});
+
+describe("session lifecycle", () => {
+  it("returns the authenticated user from /auth/me", async () => {
+    const response = await requestApp(makeTestApp(), "/auth/me", {
+      headers: authHeaders(),
+    });
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { token: string };
-    expect(typeof body.token).toBe("string");
-  });
-
-  it("rejects login with wrong password and logs the failure", async () => {
-    const db = new FakeDb();
-    db.queueSelect({ id: "user-1", email: "user@example.com" });
-    db.queueSelect({
-      id: "acc-1",
-      userId: "user-1",
-      password: await passwordHash("correct-horse"),
+    expect(await response.json()).toEqual({
+      id: "user-1",
+      email: "user@example.com",
+      name: "Test User",
+      image: "https://example.com/avatar.png",
     });
-
-    const response = await json(
-      "/auth/login",
-      { email: "user@example.com", password: "wrong" },
-      db,
-    );
-
-    expect(response.status).toBe(401);
   });
 
   it("logs out and revokes the session", async () => {
@@ -104,5 +85,6 @@ describe("auth flows", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true });
   });
 });

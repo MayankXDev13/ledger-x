@@ -25,24 +25,14 @@ export default function Index() {
 
       {/* Buttons */}
       <View className="items-center mb-12 w-full">
-        <Link href="/auth/signup" asChild>
+        <Link href="/auth/login" asChild>
           <Pressable
             className="w-full bg-brand-accent py-[18px] rounded-2xl items-center mb-4 active:scale-95 flex-row justify-center shadow-sm shadow-brand-accent/30"
           >
             <Text className="text-brand-dark text-[18px] font-bold tracking-wide mr-2">
-              Create Account
+              Continue with Google
             </Text>
             <Ionicons name="arrow-forward" size={20} color="#0A0A0A" />
-          </Pressable>
-        </Link>
-
-        <Link href="/auth/login" asChild>
-          <Pressable
-            className="w-full bg-brand-card py-[18px] rounded-2xl border border-brand-border items-center active:scale-95"
-          >
-            <Text className="text-white text-[18px] font-semibold tracking-wide">
-              Login
-            </Text>
           </Pressable>
         </Link>
       </View>

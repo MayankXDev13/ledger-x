@@ -10,16 +10,7 @@ export default function AuthLayout() {
         contentStyle: { backgroundColor: "#0A0A0A" },
       }}
     >
-      <Stack.Screen name="login" options={{ title: "Login" }} />
-      <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
-      <Stack.Screen
-        name="forgot-password"
-        options={{ title: "Forgot Password" }}
-      />
-      <Stack.Screen
-        name="reset-password"
-        options={{ title: "Reset Password" }}
-      />
+      <Stack.Screen name="login" options={{ title: "Sign In" }} />
     </Stack>
   );
 }

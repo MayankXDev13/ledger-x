@@ -6,37 +6,32 @@ Replaces Supabase Auth with Better Auth for email/password identity while preser
 
 ## Requirements
 
-### Requirement: Email/password signup and login via Better Auth
+### Requirement: Google-only OAuth sign-in
 
-The system SHALL provide email/password signup, login, and logout through Better Auth, issuing a session token that the web client sends as `Authorization: Bearer <token>`.
+The system SHALL offer Google as the sole sign-in method through Better Auth and SHALL NOT accept passwords. Password endpoints (`/auth/signup`, `/auth/login`, `/auth/request-reset`, `/auth/reset-password`, `/auth/change-password`) SHALL be disabled and stored credential hashes SHALL be purged. A successful Google sign-in SHALL issue a session token usable as `Authorization: Bearer <token>`.
 
-#### Scenario: New user signs up and calls API
+#### Scenario: New user signs in with Google and calls API
 
-- **WHEN** a user signs up with a valid email and password and then calls `GET /auth/me` with the session token
+- **WHEN** a user completes Google sign-in and then calls `GET /auth/me` with the session token
 - **THEN** the API returns `200` with that user's `id` and `email`
 
-#### Scenario: Invalid credentials rejected
+#### Scenario: Password endpoints are disabled
 
-- **WHEN** login uses a wrong password or unknown email
-- **THEN** the system returns an authentication error and issues no session
+- **WHEN** a client calls any removed password endpoint
+- **THEN** the API responds with an error status and the JSON error envelope and issues no session
 
-### Requirement: Password-reset migration for Supabase users
+### Requirement: Same-id account linking for existing password users
 
-Every migrated Supabase user SHALL authenticate only after completing a password-reset flow, since password hashes are not importable. The reset email SHALL be sent to the user's migrated email address.
+The first Google sign-in whose verified email matches an existing user SHALL link to that same `user.id`, preserving that user's customers, transactions, and history. The system SHALL NOT create a duplicate user for a known email.
 
-#### Scenario: Migrated user resets password
+#### Scenario: Existing user links via Google and keeps data
 
-- **WHEN** a migrated user requests reset for their Supabase email and follows the link with a new password
-- **THEN** they can log in with the new password and access their migrated data
-
-#### Scenario: Old Supabase session rejected
-
-- **WHEN** a client presents a pre-migration Supabase access token after cutover
-- **THEN** the API responds `401` with the JSON error envelope
+- **WHEN** the one existing password user signs in with Google using the same email
+- **THEN** the session resolves to the same `user.id` that owns their imported customers and transactions
 
 ### Requirement: Session validation and revocation
 
-The API SHALL validate the Better Auth session on every protected request and SHALL revoke sessions on logout and password change, rejecting revoked or expired tokens with `401`.
+The API SHALL validate the Better Auth session on every protected request and SHALL revoke sessions on logout, rejecting revoked or expired tokens with `401`.
 
 #### Scenario: Logged-out token rejected
 
@@ -45,5 +40,5 @@ The API SHALL validate the Better Auth session on every protected request and SH
 
 #### Scenario: Session maps to migrated identity
 
-- **WHEN** a migrated user authenticates after reset
+- **WHEN** an existing password user authenticates via Google account linking
 - **THEN** the session resolves to the same Neon `user.id` that owns their imported customers and transactions

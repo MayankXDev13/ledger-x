@@ -1,13 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { FakeDb, authHeaders, fakeWithDb, makeTestApp, requestApp } from "./helpers";
-import { verifyToken } from "../lib/auth";
-
-function sessionContext(db: FakeDb) {
-  return {
-    get: (key: string) =>
-      key === "deps" ? { withDb: fakeWithDb(db) } : undefined,
-  } as never;
-}
+import { FakeDb, authHeaders, fakeWithDb, fakeVerifyToken, makeTestApp, requestApp } from "./helpers";
+import { getAuth } from "../lib/better-auth";
+import type { Bindings } from "../types/hono";
 
 describe("authentication", () => {
   it("rejects a request with no Authorization header", async () => {
@@ -26,40 +20,16 @@ describe("authentication", () => {
     expect(await response.json()).toEqual({ error: "Invalid token" });
   });
 
-  it("rejects a pre-migration Supabase token after cutover", async () => {
-    const response = await requestApp(makeTestApp(), "/auth/me", {
-      headers: authHeaders("legacy-token"),
-    });
-
-    expect(response.status).toBe(401);
-  });
-
   it("accepts a valid Better Auth session token", async () => {
-    const db = new FakeDb();
-    db.queueSelect({
-      token: "session-token",
-      expiresAt: new Date(Date.now() + 3600_000),
+    const response = await requestApp(makeTestApp(), "/auth/me", {
+      headers: authHeaders(),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
       id: "user-1",
       email: "user@example.com",
     });
-
-    const user = await verifyToken(sessionContext(db), "session-token");
-
-    expect(user).toEqual({ id: "user-1", email: "user@example.com" });
-  });
-
-  it("rejects an expired Better Auth session token", async () => {
-    const db = new FakeDb();
-    db.queueSelect({
-      token: "stale-token",
-      expiresAt: new Date(Date.now() - 1000),
-      id: "user-1",
-      email: "user@example.com",
-    });
-
-    const user = await verifyToken(sessionContext(db), "stale-token");
-
-    expect(user).toBeNull();
   });
 
   it("does not run a protected handler without a user", async () => {
@@ -86,6 +56,31 @@ describe("authentication", () => {
     expect(await response.json()).toEqual({
       id: "user-1",
       email: "user@example.com",
+      name: "Test User",
+      image: "https://example.com/avatar.png",
+    });
+  });
+
+  it("returns null image when the user has none", async () => {
+    const response = await requestApp(
+      makeTestApp({
+        verifyToken: fakeVerifyToken({
+          id: "user-1",
+          email: "user@example.com",
+          name: "Test User",
+          image: null,
+        }),
+      }),
+      "/auth/me",
+      { headers: authHeaders() },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      id: "user-1",
+      email: "user@example.com",
+      name: "Test User",
+      image: null,
     });
   });
 
@@ -110,9 +105,47 @@ describe("authentication", () => {
       "/customers",
       "/transactions/customers/customer-1/transactions",
       "/dashboard/metrics",
+      "/audit-logs",
     ]) {
       const response = await requestApp(app, path);
       expect(response.status).toBe(401);
     }
+  });
+});
+
+describe("auth configuration", () => {
+  const env = {
+    HYPERDRIVE: { connectionString: "postgresql://test/test" },
+    GOOGLE_CLIENT_ID: "test-client-id",
+    GOOGLE_CLIENT_SECRET: "test-client-secret",
+    BETTER_AUTH_SECRET: "test-secret",
+  } as unknown as Bindings;
+
+  it("fails fast when Google credentials are missing", () => {
+    expect(() => getAuth({} as Bindings)).toThrow(
+      /missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET/,
+    );
+  });
+
+  it("builds a Google-only auth instance", () => {
+    const { auth, release } = getAuth(env);
+
+    expect(typeof auth.handler).toBe("function");
+    expect(typeof auth.api.getSession).toBe("function");
+    expect(auth.options.emailAndPassword?.enabled).toBe(false);
+    expect(
+      (auth.options.socialProviders as Record<string, unknown> | undefined)?.[
+        "google"
+      ],
+    ).toBeDefined();
+    expect(
+      (
+        auth.options.account as
+          | { accountLinking?: { trustedProviders?: unknown } }
+          | undefined
+      )?.accountLinking?.trustedProviders,
+    ).toContain("google");
+
+    void release;
   });
 });
