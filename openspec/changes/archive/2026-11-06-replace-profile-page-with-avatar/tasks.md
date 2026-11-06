@@ -28,4 +28,4 @@
 
 - [x] 5.1 `bun run typecheck` and `bun run lint` pass at the repo root.
 - [x] 5.2 Run `bun run test` (full repo) and confirm all suites pass without external services.
-- [ ] 5.3 Manual browser sanity (dev run): after Google sign-in the chip shows avatar+first name; hover opens card with image/name/email; sign out works from it; mobile shim or simulated small viewport: account item opens sheet, sign out works; navigating to `/profile` no longer finds a route.
+- [x] 5.3 Manual browser sanity (dev run): after Google sign-in the chip shows avatar+first name; hover opens card with image/name/email; sign out works from it; mobile shim or simulated small viewport: account item opens sheet, sign out works; navigating to `/profile` no longer finds a route.
