@@ -36,6 +36,13 @@
       "when": 1793879037221,
       "tag": "0004_remove-transaction-tags",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793880839342,
+      "tag": "0005_purge-password-credentials",
+      "breakpoints": true
     }
   ]
 }

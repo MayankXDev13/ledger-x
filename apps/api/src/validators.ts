@@ -23,31 +23,6 @@ export const updateTransactionSchema = z.object({
   note: z.string().optional(),
 });
 
-export const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-export const requestResetSchema = z.object({
-  email: z.string().email(),
-});
-
-export const resetPasswordSchema = z.object({
-  email: z.string().email(),
-  token: z.string().min(1),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-});
-
 export const auditQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),

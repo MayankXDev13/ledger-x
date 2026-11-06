@@ -40,17 +40,6 @@ export default function ProfileScreen() {
 
       <View className="px-6 gap-4">
         <Pressable
-          className={`flex-row items-center justify-center py-4 rounded-xl gap-3 ${isLoggingOut ? "opacity-50" : "bg-white"}`}
-          onPress={() => router.push("/auth/update-password")}
-          disabled={isLoggingOut}
-        >
-          <Ionicons name="lock-closed-outline" size={20} color="#000000" />
-          <Text className="text-black text-base font-semibold">
-            Change Password
-          </Text>
-        </Pressable>
-
-        <Pressable
           className="flex-row items-center justify-center py-4 rounded-xl gap-3 border border-[#ff6b6b]"
           onPress={handleLogout}
           disabled={isLoggingOut}

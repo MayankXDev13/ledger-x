@@ -7,11 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   FaChartBar,
   FaUsers,
-  FaArrowUp,
-  FaUser,
   FaSignOutAlt,
   FaChevronRight,
-  FaChevronDown,
   FaChevronLeft,
 } from "react-icons/fa";
 import {
@@ -19,20 +16,26 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
 import { TrendingUp } from "lucide-react";
+import {
+  avatarInitials,
+  deriveFirstName,
+} from "@/lib/name";
 
 const navItems = [
   {
@@ -55,6 +58,7 @@ export function AppSidebar() {
   const router = useRouter();
   const { data: customers } = useCustomers();
   const [collapsed, setCollapsed] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -62,10 +66,11 @@ export function AppSidebar() {
     router.push("/login");
   };
 
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : "LX";
+  const initials = avatarInitials(user?.email);
 
-  const emailName = user?.email?.split("@")[0] ?? "Account";
-  const emailDomain = user?.email?.split("@")[1] ?? "";
+  const firstName = deriveFirstName(user?.name, user?.email);
+  // Card header shows the full name when present, else the email local-part.
+  const displayName = user?.name?.trim() || firstName;
 
   const isActive = (href: string, exact: boolean) => {
     if (exact) return pathname === href;
@@ -214,63 +219,63 @@ export function AppSidebar() {
           collapsed ? "p-0" : "p-2",
         )}
       >
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <HoverCard open={identityOpen} onOpenChange={setIdentityOpen}>
+          <HoverCardTrigger asChild>
             <button
+              onClick={() => setIdentityOpen((open) => !open)}
+              onFocus={() => setIdentityOpen(true)}
+              aria-label="Account details"
+              aria-expanded={identityOpen}
               className={cn(
                 "flex items-center gap-2.5 w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-all group text-left",
                 collapsed && "justify-center",
               )}
             >
               <Avatar className="w-7 h-7 shrink-0 border border-primary/30">
+                {user?.image && <AvatarImage src={user.image} alt={firstName} />}
                 <AvatarFallback className="bg-gradient-brand text-primary-foreground text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {!collapsed && (
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-xs font-semibold text-sidebar-foreground truncate">
-                    {emailName}
-                  </span>
-                  <span className="text-[10px] text-sidebar-foreground/40 truncate">
-                    @{emailDomain}
-                  </span>
-                </div>
-              )}
-              {!collapsed && (
-                <FaChevronDown className="w-3 h-3 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/50" />
+                <span className="text-xs font-semibold text-sidebar-foreground truncate">
+                  {firstName}
+                </span>
               )}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
+          </HoverCardTrigger>
+          <HoverCardContent
+            align={collapsed ? "start" : "end"}
             side={collapsed ? "right" : "top"}
-            className="w-56"
+            className="w-64 p-0"
           >
-            <div className="px-2 py-1.5 border-b border-border mb-1">
-              <p className="text-xs font-semibold text-foreground">
-                {emailName}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user?.email}
-              </p>
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+              <Avatar>
+                {user?.image && <AvatarImage src={user.image} alt={displayName} />}
+                <AvatarFallback className="bg-gradient-brand text-primary-foreground text-sm font-bold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {displayName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </p>
+              </div>
             </div>
-            <DropdownMenuItem asChild>
-              <Link href="/profile" className="cursor-pointer">
-                <FaUser className="w-4 h-4 mr-2" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              className="text-destructive focus:text-destructive cursor-pointer"
-            >
-              <FaSignOutAlt className="w-4 h-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <div className="p-1.5">
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:outline-none cursor-pointer"
+              >
+                <FaSignOutAlt className="w-4 h-4" />
+                Sign out
+              </button>
+            </div>
+          </HoverCardContent>
+        </HoverCard>
       </div>
     </aside>
   );

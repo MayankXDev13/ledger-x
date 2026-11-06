@@ -1,42 +1,63 @@
-# Auth migration: Supabase Auth -> Better Auth
+# Auth migration: passwords -> Google-only OAuth (Better Auth)
 
-**BREAKING**: Supabase access tokens stop working at cutover. Password hashes
-cannot be migrated, so every user sets a new password.
+**BREAKING**: password endpoints return `410 Gone`. Google is the sole
+sign-in method. Stored credential hashes are purged and cannot be restored
+except from the pre-cutover backup.
 
 ## How it works
 
-1. `auth.users` rows are imported into Neon's `"user"` table with
-   `email_verified = false` (see `apps/api/scripts/import-supabase-to-neon.ts`).
-   IDs are preserved (UUID strings), so `user_id` ownership links survive.
-2. The user requests a reset: `POST /auth/request-reset { email }`
-   (always returns success to avoid email enumeration).
-3. The reset email contains a link to
-   `/reset-password?email=<email>&token=<token>`.
-4. `POST /auth/reset-password { email, token, newPassword }` sets the password
-   and revokes all existing sessions for that user.
-5. Login with the new password: `POST /auth/login` returns a session token,
-   sent as `Authorization: Bearer <token>`.
+1. The API mounts the Better Auth handler at `/api/auth/*` (per-request
+   instance: Hyperdrive DB + Worker secrets, see `getAuth` in
+   `apps/api/src/lib/better-auth.ts`).
+2. Web and Expo start a Google sign-in (`signIn.social({ provider: "google" })`).
+3. On first sign-in, Better Auth implicitly links the verified Google email
+   to the existing `user` row with the same email (`trustedProviders:
+   ["google"]`) — no duplicate user, customers/transactions preserved.
+   The `0005` migration sets `email_verified = true` for rows that had a
+   password credential, which v1.7 requires before implicit linking.
+4. The client persists the session token from the `set-auth-token` response
+   header and sends it as `Authorization: Bearer <token>` (unchanged
+   contract). `/auth/me` and `/auth/logout` keep working.
+
+## Required env (Worker secrets/vars, plus web/Expo equivalents)
+
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google Cloud OAuth client
+  (authorize the web origin and the Expo redirect URI).
+- `BETTER_AUTH_SECRET` — Better Auth signing secret (generate with
+  `openssl rand -base64 32`).
+- `BETTER_AUTH_URL` — public API origin (defaults to
+  `http://localhost:8787` for local dev).
+- `TRUSTED_ORIGINS` — comma-separated web origins (already configured).
+
+The API fails fast at startup when the Google/secret vars are missing.
+
+## Linking rules
+
+- The Google email MUST exactly match the stored user email. A different
+  Google email creates a separate user and does NOT touch existing data.
+- Users who have not linked must sign in with the same email via Google to
+  regain access. There is no password fallback after the purge.
 
 ## Client changes
 
-- Web: `apps/web/lib/auth.ts` (signup/login/logout/me/reset), token in
-  `localStorage`, `useAuth` loads `/auth/me`. Password change:
-  `POST /auth/change-password` (revokes other sessions).
-- Mobile: `apps/app/lib/auth-session.ts` (same flows, AsyncStorage).
-  Auth screens use it. The data screens still query Supabase directly and are
-  tracked as follow-up work (see below).
+- Web: `apps/web/lib/auth.ts` (Better Auth client, Google button, token in
+  `localStorage`, `useAuth` loads `/auth/me`). Password pages removed.
+- Mobile: `apps/app/lib/auth-session.ts` (`@better-auth/expo`, system
+  browser + deep link, token in SecureStore/AsyncStorage). Password screens
+  removed. Data screens still query Supabase directly (follow-up in the
+  previous revision of this doc, now superseded for auth).
 
-## Follow-up (mobile data layer)
+## Rollback
 
-`apps/app` data screens (`customers/*`, `ledger/*`, `tags/*`) still read the
-`contacts`/`ledger_entries` schema from Supabase. They must be rewritten
-against the Workers API (`/customers`, `/transactions`, `/transaction-tags`,
-`/dashboard`) using `getAuthHeaders()`. Until then, keep Supabase read-only
-and do not ship mobile updates that write.
+Re-enabling passwords is impossible without hashes — restore the `account`
+table from the pre-cutover backup. OAuth sessions stay valid. Point
+clients back only after restore.
 
 ## Verification
 
-- API: `bun test` covers signup/login/logout/reset, expired sessions, and
-  legacy-token rejection (`apps/api/src/test/auth*.test.ts`).
-- Manual: sign up, log in, `GET /auth/me` -> 200; legacy token -> 401;
-  reset flow logs in and old sessions return 401.
+- API: `bun run test` covers `410`s, session revocation, and auth audit
+  emissions (`apps/api/src/test/auth*.test.ts`).
+- Staging (required before production cutover): complete a Google sign-in
+  with the same email, `GET /auth/me` -> `200` with the original `user.id`,
+  customers/transactions intact; a different Google email must NOT touch
+  the existing user.

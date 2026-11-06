@@ -6,19 +6,19 @@ Provides an append-only audit trail for authentication events and financial-data
 
 ## Requirements
 
-### Requirement: Auth events are audited
+### Requirement: OAuth auth events are audited
 
-The system SHALL record signup, login, logout, password-reset request, password change, and session revocation with actor, timestamp, IP/user-agent when available, and outcome.
+The system SHALL record Google OAuth first-link/signup, login, logout, and session revocation with actor, timestamp, IP/user-agent when available, and outcome. Password-reset and password-change entries SHALL NOT be emitted.
 
-#### Scenario: Failed login is logged
+#### Scenario: Google sign-in is logged
 
-- **WHEN** a login attempt fails for an existing email
-- **THEN** an audit entry records the attempt, timestamp, and failure outcome without storing the password
+- **WHEN** a user completes Google sign-in (including first-time account linking)
+- **THEN** an audit entry records the login with actor, timestamp, and outcome
 
-#### Scenario: Password reset is logged
+#### Scenario: Logout revocation is logged
 
-- **WHEN** a user completes password reset
-- **THEN** an audit entry records the reset completion and session invalidation
+- **WHEN** a user logs out
+- **THEN** an audit entry records the logout and session revocation
 
 ### Requirement: Data mutations are audited
 
