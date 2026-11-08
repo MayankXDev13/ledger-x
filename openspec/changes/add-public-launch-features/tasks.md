@@ -19,7 +19,7 @@
 - [x] 3.1 Extend transaction create/update validators with the `paymentMethod` enum and persist it; add API tests for valid persistence, `400` on invalid values, and readable `null` on legacy rows.
 - [x] 3.2 Confirm ledger and customer-detail responses surface the payment method and that totals/running balances are unchanged; verify all contract tests pass and a partial payment produces the expected balance.
 - [x] 3.3 Add the payment-method selector to web transaction entry and edit dialogs; verify by recording an entry and reloading it with the same method.
-- [ ] 3.4 Add the payment-method selector to the mobile ledger entry and quick-entry flows; verify on a simulator/device that the method persists after reload.
+- [x] 3.4 Add the payment-method selector to the mobile ledger entry and quick-entry flows; verify on a simulator/device that the method persists after reload.
 - [x] 3.5 Render payment method in web and mobile transaction history with a distinct payment presentation; verify a payment row is visually distinguishable from a credit row.
 
 ## 4. Data portability
@@ -43,7 +43,7 @@
 
 - [x] 6.1 Accept optional client-supplied UUIDs on customer and transaction creation with idempotent conflict handling scoped to the owner; add contract tests proving retries return the existing record and cross-user conflicts return `404`.
 - [x] 6.2 Implement the mobile SQLite queue module (enqueue, FIFO processing, retry, failed state, sync marking) with unit tests covering ordering, deduplication, and restart persistence.
-- [ ] 6.3 Route mobile customer and transaction submissions through the queue with a pending indicator; verify an airplane-mode entry appears pending and survives an app restart.
+- [x] 6.3 Route mobile customer and transaction submissions through the queue with a pending indicator; verify an airplane-mode entry appears pending and survives an app restart.
 - [x] 6.4 Implement replay triggers on connectivity change and app foreground plus the failed-item review/retry/discard UI; verify reconnect syncs exactly once, and a server-rejected item is visible rather than dropped.
 - [x] 6.5 Label cached reads as stale while offline and refresh after reconnect; verify the label appears offline and disappears after sync.
 - [x] 6.6 Document offline behavior and queue semantics; verify the documented steps reproduce the pending/synced/failed states.

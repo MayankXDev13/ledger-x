@@ -140,6 +140,14 @@ class InsertChain implements PromiseLike<Row[]> {
     return this;
   }
 
+  onConflictDoUpdate() {
+    return this;
+  }
+
+  onConflictDoNothing() {
+    return this;
+  }
+
   returning() {
     return Promise.resolve(this.db.nextInsert());
   }

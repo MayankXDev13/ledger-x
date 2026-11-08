@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { userSettings } from "../db/schema";
-import { isUniqueViolation } from "./errors";
 
 export type UserSettingsRecord = {
   userId: string;
@@ -18,32 +16,19 @@ export async function ensureUserSettings(
   db: Db,
   userId: string,
 ): Promise<UserSettingsRecord> {
-  const [existing] = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId))
-    .limit(1);
+  // Single-statement upsert: two concurrent first-use calls (e.g. parallel
+  // settings saves on app launch) must not fail one another with a unique
+  // violation the way select-then-insert does.
+  const [row] = await db
+    .insert(userSettings)
+    .values({ userId })
+    .onConflictDoUpdate({
+      target: userSettings.userId,
+      set: { updatedAt: new Date() },
+    })
+    .returning();
 
-  if (existing) return existing as UserSettingsRecord;
+  if (!row) throw new Error("User settings could not be created");
 
-  try {
-    const [created] = await db
-      .insert(userSettings)
-      .values({ userId })
-      .returning();
-
-    if (created) return created as UserSettingsRecord;
-  } catch (error) {
-    if (!isUniqueViolation(error)) throw error;
-  }
-
-  const [raced] = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId))
-    .limit(1);
-
-  if (!raced) throw new Error("User settings could not be created");
-
-  return raced as UserSettingsRecord;
+  return row as UserSettingsRecord;
 }

@@ -41,7 +41,7 @@ describe("user settings", () => {
 
   it("saves a valid UPI ID", async () => {
     const db = new FakeDb();
-    db.queueSelect(emptySettings);
+    db.queueInsert(emptySettings);
     db.queueUpdate({
       ...emptySettings,
       upiId: "ramesh@okhdfcbank",
@@ -81,7 +81,7 @@ describe("user settings", () => {
 
   it("clears the UPI ID when null is sent", async () => {
     const db = new FakeDb();
-    db.queueSelect({ ...emptySettings, upiId: "ramesh@okhdfcbank" });
+    db.queueInsert({ ...emptySettings, upiId: "ramesh@okhdfcbank" });
     db.queueUpdate({ ...emptySettings, upiId: null });
 
     const response = await requestApp(appWith(db), "/settings", {
@@ -96,7 +96,7 @@ describe("user settings", () => {
 
   it("records onboarding completion and dismissal", async () => {
     const db = new FakeDb();
-    db.queueSelect(emptySettings);
+    db.queueInsert(emptySettings);
     db.queueUpdate({
       ...emptySettings,
       onboardingCompletedAt: new Date(),
