@@ -37,20 +37,23 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [bioAvailable, setBioAvailable] = useState(false);
+  const [lockOn, setLockOn] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
 
-  // Mask the app-switcher preview whenever the gate might be shown.
+  // Mask the app-switcher snapshot only while app lock is enabled.
+  // When the lock is off, screenshots stay available (e.g. sharing a
+  // statement image), per spec: masking is required only with lock on.
   useEffect(() => {
-    const subscription = ScreenCapture.addScreenshotListener(() => undefined);
-    ScreenCapture.preventScreenCaptureAsync().catch(() => undefined);
-    return () => {
-      subscription.remove();
+    if (lockOn) {
+      ScreenCapture.preventScreenCaptureAsync().catch(() => undefined);
+    } else {
       ScreenCapture.allowScreenCaptureAsync().catch(() => undefined);
-    };
-  }, []);
+    }
+  }, [lockOn]);
 
   const evaluate = useCallback(async () => {
     const enabled = await isLockEnabled();
+    setLockOn(enabled);
     if (!enabled) {
       setLocked(false);
       setChecking(false);
