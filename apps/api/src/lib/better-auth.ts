@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { expo } from "@better-auth/expo";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -77,7 +78,7 @@ export function getAuth(env: Bindings) {
       },
     },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
-    plugins: [bearer()],
+    plugins: [expo(), bearer()],
     databaseHooks: {
       user: {
         create: {
