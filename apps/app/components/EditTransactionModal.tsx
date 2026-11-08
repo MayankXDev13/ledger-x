@@ -8,19 +8,20 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LedgerEntry, TransactionType } from "@/types/database";
+import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
+import type { PaymentMethod, Transaction } from "@/lib/api";
 
 interface EditTransactionModalProps {
   visible: boolean;
-  transaction: LedgerEntry | null;
+  transaction: Transaction | null;
   onClose: () => void;
   onSave: (
     entryId: string,
     amount: number,
-    type: TransactionType,
+    type: "credit" | "debit",
     note: string,
-    createdAt: string,
-  ) => void;
+    paymentMethod: PaymentMethod | null,
+  ) => Promise<void> | void;
   onDelete: (entryId: string) => void;
 }
 
@@ -32,31 +33,38 @@ export function EditTransactionModal({
   onDelete,
 }: EditTransactionModalProps) {
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState<TransactionType>("credit");
+  const [type, setType] = useState<"credit" | "debit">("credit");
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (transaction) {
       setAmount(transaction.amount.toString());
-      setType(transaction.type as TransactionType);
+      setType(transaction.type);
       setNote(transaction.note || "");
+      setPaymentMethod(transaction.paymentMethod ?? null);
     }
   }, [transaction]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!transaction) return;
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) return;
 
-    onSave(
-      transaction.id,
-      amountNum,
-      type,
-      note.trim(),
-      transaction.created_at,
-    );
-
-    onClose();
+    setSaving(true);
+    try {
+      await onSave(
+        transaction.id,
+        amountNum,
+        type,
+        note.trim(),
+        paymentMethod,
+      );
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = () => {
@@ -82,8 +90,10 @@ export function EditTransactionModal({
           <Text className="text-white text-lg font-semibold">
             Edit Transaction
           </Text>
-          <Pressable onPress={handleSave}>
-            <Text className="text-blue-500 text-base font-semibold">Save</Text>
+          <Pressable onPress={handleSave} disabled={saving}>
+            <Text className="text-blue-500 text-base font-semibold">
+              {saving ? "Saving…" : "Save"}
+            </Text>
           </Pressable>
         </View>
 
@@ -151,10 +161,18 @@ export function EditTransactionModal({
                       type === "debit" ? "text-white" : "text-[#666]"
                     }`}
                   >
-                    Debit
+                    {type === "debit" ? "Payment" : "Debit"}
                   </Text>
                 </Pressable>
               </View>
+            </View>
+
+            {/* Payment method (persisted on update) */}
+            <View className="mb-6">
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+              />
             </View>
 
             <View className="mb-6">

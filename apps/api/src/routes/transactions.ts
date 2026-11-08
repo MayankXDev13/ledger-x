@@ -25,6 +25,7 @@ import {
 } from "../validators";
 import {
   ApiError,
+  isUniqueViolation,
   validationResponse,
 } from "../lib/errors";
 
@@ -189,8 +190,25 @@ transactionsApp.post("/", async (ctx) => {
   const { withDb } = ctx.get("deps");
 
   const created = await withDb(ctx, async (db) => {
+    // Client-supplied id: a replay of an already-accepted write returns the
+    // existing owned record instead of inserting a duplicate.
+    if (body.id) {
+      const [existing] = await db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.id, body.id),
+            eq(transactions.userId, user.id),
+          ),
+        )
+        .limit(1);
+
+      if (existing) return existing;
+    }
+
     const [customer] = await db
-      .select({ id: customers.id })
+      .select({ id: customers.id, bookId: customers.bookId })
       .from(customers)
       .where(
         and(
@@ -203,18 +221,43 @@ transactionsApp.post("/", async (ctx) => {
 
     if (!customer) throw new ApiError(404, "Customer not found");
 
-    const [transaction] = await db
-      .insert(transactions)
-      .values({
-        userId: user.id,
-        customerId: body.customerId,
-        amount: body.amount,
-        type: body.type,
-        note: body.note,
-      })
-      .returning();
+    try {
+      const [transaction] = await db
+        .insert(transactions)
+        .values({
+          id: body.id,
+          userId: user.id,
+          bookId: customer.bookId,
+          customerId: body.customerId,
+          amount: body.amount,
+          type: body.type,
+          paymentMethod: body.paymentMethod ?? null,
+          note: body.note,
+        })
+        .returning();
 
-    return transaction;
+      return transaction;
+    } catch (error) {
+      // A concurrent or retried insert with the same client id: return the
+      // winning owned row, otherwise hide the other user's record.
+      if (body.id && isUniqueViolation(error)) {
+        const [owned] = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.id, body.id),
+              eq(transactions.userId, user.id),
+            ),
+          )
+          .limit(1);
+
+        if (owned) return owned;
+        throw new ApiError(404, "Transaction not found");
+      }
+
+      throw error;
+    }
   });
 
   return ctx.json(created, 201);

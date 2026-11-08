@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import AuthGuard from "@/components/AuthGuard";
+import { AppLockGate } from "@/components/AppLockGate";
 import { publicRoutes } from "@/lib/auth";
 import "../global.css";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -16,7 +17,9 @@ export default function RootLayout() {
           Keep full height with flex: 1 so children Stack fills the screen. */}
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <AuthGuard>
-          <Stack screenOptions={{ headerShown: false }} />
+          <AppLockGate>
+            <Stack screenOptions={{ headerShown: false }} />
+          </AppLockGate>
         </AuthGuard>
       </SafeAreaView>
     </SafeAreaProvider>

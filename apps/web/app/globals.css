@@ -166,3 +166,60 @@
     background: linear-gradient(to right, var(--brand), var(--brand-light));
   }
 }
+
+/* ─── Print: customer statements ─── */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  /* Hide the app chrome so only the statement document prints. */
+  aside,
+  nav,
+  header,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  main {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .statement-document {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .statement-document * {
+    color: #111 !important;
+    border-color: #d4d4d4 !important;
+    background: transparent !important;
+  }
+
+  .statement-document .text-primary {
+    color: #111 !important;
+  }
+
+  .statement-document table {
+    page-break-inside: auto;
+  }
+
+  .statement-document tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .statement-document thead {
+    display: table-header-group;
+  }
+}

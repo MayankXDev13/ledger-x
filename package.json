@@ -12,6 +12,8 @@
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx": "^7.29.7",
+    "babel-preset-expo": "~54.0.12",
     "turbo": "^2.0.0"
   },
   "engines": {

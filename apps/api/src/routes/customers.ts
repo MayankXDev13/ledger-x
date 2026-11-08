@@ -3,12 +3,13 @@ import { and, eq, isNull } from "drizzle-orm";
 import { customers } from "../db/schema";
 import type { AppEnv } from "../types/hono";
 import { writeAudit } from "../lib/audit";
+import { ensureDefaultBook } from "../lib/books";
 import {
   createCustomerSchema,
   parseBody,
   updateCustomerSchema,
 } from "../validators";
-import { ApiError, validationResponse } from "../lib/errors";
+import { ApiError, isUniqueViolation, validationResponse } from "../lib/errors";
 
 const customersApp = new Hono<AppEnv>();
 
@@ -68,16 +69,51 @@ customersApp.post("/", async (ctx) => {
   const { withDb } = ctx.get("deps");
 
   const created = await withDb(ctx, async (db) => {
-    const [customer] = await db
-      .insert(customers)
-      .values({
-        userId: user.id,
-        name: body.name,
-        phone: body.phone,
-      })
-      .returning();
+    // Client-supplied id: replaying an accepted offline write returns the
+    // existing owned record rather than creating a duplicate.
+    if (body.id) {
+      const [existing] = await db
+        .select()
+        .from(customers)
+        .where(
+          and(eq(customers.id, body.id), eq(customers.userId, user.id)),
+        )
+        .limit(1);
 
-    return customer;
+      if (existing) return existing;
+    }
+
+    const book = await ensureDefaultBook(db, user.id);
+
+    try {
+      const [customer] = await db
+        .insert(customers)
+        .values({
+          id: body.id,
+          userId: user.id,
+          bookId: book.id,
+          name: body.name,
+          phone: body.phone,
+        })
+        .returning();
+
+      return customer;
+    } catch (error) {
+      if (body.id && isUniqueViolation(error)) {
+        const [owned] = await db
+          .select()
+          .from(customers)
+          .where(
+            and(eq(customers.id, body.id), eq(customers.userId, user.id)),
+          )
+          .limit(1);
+
+        if (owned) return owned;
+        throw new ApiError(404, "Customer not found");
+      }
+
+      throw error;
+    }
   });
 
   await writeAudit(ctx, {

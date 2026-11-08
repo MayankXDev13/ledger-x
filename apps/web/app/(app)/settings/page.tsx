@@ -1,0 +1,332 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Database,
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  Loader2,
+  Save,
+  Sparkles,
+  Trash2,
+  Wallet,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+
+import { useAuth } from "@/hooks/useAuth";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import {
+  useDeleteAccount,
+  useDownloadArchive,
+  useExportCustomers,
+  useExportTransactions,
+  useRemoveSampleData,
+  useSeedSampleData,
+} from "@/hooks/useDataPortability";
+import { isValidUpiId } from "@/lib/upi";
+import { toast } from "sonner";
+
+function Section({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="border-border/60 bg-card">
+      <CardHeader className="pb-3 pt-5 px-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              {title}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-5">{children}</CardContent>
+    </Card>
+  );
+}
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const { signOut } = useAuth();
+  const { data: settings, isLoading } = useSettings();
+  const updateSettings = useUpdateSettings();
+  const { data: customers } = useCustomers();
+
+  const exportCustomers = useExportCustomers();
+  const exportTransactions = useExportTransactions();
+  const downloadArchive = useDownloadArchive();
+  const seedSample = useSeedSampleData();
+  const removeSample = useRemoveSampleData();
+  const deleteAccount = useDeleteAccount();
+
+  const [upiId, setUpiId] = useState("");
+  const [payeeName, setPayeeName] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+
+  useEffect(() => {
+    if (!settings) return;
+    setUpiId(settings.upiId ?? "");
+    setPayeeName(settings.payeeName ?? "");
+  }, [settings]);
+
+  const hasSamples = (customers ?? []).some((customer) => customer.isSample);
+  const upiError =
+    upiId.trim() && !isValidUpiId(upiId.trim())
+      ? "Use a UPI ID like name@bank"
+      : null;
+
+  const saveUpi = () => {
+    if (upiError) return;
+    updateSettings.mutate(
+      {
+        upiId: upiId.trim() || null,
+        payeeName: payeeName.trim() || null,
+      },
+      {
+        onSuccess: () => toast.success("UPI settings saved"),
+      },
+    );
+  };
+
+  const handleDelete = async () => {
+    if (confirmText !== "DELETE") return;
+    try {
+      await deleteAccount.mutateAsync();
+      setConfirmText("");
+      await signOut();
+      router.push("/login");
+    } catch {
+      // The mutation surfaces the error through a toast.
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full pb-24 lg:pb-8 fade-up">
+      <div className="flex items-center gap-2">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          Dashboard
+        </Link>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-xs text-foreground font-medium">Settings</span>
+      </div>
+
+      <div>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          Account &amp; data
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure collections, download your data, or close your account.
+        </p>
+      </div>
+
+      {/* UPI */}
+      <Section
+        icon={Wallet}
+        title="UPI collections"
+        description="Customers scan your QR or open a UPI intent pre-filled with this ID. Payments are still recorded manually."
+      >
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-2/3" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="upi-id" className="text-xs font-semibold">
+                  UPI ID (VPA)
+                </Label>
+                <Input
+                  id="upi-id"
+                  placeholder="yourname@okhdfcbank"
+                  value={upiId}
+                  onChange={(event) => setUpiId(event.target.value)}
+                  className="h-10 bg-muted/20 border-border/50"
+                />
+                {upiError && (
+                  <p className="text-[11px] text-destructive">{upiError}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="payee-name" className="text-xs font-semibold">
+                  Payee name
+                </Label>
+                <Input
+                  id="payee-name"
+                  placeholder="Ramesh Kirana"
+                  value={payeeName}
+                  onChange={(event) => setPayeeName(event.target.value)}
+                  className="h-10 bg-muted/20 border-border/50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={saveUpi}
+                disabled={updateSettings.isPending || !!upiError}
+                className="gap-2 bg-gradient-brand text-primary-foreground font-semibold h-9"
+              >
+                {updateSettings.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save UPI settings
+              </Button>
+              <Link href="/collection">
+                <Button variant="outline" size="sm" className="h-9 text-xs">
+                  Open collection view
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* Exports */}
+      <Section
+        icon={Download}
+        title="Export &amp; archive"
+        description="Downloads include every active record and exclude sample data. Amounts are in rupees with two decimals."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button
+            variant="outline"
+            className="justify-start gap-2 h-11 border-border/60"
+            onClick={() => exportCustomers.mutate()}
+            disabled={exportCustomers.isPending}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            Customers CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="justify-start gap-2 h-11 border-border/60"
+            onClick={() => exportTransactions.mutate()}
+            disabled={exportTransactions.isPending}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            Transactions CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="justify-start gap-2 h-11 border-border/60 sm:col-span-2"
+            onClick={() => downloadArchive.mutate()}
+            disabled={downloadArchive.isPending}
+          >
+            <FileJson className="w-4 h-4 text-primary" />
+            Full account archive (JSON, includes soft-deleted rows)
+          </Button>
+        </div>
+      </Section>
+
+      {/* Sample data */}
+      <Section
+        icon={Database}
+        title="Sample data"
+        description="Sample customers and entries are clearly labelled and never appear in exports."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant="outline"
+            className="text-[10px] font-semibold uppercase tracking-wider"
+          >
+            {hasSamples ? "Sample data loaded" : "No sample data"}
+          </Badge>
+          {!hasSamples && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 h-9 text-xs"
+              onClick={() => seedSample.mutate()}
+              disabled={seedSample.isPending}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Load sample data
+            </Button>
+          )}
+          {hasSamples && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 h-9 text-xs"
+              onClick={() => removeSample.mutate()}
+              disabled={removeSample.isPending}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Remove sample data
+            </Button>
+          )}
+        </div>
+      </Section>
+
+      {/* Danger zone */}
+      <Section
+        icon={AlertTriangle}
+        title="Delete account"
+        description="This permanently removes your identity, customers, transactions, and settings. Audit markers are retained pseudonymously."
+      >
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Type <span className="font-mono font-bold text-destructive">DELETE</span>{" "}
+            to confirm. This cannot be undone.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              value={confirmText}
+              onChange={(event) => setConfirmText(event.target.value)}
+              placeholder="DELETE"
+              aria-label="Type DELETE to confirm account deletion"
+              className="h-9 bg-background border-destructive/30 font-mono"
+            />
+            <Button
+              variant="destructive"
+              className="gap-2 h-9"
+              disabled={confirmText !== "DELETE" || deleteAccount.isPending}
+              onClick={handleDelete}
+            >
+              {deleteAccount.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Delete my account
+            </Button>
+          </div>
+        </div>
+      </Section>
+    </div>
+  );
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, HandCoins, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { avatarInitials, deriveFirstName } from "@/lib/name";
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 const items = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { href: "/customers", icon: Users, label: "Customers", exact: false },
+  { href: "/collection", icon: HandCoins, label: "Collect", exact: false },
 ];
 
 export function MobileBottomNav() {
@@ -145,7 +146,15 @@ export function MobileBottomNav() {
               </SheetDescription>
             </div>
           </div>
-          <SheetFooter className="pt-4 pb-6">
+          <SheetFooter className="pt-4 pb-6 gap-2">
+            <Link
+              href="/settings"
+              onClick={() => setAccountOpen(false)}
+              className="flex items-center justify-center gap-2 h-9 rounded-md border border-border/60 text-xs font-semibold text-foreground hover:bg-muted/40 transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Account &amp; data settings
+            </Link>
             <Button
               variant="destructive"
               className="w-full"

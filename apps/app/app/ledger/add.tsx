@@ -8,21 +8,28 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
-import { supabase } from "@/lib/supabase";
+import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import type { PaymentMethod } from "@/lib/api";
 
 export default function AddEntryScreen() {
   const { contactId, type } = useLocalSearchParams<{
     contactId: string;
     type: string;
   }>();
+  const { queueTransaction, isOnline } = useOfflineQueue();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
+
+  const entryType = type === "debit" ? "debit" : "credit";
 
   const validateForm = () => {
     let valid = true;
@@ -48,24 +55,20 @@ export default function AddEntryScreen() {
     setLoading(true);
     setError(null);
 
-    const numAmount = parseFloat(amount);
-
-    const { error: insertError } = await supabase
-      .from("ledger_entries")
-      .insert({
-        contact_id: contactId,
-        amount: numAmount,
-        type: type as "credit" | "debit",
-        note: note || null,
+    try {
+      await queueTransaction({
+        customerId: contactId,
+        amount: parseFloat(amount),
+        type: entryType,
+        paymentMethod,
+        note: note || undefined,
       });
-
-    if (insertError) {
-      setError(insertError.message);
+      router.back();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save entry");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.back();
   };
 
   return (
@@ -73,12 +76,14 @@ export default function AddEntryScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.content}>
+      <ScrollView style={styles.content} bounces={false}>
         <Text style={styles.title}>
-          {type === "credit" ? "Add Credit" : "Add Debit"}
+          {entryType === "credit" ? "Add Credit" : "Record Payment"}
         </Text>
         <Text style={styles.subtitle}>
-          {type === "credit" ? "Money you gave" : "Money you received"}
+          {entryType === "credit"
+            ? "Money you gave"
+            : "Money the customer paid you"}
         </Text>
 
         <View style={styles.form}>
@@ -99,6 +104,13 @@ export default function AddEntryScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <PaymentMethodSelector
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Note (Optional)</Text>
             <TextInput
               style={[styles.input, styles.noteInput]}
@@ -111,6 +123,12 @@ export default function AddEntryScreen() {
               textAlignVertical="top"
             />
           </View>
+
+          {!isOnline && (
+            <Text style={styles.offlineText}>
+              Offline — saved on device and synced when you reconnect.
+            </Text>
+          )}
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -138,7 +156,7 @@ export default function AddEntryScreen() {
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       <StatusBar style="auto" />
     </KeyboardAvoidingView>
@@ -167,8 +185,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   form: {
-    flex: 1,
     gap: 24,
+    paddingBottom: 40,
   },
   inputGroup: {
     gap: 8,
@@ -194,6 +212,10 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#ff6b6b",
     fontSize: 14,
+  },
+  offlineText: {
+    color: "#F59E0B",
+    fontSize: 13,
   },
   buttonContainer: {
     flexDirection: "row",

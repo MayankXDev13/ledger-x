@@ -31,6 +31,8 @@ export function useCreateCustomer() {
     mutationFn: customersApi.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customerKeys.lists() });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["collection"] });
       toast.success("Customer created successfully");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -57,6 +59,7 @@ export function useDeleteCustomer() {
     mutationFn: customersApi.delete,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customerKeys.lists() });
+      qc.invalidateQueries({ queryKey: ["collection"] });
       toast.success("Customer deleted");
     },
     onError: (err: Error) => toast.error(err.message),

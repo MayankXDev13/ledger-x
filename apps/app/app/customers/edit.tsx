@@ -14,14 +14,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
-import { Contact } from "@/types/database";
+import { customersApi } from "@/lib/api";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
 export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -31,31 +28,22 @@ export default function EditCustomerScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [originalPhone, setOriginalPhone] = useState("");
 
   useEffect(() => {
-    if (id && session?.user) {
+    if (id) {
       fetchCustomer();
     }
-  }, [id, session]);
+  }, [id]);
 
   const fetchCustomer = async () => {
     if (!id) return;
 
     setLoading(true);
     try {
-      const { data: contactData, error: contactError } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (contactError) throw contactError;
-
-      setName(contactData.name);
-      setPhone(contactData.phone);
-      setOriginalPhone(contactData.phone);
-    } catch (err) {
+      const customer = await customersApi.get(id);
+      setName(customer.name);
+      setPhone(customer.phone);
+    } catch {
       setError("Failed to load customer");
     } finally {
       setLoading(false);
@@ -84,49 +72,21 @@ export default function EditCustomerScreen() {
   };
 
   const onSave = async () => {
-    if (!session?.user || !validateForm()) return;
+    if (!validateForm()) return;
 
     setSaving(true);
     setError(null);
 
     try {
-      if (phone.trim() !== originalPhone) {
-        const { data: existingContact } = await supabase
-          .from("contacts")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .eq("phone", phone.trim())
-          .neq("id", id)
-          .single();
-
-        if (existingContact) {
-          setError("A customer with this phone number already exists");
-          setSaving(false);
-          return;
-        }
-      }
-
-      const { error: updateError } = await supabase
-        .from("contacts")
-        .update({
-          name: name.trim(),
-          phone: phone.trim(),
-        })
-        .eq("id", id);
-
-      if (updateError) {
-        if (updateError.code === "23505") {
-          setError("A customer with this phone number already exists");
-        } else {
-          setError(updateError.message);
-        }
-        setSaving(false);
-        return;
-      }
-
+      await customersApi.update(id, {
+        name: name.trim(),
+        phone: phone.trim(),
+      });
       router.back();
     } catch (err) {
-      setError("An unexpected error occurred");
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
       setSaving(false);
     }
   };
@@ -134,17 +94,13 @@ export default function EditCustomerScreen() {
   const handleDeleteCustomer = async () => {
     if (!id) return;
 
-    const { error } = await supabase.rpc("soft_delete_customer", {
-      p_contact_id: id,
-    });
-
-    if (error) {
-      console.error("Error deleting customer:", error);
+    try {
+      await customersApi.remove(id);
+      router.replace("/(tabs)/customers");
+    } catch (err) {
+      console.error("Error deleting customer:", err);
       setError("Failed to delete customer");
-      return;
     }
-
-    router.replace("/(tabs)/customers");
   };
 
   if (loading) {

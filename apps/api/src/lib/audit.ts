@@ -14,7 +14,12 @@ export type AuditAction =
   | "customer.delete"
   | "transaction.create"
   | "transaction.update"
-  | "transaction.delete";
+  | "transaction.delete"
+  | "account.export"
+  | "account.delete"
+  | "account.delete_failed"
+  | "sample.create"
+  | "sample.delete";
 
 export async function writeAudit(
   ctx: Context<AppEnv>,

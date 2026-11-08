@@ -6,6 +6,13 @@ import customersApp from "./routes/customers";
 import transactionsApp from "./routes/transactions";
 import dashboardApp from "./routes/dashboard";
 import auditLogsApp from "./routes/audit-logs";
+import booksApp from "./routes/books";
+import exportsApp from "./routes/exports";
+import accountApp from "./routes/account";
+import statementsApp from "./routes/statements";
+import settingsApp from "./routes/settings";
+import collectionApp from "./routes/collection";
+import sampleDataApp from "./routes/sample-data";
 import { getAuth } from "./lib/better-auth";
 import { withDb as defaultWithDb } from "./db";
 import { verifyToken as defaultVerifyToken } from "./lib/auth";
@@ -56,6 +63,13 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use("/auth/me", authMiddleware);
   app.use("/auth/logout", authMiddleware);
   app.use("/audit-logs/*", authMiddleware);
+  app.use("/books/*", authMiddleware);
+  app.use("/exports/*", authMiddleware);
+  app.use("/account/*", authMiddleware);
+  app.use("/statements/*", authMiddleware);
+  app.use("/settings/*", authMiddleware);
+  app.use("/collection/*", authMiddleware);
+  app.use("/sample-data/*", authMiddleware);
 
   app.route("/auth", authApp);
   app.route("/audit-logs", auditLogsApp);
@@ -137,6 +151,13 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.route("/customers", customersApp);
   app.route("/transactions", transactionsApp);
   app.route("/dashboard", dashboardApp);
+  app.route("/books", booksApp);
+  app.route("/exports", exportsApp);
+  app.route("/account", accountApp);
+  app.route("/statements", statementsApp);
+  app.route("/settings", settingsApp);
+  app.route("/collection", collectionApp);
+  app.route("/sample-data", sampleDataApp);
 
   app.notFound((ctx) => ctx.json({ error: "Not found" }, 404));
 

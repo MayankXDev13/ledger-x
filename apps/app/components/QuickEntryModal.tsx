@@ -9,11 +9,14 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
-import { Contact } from "@/types/database";
+import { customersApi, type Customer } from "@/lib/api";
+import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import type { PaymentMethod } from "@/lib/api";
 
 interface QuickEntryModalProps {
   visible: boolean;
@@ -29,56 +32,54 @@ export function QuickEntryModal({
   onEntryAdded,
 }: QuickEntryModalProps) {
   const insets = useSafeAreaInsets();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const { queueTransaction, outstanding, isOnline } = useOfflineQueue();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchContacts = async () => {
+  const fetchCustomers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .is("deleted_at", null)
-      .order("name", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching contacts:", error);
-    } else {
-      setContacts(data ?? []);
-      setFilteredContacts(data ?? []);
+    try {
+      const data = await customersApi.list();
+      setCustomers(data);
+      setFilteredCustomers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load customers");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     if (visible) {
-      fetchContacts();
+      fetchCustomers();
     }
   }, [visible]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
-      setFilteredContacts(contacts);
+      setFilteredCustomers(customers);
     } else {
       const query = searchQuery.toLowerCase();
-      setFilteredContacts(
-        contacts.filter(
+      setFilteredCustomers(
+        customers.filter(
           (c) =>
             c.name.toLowerCase().includes(query) ||
             c.phone.includes(searchQuery),
         ),
       );
     }
-  }, [searchQuery, contacts]);
+  }, [searchQuery, customers]);
 
   const handleSubmit = async () => {
-    if (!selectedContact || !amount) return;
+    if (!selectedCustomer || !amount) return;
 
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
@@ -86,47 +87,45 @@ export function QuickEntryModal({
     setSubmitting(true);
     setError(null);
 
-    const { error: insertError } = await supabase
-      .from("ledger_entries")
-      .insert({
-        contact_id: selectedContact.id,
+    try {
+      // Writes go through the offline queue: online they land immediately,
+      // offline they are stored with a device UUID and replayed later.
+      await queueTransaction({
+        customerId: selectedCustomer.id,
         amount: numAmount,
         type,
-        note: note || null,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      setError(insertError.message);
+        paymentMethod,
+        note: note || undefined,
+      });
+      handleClose();
+      onEntryAdded?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save entry");
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    setSubmitting(false);
-    handleClose();
-    onEntryAdded?.();
   };
 
   const handleClose = () => {
-    setSelectedContact(null);
+    setSelectedCustomer(null);
     setAmount("");
     setNote("");
+    setPaymentMethod(null);
     setSearchQuery("");
     setError(null);
     onClose();
   };
 
-  const renderContactItem = ({ item }: { item: Contact }) => (
+  const renderCustomerItem = ({ item }: { item: Customer }) => (
     <Pressable
-      className={`flex-row items-center justify-between py-3 border-b border-brand-border ${selectedContact?.id === item.id ? "bg-brand-card -mx-3 px-3" : ""}`}
-      onPress={() => setSelectedContact(item)}
+      className={`flex-row items-center justify-between py-3 border-b border-brand-border ${selectedCustomer?.id === item.id ? "bg-brand-card -mx-3 px-3" : ""}`}
+      onPress={() => setSelectedCustomer(item)}
     >
       <View className="flex-1">
         <Text className="text-white font-medium text-base">{item.name}</Text>
         <Text className="text-brand-muted text-sm mt-0.5">{item.phone}</Text>
       </View>
-      {selectedContact?.id === item.id && (
+      {selectedCustomer?.id === item.id && (
         <Ionicons name="checkmark-circle" size={24} color="#10B981" />
       )}
     </Pressable>
@@ -151,7 +150,7 @@ export function QuickEntryModal({
             <Text className="text-brand-muted text-base">Cancel</Text>
           </Pressable>
           <Text className="text-white text-xl font-semibold">
-            {type === "credit" ? "Add Credit" : "Add Debit"}
+            {type === "credit" ? "Add Credit" : "Add Payment"}
           </Text>
           <View className="w-[60px]" />
         </View>
@@ -180,8 +179,8 @@ export function QuickEntryModal({
               </View>
 
               <FlatList
-                data={filteredContacts}
-                renderItem={renderContactItem}
+                data={filteredCustomers}
+                renderItem={renderCustomerItem}
                 keyExtractor={(item) => item.id}
                 className="flex-1"
                 contentContainerStyle={{
@@ -203,45 +202,62 @@ export function QuickEntryModal({
           className="px-6 pt-4 border-t border-brand-border gap-3"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
-          {error && <Text className="text-red-500 text-sm">{error}</Text>}
+          <ScrollView bounces={false}>
+            {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
-          <View className="flex-row items-center bg-brand-card rounded-lg px-4">
-            <Text className="text-white text-xl font-semibold">₹</Text>
+            <View className="flex-row items-center bg-brand-card rounded-lg px-4">
+              <Text className="text-white text-xl font-semibold">₹</Text>
+              <TextInput
+                className="flex-1 py-4 text-xl font-semibold text-white"
+                placeholder="0.00"
+                placeholderTextColor="#666"
+                value={amount}
+                onChangeText={(text) => {
+                  const filtered = text.replace(/[^0-9.]/g, "");
+                  setAmount(filtered);
+                }}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            {/* Payment method (recorded on payments and credits alike) */}
+            <View className="mt-3">
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+              />
+            </View>
+
             <TextInput
-              className="flex-1 py-4 text-xl font-semibold text-white"
-              placeholder="0.00"
+              className="bg-brand-card rounded-lg px-4 py-3 text-white text-base min-h-12 mt-3"
+              placeholder="Add a note (optional)"
               placeholderTextColor="#666"
-              value={amount}
-              onChangeText={(text) => {
-                const filtered = text.replace(/[^0-9.]/g, "");
-                setAmount(filtered);
-              }}
-              keyboardType="decimal-pad"
+              value={note}
+              onChangeText={setNote}
+              multiline
             />
-          </View>
 
-          <TextInput
-            className="bg-brand-card rounded-lg px-4 py-3 text-white text-base min-h-12"
-            placeholder="Add a note (optional)"
-            placeholderTextColor="#666"
-            value={note}
-            onChangeText={setNote}
-            multiline
-          />
-
-          <Pressable
-            className={`py-4 rounded-lg items-center ${!selectedContact || !amount || submitting ? "opacity-50" : ""}`}
-            onPress={handleSubmit}
-            disabled={!selectedContact || !amount || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text className="text-black text-base font-semibold">
-                {type === "credit" ? "Add Credit" : "Add Debit"}
+            {!isOnline && (
+              <Text className="text-[#F59E0B] text-xs mt-2">
+                Offline — this entry is saved on device and syncs when you
+                reconnect ({outstanding} pending).
               </Text>
             )}
-          </Pressable>
+
+            <Pressable
+              className={`py-4 rounded-lg items-center mt-4 ${!selectedCustomer || !amount || submitting ? "opacity-50" : ""}`}
+              onPress={handleSubmit}
+              disabled={!selectedCustomer || !amount || submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text className="text-black text-base font-semibold">
+                  {type === "credit" ? "Add Credit" : "Record Payment"}
+                </Text>
+              )}
+            </Pressable>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

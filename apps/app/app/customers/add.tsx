@@ -11,12 +11,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { router } from "expo-router";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 
 export default function AddCustomerScreen() {
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
+  const { queueCustomer, isOnline } = useOfflineQueue();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,52 +48,20 @@ export default function AddCustomerScreen() {
   };
 
   const onSubmit = async () => {
-    if (!session?.user || !validateForm()) return;
+    if (!validateForm()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const { data: existingContact } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .eq("phone", phone.trim())
-        .single();
-
-      if (existingContact && !existingContact.deleted_at) {
-        setError("A customer with this phone number already exists");
-        setLoading(false);
-        return;
-      }
-
-      if (existingContact && existingContact.deleted_at) {
-        const { error: restoreError } = await supabase
-          .from("contacts")
-          .update({ name: name.trim(), deleted_at: null })
-          .eq("id", existingContact.id);
-
-        if (restoreError) throw restoreError;
-      } else {
-        const { error: insertError } = await supabase.from("contacts").insert({
-          user_id: session.user.id,
-          name: name.trim(),
-          phone: phone.trim(),
-        });
-
-        if (insertError) {
-          if (insertError.code === "23505") {
-            setError("A customer with this phone number already exists");
-          } else {
-            setError(insertError.message);
-          }
-          setLoading(false);
-          return;
-        }
-      }
+      // Goes through the offline queue: online it lands immediately,
+      // offline the device UUID keeps the retry idempotent.
+      await queueCustomer({ name: name.trim(), phone: phone.trim() });
       router.back();
     } catch (err) {
-      setError("An unexpected error occurred");
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
       setLoading(false);
     }
   };
@@ -151,6 +118,12 @@ export default function AddCustomerScreen() {
           </View>
 
           {error && <Text className="text-red-500 text-sm">{error}</Text>}
+
+          {!isOnline && (
+            <Text className="text-[#F59E0B] text-xs">
+              Offline — saved on device and synced when you reconnect.
+            </Text>
+          )}
 
           <View className="flex-row gap-4 mt-4">
             <Pressable

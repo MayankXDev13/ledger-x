@@ -7,6 +7,7 @@ export const dashboardKeys = {
   all: ["dashboard"] as const,
   metrics: () => [...dashboardKeys.all, "metrics"] as const,
   recentTransactions: () => [...dashboardKeys.all, "recent-transactions"] as const,
+  analytics: () => [...dashboardKeys.all, "analytics"] as const,
 };
 
 export function useDashboardMetrics() {
@@ -21,6 +22,14 @@ export function useRecentTransactions() {
   return useQuery({
     queryKey: dashboardKeys.recentTransactions(),
     queryFn: dashboardApi.recentTransactions,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useDashboardAnalytics() {
+  return useQuery({
+    queryKey: dashboardKeys.analytics(),
+    queryFn: dashboardApi.analytics,
     refetchInterval: 30_000,
   });
 }

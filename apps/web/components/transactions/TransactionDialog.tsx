@@ -16,7 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
-import { FaArrowUp, FaArrowDown, FaRupeeSign, FaSpinner } from "react-icons/fa";
+import {
+  FaArrowUp,
+  FaArrowDown,
+  FaRupeeSign,
+  FaSpinner,
+  FaMoneyBillWave,
+  FaMobileAlt,
+  FaEllipsisH,
+  FaTimes,
+} from "react-icons/fa";
 import { cn } from "@/lib/utils";
 
 import {
@@ -46,33 +55,45 @@ export function TransactionDialog({
 
   const isEditing = !!transaction;
 
+  const paymentOptions = [
+    { value: "cash", label: "Cash", icon: FaMoneyBillWave },
+    { value: "upi", label: "UPI", icon: FaMobileAlt },
+    { value: "other", label: "Other", icon: FaEllipsisH },
+    { value: null, label: "None", icon: FaTimes },
+  ] as const;
+
   const form = useForm({
     resolver: zodResolver(transactionSchema),
     defaultValues: transaction
       ? {
           amount: transaction.amount,
           transactionType: transaction.type,
+          paymentMethod: transaction.paymentMethod ?? null,
           note: transaction.note || "",
         }
       : {
           amount: 0,
           transactionType: "credit",
+          paymentMethod: null,
           note: "",
         },
   });
 
   const handleSubmit = async (data: TransactionFormData) => {
     try {
+      const paymentMethod = data.paymentMethod ?? null;
+
       if (isEditing) {
         await updateTransaction.mutateAsync({
           id: transaction!.id,
-          data,
+          data: { ...data, paymentMethod },
         });
       } else {
         await createTransaction.mutateAsync({
           customerId,
           amount: data.amount,
           type: data.transactionType,
+          paymentMethod,
           note: data.note,
         });
       }
@@ -88,12 +109,14 @@ export function TransactionDialog({
       form.reset({
         amount: transaction.amount,
         transactionType: transaction.type,
+        paymentMethod: transaction.paymentMethod ?? null,
         note: transaction.note || "",
       });
     } else {
       form.reset({
         amount: 0,
         transactionType: "credit",
+        paymentMethod: null,
         note: "",
       });
     }
@@ -196,6 +219,45 @@ export function TransactionDialog({
               />
             </div>
             <FormError name="amount" />
+          </div>
+
+          {/* Payment method */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Payment method{" "}
+              <span className="normal-case font-normal text-muted-foreground/60">
+                (optional)
+              </span>
+            </Label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {paymentOptions.map(({ value, label, icon: Icon }) => {
+                const selected =
+                  (form.watch("paymentMethod") ?? null) === value;
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() =>
+                      form.setValue("paymentMethod", value, {
+                        shouldDirty: true,
+                      })
+                    }
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 h-14 rounded-xl border text-[11px] font-semibold transition-all",
+                      selected
+                        ? "bg-primary/10 border-primary/40 text-primary shadow-sm shadow-primary/10"
+                        : "border-border/60 text-muted-foreground hover:border-primary/25 hover:bg-primary/5",
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <FormError name="paymentMethod" />
           </div>
 
           {/* Note */}

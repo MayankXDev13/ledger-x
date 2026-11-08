@@ -21,7 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import Link from "next/link";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import { useExportTransactions } from "@/hooks/useDataPortability";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -69,6 +71,7 @@ export function CustomerProfileHeader({
   onDelete,
 }: CustomerProfileHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const exportTransactions = useExportTransactions();
   const avatarGradient = getAvatarGradient(customer.name);
 
   const isReceivable = balance > 0;
@@ -229,11 +232,16 @@ export function CustomerProfileHeader({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem className="text-xs cursor-pointer">
+                    <DropdownMenuItem
+                      className="text-xs cursor-pointer"
+                      onClick={() => exportTransactions.mutate()}
+                    >
                       Export transactions
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs cursor-pointer">
-                      Send statement
+                    <DropdownMenuItem asChild className="text-xs cursor-pointer">
+                      <Link href={`/customers/statement?id=${customer.id}`}>
+                        View statement
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

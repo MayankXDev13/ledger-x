@@ -66,6 +66,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="collection"
+        options={{
+          title: "Collect",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "hand-left" : "hand-left-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

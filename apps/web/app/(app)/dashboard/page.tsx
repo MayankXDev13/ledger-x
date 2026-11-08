@@ -1,6 +1,10 @@
 "use client";
 
-import { useDashboardMetrics, useRecentTransactions } from "@/hooks/useDashboard";
+import {
+  useDashboardAnalytics,
+  useDashboardMetrics,
+  useRecentTransactions,
+} from "@/hooks/useDashboard";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +22,10 @@ import {
   Plus,
   ChevronRight,
   LayoutDashboard,
+  HandCoins,
+  Wallet,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -33,9 +41,12 @@ import {
   BarChart,
   Bar,
   Cell,
+  Legend,
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { deriveFirstName } from "@/lib/name";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { paymentMethodLabel } from "@/lib/payments";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -50,6 +61,10 @@ function getGreeting() {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
+}
+
+function monthLabel(month: string) {
+  return format(new Date(`${month}-01T00:00:00Z`), "MMM yy");
 }
 
 /* ── Metric Card ── */
@@ -169,9 +184,32 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
+/* ── Trend Tooltip (two series) ── */
+function TrendTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl text-xs space-y-1">
+      <p className="text-muted-foreground">
+        {typeof label === "string" ? monthLabel(label) : label}
+      </p>
+      {payload.map((entry: any) => (
+        <p
+          key={entry.dataKey}
+          className="font-semibold flex items-center justify-between gap-4"
+          style={{ color: entry.color }}
+        >
+          <span>{entry.name}</span>
+          <span className="tabular">{formatCurrency(entry.value ?? 0)}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: metrics, isLoading: metricsLoading, refetch } = useDashboardMetrics();
   const { data: recentTxns, isLoading: txnsLoading } = useRecentTransactions();
+  const { data: analytics, isLoading: analyticsLoading } = useDashboardAnalytics();
   const { data: customers } = useCustomers();
   const { user } = useAuth();
 
@@ -420,6 +458,181 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* ─── Analytics: trend, debtors, aging ─── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* 12-month trend */}
+        <Card className="xl:col-span-2 border-border/60 bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
+            <div>
+              <CardTitle className="text-sm font-semibold text-foreground">
+                12-Month Trend
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Credit given vs payments received
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-semibold text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Credit
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                Paid
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 px-2 pb-4">
+            {analyticsLoading ? (
+              <Skeleton className="h-56 w-full" />
+            ) : analytics && analytics.trend.some((t) => t.credit || t.debit) ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={analytics.trend}
+                  margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(255,255,255,0.04)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tickFormatter={monthLabel}
+                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={46}
+                    tickFormatter={(v) =>
+                      Math.abs(v) >= 1000
+                        ? `₹${(Math.abs(v) / 1000).toFixed(0)}k`
+                        : `₹${Math.abs(v)}`
+                    }
+                  />
+                  <RechartsTooltip content={<TrendTooltip />} />
+                  <Bar
+                    dataKey="credit"
+                    name="Credit"
+                    fill="#22C55E"
+                    fillOpacity={0.85}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="debit"
+                    name="Paid"
+                    fill="#EF4444"
+                    fillOpacity={0.85}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-56 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <TrendingUp className="w-8 h-8 opacity-30" />
+                <p className="text-sm">No activity in the last 12 months</p>
+                <p className="text-xs">Record a credit to start the trend.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top debtors + aging */}
+        <div className="flex flex-col gap-4">
+          <Card className="border-border/60 bg-card">
+            <CardHeader className="pb-2 pt-4 px-5">
+              <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <HandCoins className="w-4 h-4 text-primary" />
+                Top Debtors
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pb-2">
+              {analyticsLoading ? (
+                <div className="space-y-2 px-5">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : analytics && analytics.topDebtors.length > 0 ? (
+                <div className="divide-y divide-border/40">
+                  {analytics.topDebtors.map((debtor) => (
+                    <Link
+                      key={debtor.customerId}
+                      href={`/customers/detail?id=${debtor.customerId}`}
+                      className="flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                        {debtor.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {debtor.name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {debtor.ageDays === null
+                            ? "No unpaid credit"
+                            : debtor.ageDays === 0
+                              ? "Unpaid today"
+                              : `Unpaid ${debtor.ageDays}d`}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-foreground tabular shrink-0">
+                        {formatCurrency(debtor.outstanding)}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 px-5 text-center text-muted-foreground">
+                  <CheckCircle2 className="w-6 h-6 opacity-30 mb-1.5" />
+                  <p className="text-xs">No outstanding balances</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 bg-card">
+            <CardHeader className="pb-2 pt-4 px-5">
+              <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Receivables Aging
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-4">
+              {analyticsLoading ? (
+                <Skeleton className="h-16 w-full" />
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      { key: "0-30", tone: "text-emerald-400", bg: "bg-emerald-500/10" },
+                      { key: "31-60", tone: "text-amber-400", bg: "bg-amber-500/10" },
+                      { key: "60+", tone: "text-red-400", bg: "bg-red-500/10" },
+                    ] as const
+                  ).map(({ key, tone, bg }) => (
+                    <div
+                      key={key}
+                      className={cn("rounded-lg border border-border/40 p-2.5", bg)}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {key} days
+                      </p>
+                      <p className={cn("text-sm font-bold tabular mt-0.5", tone)}>
+                        {formatCurrency(analytics?.aging[key] ?? 0)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* ─── Recent Transactions ─── */}
       <Card className="border-border/60 bg-card">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-5">
@@ -464,6 +677,7 @@ export default function DashboardPage() {
               {recentTxns.map((tx) => {
                 const customer = customers?.find((c) => c.id === tx.customerId);
                 const isCredit = tx.type === "credit";
+                const methodLabel = paymentMethodLabel(tx.paymentMethod);
                 return (
                   <Link
                     key={tx.id}
@@ -475,7 +689,9 @@ export default function DashboardPage() {
                         "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                         isCredit
                           ? "bg-emerald-500/12 text-emerald-400"
-                          : "bg-red-500/12 text-red-400"
+                          : methodLabel
+                            ? "bg-amber-500/12 text-amber-400"
+                            : "bg-red-500/12 text-red-400"
                       )}
                     >
                       {isCredit ? (
@@ -490,7 +706,8 @@ export default function DashboardPage() {
                         {customer?.name || "Unknown Customer"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {tx.note || tx.type} ·{" "}
+                        {tx.note || tx.type}
+                        {methodLabel ? ` · ${methodLabel}` : ""} ·{" "}
                         {format(new Date(tx.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
@@ -499,7 +716,11 @@ export default function DashboardPage() {
                       <span
                         className={cn(
                           "text-sm font-bold tabular",
-                          isCredit ? "text-emerald-400" : "text-red-400"
+                          isCredit
+                            ? "text-emerald-400"
+                            : methodLabel
+                              ? "text-amber-400"
+                              : "text-red-400"
                         )}
                       >
                         {isCredit ? "+" : "−"}
@@ -530,6 +751,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      </div>
+      <OnboardingFlow />
+    </div>
   );
 }

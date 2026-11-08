@@ -11,5 +11,9 @@ export const customerSchema = z.object({
 export const transactionSchema = z.object({
   amount: z.number().min(0.01, "Amount must be at least 0.01"),
   transactionType: z.enum(["credit", "debit"]),
+  paymentMethod: z
+    .enum(["cash", "upi", "other"])
+    .nullable()
+    .optional(),
   note: z.string().max(200, "Note must be less than 200 characters").optional(),
 });

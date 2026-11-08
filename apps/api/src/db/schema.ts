@@ -11,11 +11,17 @@ import {
   boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const transactionTypeEnum = pgEnum("transaction_type", [
   "credit",
   "debit",
+]);
+
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "cash",
+  "upi",
+  "other",
 ]);
 
 /* Better Auth tables generated via `bunx @better-auth/cli generate`
@@ -113,6 +119,43 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
+export const books = pgTable(
+  "books",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull().default("My Ledger"),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    userIdx: index("books_user_idx").on(t.userId),
+    // One default book per user; additional books are allowed later.
+    defaultUniqueIdx: uniqueIndex("books_user_default_idx")
+      .on(t.userId)
+      .where(sql`${t.isDefault}`),
+  }),
+);
+
+export const userSettings = pgTable("user_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  upiId: text("upi_id"),
+  payeeName: text("payee_name"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { mode: "date" }),
+  onboardingDismissedAt: timestamp("onboarding_dismissed_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
@@ -142,8 +185,12 @@ export const customers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    bookId: uuid("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     phone: text("phone").notNull(),
+    isSample: boolean("is_sample").notNull().default(false),
     createdAt: timestamp("created_at", {
       mode: "date",
     })
@@ -160,7 +207,9 @@ export const customers = pgTable(
   },
   (t) => ({
     userIdx: index("customer_user_idx").on(t.userId),
+    bookIdx: index("customer_book_idx").on(t.bookId),
     deletedAtIdx: index("customer_deleted_at_idx").on(t.deletedAt),
+    sampleIdx: index("customer_user_sample_idx").on(t.userId, t.isSample),
   }),
 );
 
@@ -171,6 +220,9 @@ export const transactions = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    bookId: uuid("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, {
@@ -179,7 +231,9 @@ export const transactions = pgTable(
     // Store amount in paise/cents
     amount: integer("amount").notNull(),
     type: transactionTypeEnum("type").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method"),
     note: text("note"),
+    isSample: boolean("is_sample").notNull().default(false),
     createdAt: timestamp("created_at", {
       mode: "date",
     })
@@ -196,19 +250,48 @@ export const transactions = pgTable(
   },
   (t) => ({
     customerIdx: index("transaction_customer_idx").on(t.customerId),
+    customerCreatedIdx: index("transaction_customer_created_idx").on(
+      t.customerId,
+      t.createdAt,
+    ),
     userIdx: index("transaction_user_idx").on(t.userId),
     typeIdx: index("transaction_type_idx").on(t.type),
     deletedAtIdx: index("transaction_deleted_at_idx").on(t.deletedAt),
+    sampleIdx: index("transaction_user_sample_idx").on(t.userId, t.isSample),
   }),
 );
 
 /* Relations */
 
-export const customersRelations = relations(customers, ({ many }) => ({
+export const booksRelations = relations(books, ({ one, many }) => ({
+  user: one(user, {
+    fields: [books.userId],
+    references: [user.id],
+  }),
+  customers: many(customers),
+  transactions: many(transactions),
+}));
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(user, {
+    fields: [userSettings.userId],
+    references: [user.id],
+  }),
+}));
+
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  book: one(books, {
+    fields: [customers.bookId],
+    references: [books.id],
+  }),
   transactions: many(transactions),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
+  book: one(books, {
+    fields: [transactions.bookId],
+    references: [books.id],
+  }),
   customer: one(customers, {
     fields: [transactions.customerId],
     references: [customers.id],

@@ -10,6 +10,8 @@ import {
   FaSignOutAlt,
   FaChevronRight,
   FaChevronLeft,
+  FaHandHoldingUsd,
+  FaCog,
 } from "react-icons/fa";
 import {
   Tooltip,
@@ -48,6 +50,18 @@ const navItems = [
     href: "/customers",
     icon: FaUsers,
     label: "Customers",
+    exact: false,
+  },
+  {
+    href: "/collection",
+    icon: FaHandHoldingUsd,
+    label: "Collection",
+    exact: false,
+  },
+  {
+    href: "/settings",
+    icon: FaCog,
+    label: "Settings",
     exact: false,
   },
 ];

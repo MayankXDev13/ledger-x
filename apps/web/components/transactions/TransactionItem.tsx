@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/api";
+import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -35,19 +36,30 @@ export function TransactionItem({
   onDelete,
 }: TransactionItemProps) {
   const isCredit = transaction.type === "credit";
+  const isPayment = isPaymentEntry(transaction);
+  const methodLabel = paymentMethodLabel(transaction.paymentMethod);
 
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors group relative">
+    <div
+      className={cn(
+        "flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors group relative",
+        isPayment && "bg-amber-500/[0.03]",
+      )}
+    >
       {/* Left: type icon */}
       <div
         className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-          isCredit
-            ? "bg-emerald-500/12 text-emerald-400"
-            : "bg-red-500/12 text-red-400"
+          isPayment
+            ? "bg-amber-500/15 text-amber-400"
+            : isCredit
+              ? "bg-emerald-500/12 text-emerald-400"
+              : "bg-red-500/12 text-red-400"
         )}
       >
-        {isCredit ? (
+        {isPayment ? (
+          <FaWallet className="w-4 h-4" />
+        ) : isCredit ? (
           <FaArrowUp className="w-4 h-4" />
         ) : (
           <FaArrowDown className="w-4 h-4" />
@@ -62,12 +74,18 @@ export function TransactionItem({
             variant="outline"
             className={cn(
               "text-[10px] px-1.5 py-0 h-4 font-semibold uppercase tracking-wider",
-              isCredit
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                : "bg-red-500/10 text-red-400 border-red-500/20"
+              isPayment
+                ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
+                : isCredit
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  : "bg-red-500/10 text-red-400 border-red-500/20"
             )}
           >
-            {isCredit ? "↑ Credit" : "↓ Debit"}
+            {isPayment
+              ? `Payment · ${methodLabel}`
+              : isCredit
+                ? "↑ Credit"
+                : "↓ Debit"}
           </Badge>
 
           {/* Note */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { transactionsApi, type Transaction, type PagedTransactions } from "@/lib/api";
+import { transactionsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export const transactionKeys = {
@@ -39,6 +39,8 @@ export function useCreateTransaction() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: ["statements"] });
       toast.success("Transaction created");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -53,12 +55,20 @@ export function useUpdateTransaction() {
       data,
     }: {
       id: string;
-      data: { customerId?: string; amount?: number; type?: "credit" | "debit"; note?: string };
+      data: {
+        customerId?: string;
+        amount?: number;
+        type?: "credit" | "debit";
+        paymentMethod?: import("@/lib/api").PaymentMethod | null;
+        note?: string;
+      };
     }) => transactionsApi.update(id, data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
       qc.invalidateQueries({ queryKey: transactionKeys.detail(data.id) });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: ["statements"] });
       toast.success("Transaction updated");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -72,6 +82,8 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionKeys.all });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: ["statements"] });
       toast.success("Transaction deleted");
     },
     onError: (err: Error) => toast.error(err.message),

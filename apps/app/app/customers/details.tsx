@@ -12,25 +12,23 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, router, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
 import {
-  Contact,
-  LedgerEntry,
-} from "@/types/database";
+  customersApi,
+  transactionsApi,
+  type Customer,
+  type Transaction,
+} from "@/lib/api";
 import { format } from "date-fns";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import {
-  updateTransaction,
-  deleteTransaction,
-} from "@/lib/transactions";
+import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
 import { formatCurrency } from "@/types/database";
 
 interface BalanceData {
-  total_credit: number;
-  total_debit: number;
+  totalCredit: number;
+  totalDebit: number;
   balance: number;
 }
 
@@ -38,20 +36,18 @@ export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
 
-  const [contact, setContact] = useState<Contact | null>(null);
-  const [entries, setEntries] = useState<
-    (LedgerEntry & { running_balance?: number })[]
-  >([]);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [entries, setEntries] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState<BalanceData>({
-    total_credit: 0,
-    total_debit: 0,
+    totalCredit: 0,
+    totalDebit: 0,
     balance: 0,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const [editingTransaction, setEditingTransaction] =
-    useState<LedgerEntry | null>(null);
+    useState<Transaction | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
 
@@ -61,68 +57,24 @@ export default function CustomerDetailsScreen() {
     if (!id) return;
 
     setLoading(true);
+    try {
+      const [customerData, paged] = await Promise.all([
+        customersApi.get(id),
+        transactionsApi.listByCustomer(id, { pageSize: 100 }),
+      ]);
 
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (contactData) setContact(contactData);
-
-    // Fetch balance first so we can compute running balances reliably
-    const startingBalance = await fetchBalance();
-    await fetchTransactions(startingBalance ?? undefined);
-
-    setLoading(false);
-  };
-
-  const fetchTransactions = async (startingBalanceParam?: number) => {
-    if (!id) return;
-
-    const { data } = await supabase
-      .from("ledger_entries")
-      .select("*")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false });
-
-    // Compute running (post-transaction) balance for each entry.
-    // data is ordered newest -> oldest (created_at descending)
-    let running =
-      typeof startingBalanceParam === "number"
-        ? startingBalanceParam
-        : (balance.balance ?? 0);
-
-    const withRunning = (data || []).map((entry: LedgerEntry) => {
-      const entryWithRunning = { ...entry, running_balance: running };
-      const amt = Number(entry.amount || 0);
-      // Reverse the effect so the next (older) entry gets its post-transaction balance
-      if (entry.type === "credit") {
-        // credit increases the balance
-        running = running - amt;
-      } else {
-        // debit decreases the balance
-        running = running + amt;
-      }
-      return entryWithRunning;
-    });
-
-    setEntries(withRunning);
-  };
-
-  const fetchBalance = async (): Promise<number | null> => {
-    if (!id) return null;
-
-    const { data } = await supabase.rpc("get_contact_balance", {
-      contact_id: id,
-    });
-
-    if (data?.length) {
-      setBalance(data[0]);
-      return data[0].balance;
+      setCustomer(customerData);
+      setEntries(paged.data);
+      setBalance({
+        totalCredit: paged.totalCredit,
+        totalDebit: paged.totalDebit,
+        balance: paged.totalCredit - paged.totalDebit,
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+    } finally {
+      setLoading(false);
     }
-
-    return null;
   };
 
   useEffect(() => {
@@ -145,34 +97,27 @@ export default function CustomerDetailsScreen() {
     return type === "credit" ? `+${formatted}` : `-${formatted}`;
   };
 
+  const balanceText = () => {
+    if (balance.balance > 0) return `You owe ₹${balance.balance.toFixed(2)}`;
+    if (balance.balance < 0)
+      return `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`;
+    return "All settled up";
+  };
+
   const sendSMS = () => {
-    if (!contact) return;
+    if (!customer) return;
 
-    const text =
-      balance.balance > 0
-        ? `You owe ₹${balance.balance.toFixed(2)}`
-        : balance.balance < 0
-          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
-          : "All settled up";
-
-    const message = `Ledger Update - LedgerX\n\nCustomer: ${contact.name}\nBalance: ${text}`;
-    const phone = contact.phone.replace(/\D/g, "");
+    const message = `Ledger Update - Ledger-X\n\nCustomer: ${customer.name}\nBalance: ${balanceText()}`;
+    const phone = customer.phone.replace(/\D/g, "");
 
     Linking.openURL(`sms:${phone}?body=${encodeURIComponent(message)}`);
   };
 
   const sendWhatsApp = async () => {
-    if (!contact) return;
+    if (!customer) return;
 
-    const text =
-      balance.balance > 0
-        ? `You owe ₹${balance.balance.toFixed(2)}`
-        : balance.balance < 0
-          ? `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`
-          : "All settled up";
-
-    const message = `Ledger Update - LedgerX\n\nCustomer: ${contact.name}\nBalance: ${text}`;
-    const phone = contact.phone.replace(/\D/g, "");
+    const message = `Ledger Update - Ledger-X\n\nCustomer: ${customer.name}\nBalance: ${balanceText()}`;
+    const phone = customer.phone.replace(/\D/g, "");
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
     Linking.openURL(url).catch(() => {
@@ -182,7 +127,7 @@ export default function CustomerDetailsScreen() {
 
   /* -------------------- RENDER -------------------- */
 
-  if (loading || !contact) {
+  if (loading || !customer) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#fff" />
@@ -190,56 +135,80 @@ export default function CustomerDetailsScreen() {
     );
   }
 
-  const renderEntry = ({
-    item,
-  }: {
-    item: LedgerEntry & { running_balance?: number };
-  }) => (
-    <Pressable
-      style={styles.entryCard}
-      onPress={() => setEditingTransaction(item)}
-    >
-      <View>
-        <Text
-          style={[
-            styles.entryAmount,
-            item.type === "credit" ? styles.credit : styles.debit,
-          ]}
-        >
-          {formatAmount(Number(item.amount), item.type)}
-        </Text>
-        <Text style={styles.entryDate}>
-          {format(new Date(item.created_at), "dd MMM yyyy, hh:mm a")}
-        </Text>
-        {/* Post-transaction running balance for this row */}
-        {typeof item.running_balance !== "undefined" && (
-          <Text
-            style={[
-              styles.entryBalance,
-              item.running_balance > 0
-                ? styles.owe
-                : item.running_balance < 0
-                  ? styles.owed
-                  : styles.settled,
-            ]}
-          >
-            {formatCurrency(Math.abs(Number(item.running_balance || 0)))}
+  const renderEntry = ({ item }: { item: Transaction }) => {
+    const isCredit = item.type === "credit";
+    const isPayment = isPaymentEntry(item);
+    const method = paymentMethodLabel(item.paymentMethod);
+
+    return (
+      <Pressable
+        style={[
+          styles.entryCard,
+          isPayment && { backgroundColor: "rgba(245, 158, 11, 0.04)" },
+        ]}
+        onPress={() => setEditingTransaction(item)}
+      >
+        <View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text
+              style={[
+                styles.entryAmount,
+                isPayment
+                  ? styles.payment
+                  : isCredit
+                    ? styles.credit
+                    : styles.debit,
+              ]}
+            >
+              {formatAmount(Number(item.amount), item.type)}
+            </Text>
+            {isPayment && method && (
+              <View style={styles.methodBadge}>
+                <Text style={styles.methodText}>{method}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.entryDate}>
+            {format(new Date(item.createdAt), "dd MMM yyyy, hh:mm a")}
           </Text>
-        )}
-        {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color="#666" />
-    </Pressable>
-  );
+          {typeof item.runningBalance !== "undefined" && (
+            <Text
+              style={[
+                styles.entryBalance,
+                item.runningBalance > 0
+                  ? styles.owe
+                  : item.runningBalance < 0
+                    ? styles.owed
+                    : styles.settled,
+              ]}
+            >
+              {formatCurrency(Math.abs(Number(item.runningBalance || 0)))}
+            </Text>
+          )}
+          {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#666" />
+      </Pressable>
+    );
+  };
 
   return (
     <View style={styles.container}>
       {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.name}>{contact.name}</Text>
-            <Text style={styles.phone}>{contact.phone}</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={styles.name} numberOfLines={1}>
+                {customer.name}
+              </Text>
+              {customer.isSample && (
+                <View style={styles.sampleBadge}>
+                  <Text style={styles.sampleText}>SAMPLE</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.phone}>{customer.phone}</Text>
           </View>
           <Pressable
             style={styles.editBtn}
@@ -267,8 +236,8 @@ export default function CustomerDetailsScreen() {
           </Text>
 
           <View style={styles.balanceMeta}>
-            <Text style={styles.meta}>Credit ₹{balance.total_credit}</Text>
-            <Text style={styles.meta}>Debit ₹{balance.total_debit}</Text>
+            <Text style={styles.meta}>Credit ₹{balance.totalCredit}</Text>
+            <Text style={styles.meta}>Debit ₹{balance.totalDebit}</Text>
           </View>
         </View>
       </View>
@@ -288,8 +257,19 @@ export default function CustomerDetailsScreen() {
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
         >
           <Ionicons name="remove-circle" size={18} color="#EF4444" />
-          <Text style={styles.debit}>Debit</Text>
+          <Text style={styles.debit}>Payment</Text>
         </Pressable>
+
+        <Link
+          href={`/customers/statement?id=${id}`}
+          style={styles.actionBtn}
+          asChild
+        >
+          <Pressable>
+            <Ionicons name="document-text" size={18} color="#3B82F6" />
+            <Text style={styles.smsText}>Statement</Text>
+          </Pressable>
+        </Link>
 
         <Pressable style={styles.whatsappBtn} onPress={sendWhatsApp}>
           <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
@@ -319,7 +299,13 @@ export default function CustomerDetailsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No transactions yet</Text>
+          <View style={{ alignItems: "center", paddingVertical: 48 }}>
+            <Ionicons name="receipt-outline" size={40} color="#444" />
+            <Text style={styles.emptyText}>No transactions yet</Text>
+            <Text style={styles.emptyHint}>
+              Use Credit or Payment above to record the first entry.
+            </Text>
+          </View>
         }
       />
 
@@ -328,9 +314,17 @@ export default function CustomerDetailsScreen() {
         visible={!!editingTransaction}
         transaction={editingTransaction}
         onClose={() => setEditingTransaction(null)}
-        onSave={updateTransaction}
-        onDelete={(id) => {
-          setDeleteEntryId(id);
+        onSave={async (entryId, amount, type, note, paymentMethod) => {
+          await transactionsApi.update(entryId, {
+            amount,
+            type,
+            note: note || undefined,
+            paymentMethod: paymentMethod ?? null,
+          });
+          await fetchData();
+        }}
+        onDelete={(txId) => {
+          setDeleteEntryId(txId);
           setShowDeleteConfirm(true);
         }}
       />
@@ -340,8 +334,11 @@ export default function CustomerDetailsScreen() {
         title="Delete Transaction?"
         message="This action cannot be undone."
         confirmText="Delete"
-        onConfirm={() => {
-          if (deleteEntryId) deleteTransaction(deleteEntryId);
+        onConfirm={async () => {
+          if (deleteEntryId) {
+            await transactionsApi.remove(deleteEntryId);
+            await fetchData();
+          }
           setShowDeleteConfirm(false);
         }}
         onCancel={() => setShowDeleteConfirm(false)}
@@ -362,10 +359,19 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  name: { fontSize: 26, fontWeight: "700", color: "#fff" },
+  name: { fontSize: 26, fontWeight: "700", color: "#fff", flexShrink: 1 },
   phone: { color: "#888", marginTop: 4 },
+
+  sampleBadge: {
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  sampleText: { color: "#F59E0B", fontSize: 9, fontWeight: "700" },
 
   editBtn: {
     flexDirection: "row",
@@ -447,6 +453,15 @@ const styles = StyleSheet.create({
 
   credit: { color: "#10B981", fontWeight: "600" },
   debit: { color: "#EF4444", fontWeight: "600" },
+  payment: { color: "#F59E0B", fontWeight: "600" },
+
+  methodBadge: {
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  methodText: { color: "#F59E0B", fontSize: 10, fontWeight: "600" },
 
   txHeader: {
     flexDirection: "row",
@@ -461,10 +476,12 @@ const styles = StyleSheet.create({
 
   entryCard: {
     paddingVertical: 14,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#222",
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
 
   entryAmount: { fontSize: 18, fontWeight: "600" },
@@ -472,5 +489,11 @@ const styles = StyleSheet.create({
   entryBalance: { color: "#888", marginTop: 4, fontSize: 13 },
   entryNote: { color: "#666", fontStyle: "italic", marginTop: 4 },
 
-  emptyText: { color: "#666", textAlign: "center", paddingVertical: 40 },
+  emptyText: {
+    color: "#888",
+    textAlign: "center",
+    marginTop: 12,
+    fontSize: 15,
+  },
+  emptyHint: { color: "#666", textAlign: "center", marginTop: 4, fontSize: 12 },
 });

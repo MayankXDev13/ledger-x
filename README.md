@@ -2,6 +2,33 @@
 
 A bun-managed Turborepo containing the Ledger-X mobile app, web app, and API.
 
+A public khata (digital ledger) for small shops: record credits and payments,
+share printable statements, collect via UPI QR, and export or delete your data
+at any time. Web and mobile ship in lockstep on the same Workers API.
+
+## Features
+
+- **Single book, server-resolved** — every write lands in the user's default
+  book; clients never send book references (see `docs/books.md`).
+- **Payment recording** — debits carry an optional payment method
+  (Cash/UPI/Other) with a distinct presentation in history views.
+- **Customer statements** — API-computed statement model printed to PDF on web
+  and shared as a PDF on mobile (`docs/statements.md`).
+- **UPI collection** — per-customer outstanding balances with FIFO aging and a
+  `upi://pay` QR/link per customer; payment completion is recorded manually
+  (`docs/upi-collection.md`).
+- **Dashboard analytics** — 12-month credit/paid trend, top debtors, and
+  receivables aging in one endpoint (`docs/dashboard-analytics.md`).
+- **Offline write queue (mobile)** — entries captured offline survive restarts
+  and sync exactly once (`docs/offline-queue.md`).
+- **App lock (mobile)** — device-local PIN + biometrics, auto-lock, and
+  app-switcher masking (`docs/app-lock.md`).
+- **Data portability** — CSV exports, a full JSON archive, and self-serve
+  account deletion with audit retention (`docs/data-portability.md`).
+- **Onboarding & sample data** — first-run flow plus clearly-labelled sample
+  rows that never appear in exports
+  (`docs/onboarding-and-sample-data.md`).
+
 ## Workspaces
 
 | Path | Package | Stack |
@@ -44,8 +71,27 @@ bun dev        # run all dev servers (web + api; Expo is started from apps/app)
 bun run build  # build web + api (Workers bundle check via wrangler dry-run)
 bun run lint   # lint app + web
 bun run typecheck
-bun run test   # API contract tests (no live Supabase or database required)
+bun run test   # API + web + mobile unit/contract tests (no live database required)
 ```
+
+## Documentation index
+
+| Doc | Covers |
+| --- | --- |
+| `docs/books.md` | Single-book behavior and the `GET /books` contract |
+| `docs/data-portability.md` | CSV exports, JSON archive, `DELETE /account` |
+| `docs/statements.md` | Statement endpoint, periods, PDF naming and sharing |
+| `docs/offline-queue.md` | Mobile offline writes, queue states, replay triggers |
+| `docs/upi-collection.md` | UPI configuration, intent URI, collection view |
+| `docs/dashboard-analytics.md` | `GET /dashboard/analytics` blocks and UTC months |
+| `docs/app-lock.md` | Mobile PIN/biometric lock, auto-lock, recovery |
+| `docs/onboarding-and-sample-data.md` | First-run flow and sample-data lifecycle |
+| `docs/auth-migration.md` | Google-only Better Auth sign-in contract |
+| `docs/audit-logs.md` | Audit event types and retention |
+| `docs/cloudflare-deploy.md` | Workers/Pages deployment runbook |
+| `docs/cutover.md` | Supabase → Postgres cutover runbook |
+| `docs/backup-r2.md` | Backup and restore procedures |
+| `docs/tags-removal.md` | Tags feature removal record |
 
 ## Per-workspace commands
 
