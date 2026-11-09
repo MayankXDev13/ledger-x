@@ -1,0 +1,1548 @@
+openapi: 3.0.3
+info:
+  title: Ledger-X API
+  version: 1.0.0
+  description: Generated OpenAPI specification for the Ledger-X server routes. Regenerate with `bun run openapi:generate`.
+servers:
+  - url: http://localhost:8787
+    description: Local development server
+  - url: https://api.ledgex.mayankxdev.shop
+    description: Production API
+tags:
+  - name: auth
+    description: Authentication and session endpoints
+  - name: customers
+    description: Customer records
+  - name: transactions
+    description: Credits and payments
+  - name: dashboard
+    description: Dashboard aggregates
+  - name: books
+    description: Ledger books
+  - name: exports
+    description: CSV data exports
+  - name: account
+    description: Account archive and deletion
+  - name: statements
+    description: Customer statements
+  - name: settings
+    description: UPI and onboarding settings
+  - name: collection
+    description: Outstanding receivables
+  - name: sample-data
+    description: Demo data management
+  - name: audit-logs
+    description: Audit trail
+paths:
+  /account:
+    delete:
+      summary: Delete the account and its data
+      tags:
+        - account
+      description: Requires the exact confirmation body and is irreversible. Audit entries survive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirm:
+                  type: string
+                  enum:
+                    - DELETE
+              required:
+                - confirm
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /account/export:
+    get:
+      summary: Export the full account archive
+      tags:
+        - account
+      description: Includes soft-deleted rows; excludes sample rows.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Complete account archive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountArchive"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/auth/*:
+    get:
+      summary: Better Auth request handler
+      tags:
+        - auth
+      description: Pass-through for all Better Auth endpoints (OAuth callback, session, sign-out). Every HTTP method is handled.
+      responses:
+        "200":
+          description: Response produced by the Better Auth handler
+  /api/auth/redirect/google:
+    get:
+      summary: Start a direct-navigation Google sign-in
+      tags:
+        - auth
+      description: Browser entry point that sets the OAuth state cookie same-site and redirects to Google.
+      parameters:
+        - name: callbackURL
+          in: query
+          required: false
+          description: Where to send the browser after sign-in.
+          schema:
+            type: string
+            format: uri
+      responses:
+        "302":
+          description: Redirect to the Google OAuth consent screen
+          headers:
+            Location:
+              description: Google OAuth URL
+              schema:
+                type: string
+                format: uri
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /audit-logs:
+    get:
+      summary: List the caller's audit entries
+      tags:
+        - audit-logs
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          required: false
+          schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            default: 20
+            type: integer
+            minimum: 1
+            maximum: 100
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Paginated audit entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /audit-logs/{id}:
+    get:
+      summary: Get one audit entry
+      tags:
+        - audit-logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Audit entry id
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Audit entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLog"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      summary: Revoke the current session
+      tags:
+        - auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/me:
+    get:
+      summary: Get the current authenticated user
+      tags:
+        - auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMe"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /books:
+    get:
+      summary: Get the caller's default book
+      tags:
+        - books
+      description: Creates the default book on first use.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Default book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /collection:
+    get:
+      summary: List customers with an outstanding balance
+      tags:
+        - collection
+      parameters:
+        - name: sort
+          in: query
+          required: false
+          schema:
+            default: amount
+            type: string
+            enum:
+              - amount
+              - age
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Outstanding receivables
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /customers:
+    get:
+      summary: List non-deleted customers
+      tags:
+        - customers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Array of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a customer
+      tags:
+        - customers
+      description: A client-supplied id makes the request idempotent for offline replays.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                name:
+                  type: string
+                  minLength: 1
+                phone:
+                  type: string
+                  minLength: 1
+              required:
+                - name
+                - phone
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Customer created or replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /customers/{id}:
+    get:
+      summary: Get a single customer
+      tags:
+        - customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer id
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update a customer
+      tags:
+        - customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer id
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                phone:
+                  type: string
+                  minLength: 1
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Soft-delete a customer
+      tags:
+        - customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer id
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Customer deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dashboard/analytics:
+    get:
+      summary: Get 12-month trend, top debtors, and aging
+      tags:
+        - dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analytics"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dashboard/metrics:
+    get:
+      summary: Get dashboard totals
+      tags:
+        - dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardMetrics"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dashboard/recent-transactions:
+    get:
+      summary: Get the five most recent transactions
+      tags:
+        - dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /exports/customers.csv:
+    get:
+      summary: Export customers as CSV
+      tags:
+        - exports
+      description: Excludes deleted and sample rows.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CSV attachment of customers
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /exports/transactions.csv:
+    get:
+      summary: Export transactions as CSV
+      tags:
+        - exports
+      description: Excludes deleted and sample rows.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CSV attachment of transactions
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sample-data:
+    post:
+      summary: Seed sample customers and transactions
+      tags:
+        - sample-data
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created sample records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SampleDataResult"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Remove only the sample records
+      tags:
+        - sample-data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sample records removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /settings:
+    get:
+      summary: Get the caller's settings
+      tags:
+        - settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: UPI and onboarding settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update the caller's settings
+      tags:
+        - settings
+      description: Partial update; null clears a field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                upiId:
+                  type: string
+                  pattern: ^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$
+                  nullable: true
+                payeeName:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  nullable: true
+                onboardingCompleted:
+                  type: boolean
+                onboardingDismissed:
+                  type: boolean
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /statements/customers/{id}:
+    get:
+      summary: Get a customer statement
+      tags:
+        - statements
+      description: Computes opening/closing balances and per-entry running balances for an optional date range.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer id
+          schema:
+            type: string
+            format: uuid
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Statement model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Statement"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /transactions:
+    post:
+      summary: Create a transaction
+      tags:
+        - transactions
+      description: A client-supplied id makes the request idempotent for offline replays.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                customerId:
+                  type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                amount:
+                  type: integer
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                  minimum: 0
+                type:
+                  type: string
+                  enum:
+                    - credit
+                    - debit
+                paymentMethod:
+                  type: string
+                  enum:
+                    - cash
+                    - upi
+                    - other
+                  nullable: true
+                note:
+                  type: string
+              required:
+                - customerId
+                - amount
+                - type
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Transaction created or replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /transactions/customers/{id}/transactions:
+    get:
+      summary: List a customer's transactions
+      tags:
+        - transactions
+      description: Paginated, newest first, with a running balance computed over the filtered set.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer id
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            default: 10
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Paginated transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionPage"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /transactions/{id}:
+    get:
+      summary: Get a single transaction
+      tags:
+        - transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction id
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update a transaction
+      tags:
+        - transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction id
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                  minimum: 0
+                type:
+                  type: string
+                  enum:
+                    - credit
+                    - debit
+                paymentMethod:
+                  type: string
+                  enum:
+                    - cash
+                    - upi
+                    - other
+                  nullable: true
+                note:
+                  type: string
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Soft-delete a transaction
+      tags:
+        - transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction id
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transaction deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Better Auth session token passed as `Authorization: Bearer <token>`."
+  schemas:
+    AccountArchive:
+      type: object
+      properties:
+        exportedAt: &a1
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+              format: email
+          required:
+            - id
+            - email
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerWithDeleted"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionWithDeleted"
+      required:
+        - exportedAt
+        - user
+        - customers
+        - transactions
+    AgingBuckets:
+      type: object
+      properties:
+        0-30:
+          type: integer
+        31-60:
+          type: integer
+        60+:
+          type: integer
+      required:
+        - 0-30
+        - 31-60
+        - 60+
+    Analytics:
+      type: object
+      properties:
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsTrendPoint"
+        topDebtors:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopDebtor"
+        aging:
+          $ref: "#/components/schemas/AgingBuckets"
+        totalReceivables:
+          type: integer
+      required:
+        - trend
+        - topDebtors
+        - aging
+        - totalReceivables
+    AnalyticsTrendPoint:
+      type: object
+      properties:
+        month:
+          type: string
+          description: UTC month key, YYYY-MM
+        credit:
+          type: integer
+        debit:
+          type: integer
+      required:
+        - month
+        - credit
+        - debit
+    AuditLog:
+      type: object
+      properties:
+        id: &a2
+          type: string
+          format: uuid
+        actorUserId:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        createdAt: *a1
+      required:
+        - id
+        - actorUserId
+        - action
+        - entityType
+        - entityId
+        - metadata
+        - ipAddress
+        - userAgent
+        - createdAt
+    AuditLogPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+      required:
+        - data
+        - page
+        - pageSize
+    AuthMe:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+      required:
+        - id
+        - email
+        - name
+        - image
+    Book:
+      type: object
+      properties:
+        id: *a2
+        userId:
+          type: string
+        name:
+          type: string
+        isDefault:
+          type: boolean
+        createdAt: *a1
+        updatedAt: *a1
+      required:
+        - id
+        - userId
+        - name
+        - isDefault
+        - createdAt
+        - updatedAt
+    CollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionRow"
+        totalReceivables:
+          type: integer
+        sort:
+          type: string
+          enum:
+            - amount
+            - age
+      required:
+        - data
+        - totalReceivables
+        - sort
+    CollectionRow:
+      type: object
+      properties:
+        customerId: *a2
+        name:
+          type: string
+        phone:
+          type: string
+        outstanding:
+          type: integer
+        oldestUnpaidCreditAt:
+          type: string
+          format: date-time
+          nullable: true
+        ageDays:
+          type: integer
+          nullable: true
+      required:
+        - customerId
+        - name
+        - phone
+        - outstanding
+        - oldestUnpaidCreditAt
+        - ageDays
+    Customer:
+      type: object
+      properties:
+        id: *a2
+        userId:
+          type: string
+        bookId: *a2
+        name:
+          type: string
+        phone:
+          type: string
+        isSample:
+          type: boolean
+        createdAt: *a1
+        updatedAt: *a1
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - userId
+        - bookId
+        - name
+        - phone
+        - isSample
+        - createdAt
+        - updatedAt
+        - deletedAt
+    CustomerWithDeleted:
+      allOf:
+        - $ref: "#/components/schemas/Customer"
+        - type: object
+          properties:
+            deleted:
+              type: boolean
+          required:
+            - deleted
+    DashboardMetrics:
+      type: object
+      properties:
+        totalBalance:
+          type: integer
+        totalCustomers:
+          type: integer
+        monthlyNet:
+          type: integer
+      required:
+        - totalBalance
+        - totalCustomers
+        - monthlyNet
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+        - error
+    SampleDataResult:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - customers
+        - transactions
+    Settings:
+      type: object
+      properties:
+        upiId:
+          type: string
+          nullable: true
+        payeeName:
+          type: string
+          nullable: true
+        onboardingCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        onboardingDismissedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - upiId
+        - payeeName
+        - onboardingCompletedAt
+        - onboardingDismissedAt
+    Statement:
+      type: object
+      properties:
+        customer:
+          type: object
+          properties:
+            id: *a2
+            name:
+              type: string
+            phone:
+              type: string
+          required:
+            - id
+            - name
+            - phone
+        start:
+          type: string
+          nullable: true
+        end:
+          type: string
+          nullable: true
+        openingBalance:
+          type: integer
+        closingBalance:
+          type: integer
+        totalCredit:
+          type: integer
+        totalDebit:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatementEntry"
+      required:
+        - customer
+        - start
+        - end
+        - openingBalance
+        - closingBalance
+        - totalCredit
+        - totalDebit
+        - entries
+    StatementEntry:
+      type: object
+      properties:
+        id: *a2
+        date: *a1
+        type: &a3
+          type: string
+          enum:
+            - credit
+            - debit
+        amount:
+          type: integer
+        paymentMethod:
+          type: string
+          enum: &a4
+            - cash
+            - upi
+            - other
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        runningBalance:
+          type: integer
+      required:
+        - id
+        - date
+        - type
+        - amount
+        - paymentMethod
+        - note
+        - runningBalance
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+    TopDebtor:
+      type: object
+      properties:
+        customerId: *a2
+        name:
+          type: string
+        outstanding:
+          type: integer
+        ageDays:
+          type: integer
+          nullable: true
+      required:
+        - customerId
+        - name
+        - outstanding
+        - ageDays
+    Transaction:
+      type: object
+      properties:
+        id: *a2
+        userId:
+          type: string
+        bookId: *a2
+        customerId: *a2
+        amount:
+          type: integer
+          description: Whole currency units (rupees)
+        type: *a3
+        paymentMethod:
+          type: string
+          enum: *a4
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        isSample:
+          type: boolean
+        createdAt: *a1
+        updatedAt: *a1
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - userId
+        - bookId
+        - customerId
+        - amount
+        - type
+        - paymentMethod
+        - note
+        - isSample
+        - createdAt
+        - updatedAt
+        - deletedAt
+    TransactionPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionWithRunningBalance"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalCredit:
+          type: integer
+        totalDebit:
+          type: integer
+        totalAmount:
+          type: integer
+        start:
+          type: string
+          nullable: true
+        end:
+          type: string
+          nullable: true
+      required:
+        - data
+        - page
+        - pageSize
+        - total
+        - totalCredit
+        - totalDebit
+        - totalAmount
+        - start
+        - end
+    TransactionWithDeleted:
+      allOf:
+        - $ref: "#/components/schemas/Transaction"
+        - type: object
+          properties:
+            deleted:
+              type: boolean
+          required:
+            - deleted
+    TransactionWithRunningBalance:
+      allOf:
+        - $ref: "#/components/schemas/Transaction"
+        - type: object
+          properties:
+            runningBalance:
+              type: integer
+          required:
+            - runningBalance

@@ -92,6 +92,7 @@ bun run test   # API + web + mobile unit/contract tests (no live database requir
 | `docs/cutover.md` | Supabase → Postgres cutover runbook |
 | `docs/backup-r2.md` | Backup and restore procedures |
 | `docs/tags-removal.md` | Tags feature removal record |
+| `docs/api-specification.md` | Generated OpenAPI 3.0 contract and drift checks |
 
 ## Per-workspace commands
 
@@ -112,6 +113,8 @@ cd apps/api && bun run db:generate  # drizzle-kit generate
 cd apps/api && bun run db:migrate   # drizzle-kit migrate (uses DATABASE_URL from .dev.vars)
 cd apps/api && bun run db:studio
 cd apps/api && bun run cf-typegen
+cd apps/api && bun run openapi:generate # regenerate openapi.yaml
+cd apps/api && bun run openapi:check    # fail if openapi.yaml is stale
 ```
 
 ## Deployment
