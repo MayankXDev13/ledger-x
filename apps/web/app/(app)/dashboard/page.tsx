@@ -82,32 +82,27 @@ function MetricCard({
   icon: React.ElementType;
   trend?: "up" | "down" | "neutral";
   trendLabel?: string;
-  accentColor: string; // e.g. "cyan" | "emerald" | "violet"
+  accentColor: string; // "brand" | "positive" | "danger"
   loading?: boolean;
 }) {
   const colorMap: Record<string, { bg: string; icon: string; ring: string }> = {
-    cyan: {
-      bg: "from-primary/8 to-transparent",
+    brand: {
+      bg: "from-primary/10 to-transparent",
       icon: "bg-primary/15 text-primary",
       ring: "border-primary/20",
     },
-    emerald: {
-      bg: "from-emerald-500/8 to-transparent",
-      icon: "bg-emerald-500/15 text-emerald-400",
-      ring: "border-emerald-500/20",
+    positive: {
+      bg: "from-[#34D399]/10 to-transparent",
+      icon: "bg-[#34D399]/15 text-[#34D399]",
+      ring: "border-[#34D399]/20",
     },
-    violet: {
-      bg: "from-violet-500/8 to-transparent",
-      icon: "bg-violet-500/15 text-violet-400",
-      ring: "border-violet-500/20",
-    },
-    amber: {
-      bg: "from-amber-500/8 to-transparent",
-      icon: "bg-amber-500/15 text-amber-400",
-      ring: "border-amber-500/20",
+    danger: {
+      bg: "from-[#E11D48]/10 to-transparent",
+      icon: "bg-[#E11D48]/15 text-[#E11D48]",
+      ring: "border-[#E11D48]/20",
     },
   };
-  const colors = colorMap[accentColor] ?? colorMap.cyan;
+  const colors = colorMap[accentColor] ?? colorMap.brand;
 
   return (
     <div
@@ -144,15 +139,15 @@ function MetricCard({
           </div>
         ) : (
           <div>
-            <p className="text-2xl font-bold text-foreground tabular">{value}</p>
+            <p className="text-2xl font-bold text-foreground tabular font-mono tabular-nums">{value}</p>
             {trendLabel && (
               <div
                 className={cn(
-                  "flex items-center gap-1 mt-1 text-xs font-medium",
+                  "flex items-center gap-1 mt-1 text-xs font-medium font-mono tabular-nums",
                   trend === "up"
-                    ? "text-emerald-400"
+                    ? "text-[#34D399]"
                     : trend === "down"
-                      ? "text-red-400"
+                      ? "text-[#E11D48]"
                       : "text-muted-foreground"
                 )}
               >
@@ -283,7 +278,7 @@ export default function DashboardPage() {
               : "neutral"
           }
           trendLabel="Overall ledger balance"
-          accentColor="cyan"
+          accentColor="brand"
           loading={metricsLoading}
         />
         <MetricCard
@@ -292,7 +287,7 @@ export default function DashboardPage() {
           icon={Users}
           trend="neutral"
           trendLabel="Active customers"
-          accentColor="violet"
+          accentColor="brand"
           loading={metricsLoading}
         />
         <MetricCard
@@ -307,7 +302,7 @@ export default function DashboardPage() {
               : "neutral"
           }
           trendLabel="This month's net flow"
-          accentColor="emerald"
+          accentColor="positive"
           loading={metricsLoading}
         />
       </div>
@@ -349,8 +344,8 @@ export default function DashboardPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#EA580C" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#EA580C" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -377,11 +372,11 @@ export default function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="amount"
-                    stroke="#DC2626"
+                    stroke="#EA580C"
                     strokeWidth={2}
                     fill="url(#colorFlowPos)"
                     dot={{
-                      fill: "#DC2626",
+                      fill: "#EA580C",
                       r: 4,
                       strokeWidth: 2,
                       stroke: "var(--card)",
@@ -441,7 +436,7 @@ export default function DashboardPage() {
                     {chartData.map((entry, index) => (
                       <Cell
                         key={index}
-                        fill={entry.type === "credit" ? "#22C55E" : "#EF4444"}
+                        fill={entry.type === "credit" ? "#34D399" : "#E11D48"}
                         fillOpacity={0.85}
                       />
                     ))}
@@ -473,11 +468,11 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3 text-[10px] font-semibold text-muted-foreground">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="w-2 h-2 rounded-full bg-[#34D399]" />
                 Credit
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-400" />
+                <span className="w-2 h-2 rounded-full bg-[#E11D48]" />
                 Paid
               </span>
             </div>
@@ -518,14 +513,14 @@ export default function DashboardPage() {
                   <Bar
                     dataKey="credit"
                     name="Credit"
-                    fill="#22C55E"
+                    fill="#34D399"
                     fillOpacity={0.85}
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
                     dataKey="debit"
                     name="Paid"
-                    fill="#EF4444"
+                    fill="#E11D48"
                     fillOpacity={0.85}
                     radius={[4, 4, 0, 0]}
                   />
@@ -580,7 +575,7 @@ export default function DashboardPage() {
                               : `Unpaid ${debtor.ageDays}d`}
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-foreground tabular shrink-0">
+                      <span className="text-xs font-bold text-foreground font-mono tabular-nums shrink-0">
                         {formatCurrency(debtor.outstanding)}
                       </span>
                     </Link>
@@ -606,12 +601,37 @@ export default function DashboardPage() {
               {analyticsLoading ? (
                 <Skeleton className="h-16 w-full" />
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-2.5">
+                  {(() => {
+                    const buckets = analytics?.aging ?? { "0-30": 0, "31-60": 0, "60+": 0 };
+                    const total = buckets["0-30"] + buckets["31-60"] + buckets["60+"] || 1;
+                    const segs = [
+                      { key: "0-30", value: buckets["0-30"], fill: "bg-[#34D399]" },
+                      { key: "31-60", value: buckets["31-60"], fill: "bg-[#FB923C]" },
+                      { key: "60+", value: buckets["60+"], fill: "bg-[#E11D48]" },
+                    ] as const;
+                    return (
+                      <div
+                        className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+                        role="img"
+                        aria-label={`Aging split: 0-30 ${formatCurrency(buckets["0-30"])}, 31-60 ${formatCurrency(buckets["31-60"])}, 60+ ${formatCurrency(buckets["60+"])}`}
+                      >
+                        {segs.map(({ key, value, fill }) => (
+                          <div
+                            key={key}
+                            className={fill}
+                            style={{ width: `${(value / total) * 100}%` }}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-3 gap-2">
                   {(
                     [
-                      { key: "0-30", tone: "text-emerald-400", bg: "bg-emerald-500/10" },
-                      { key: "31-60", tone: "text-amber-400", bg: "bg-amber-500/10" },
-                      { key: "60+", tone: "text-red-400", bg: "bg-red-500/10" },
+                      { key: "0-30", tone: "text-[#34D399]", bg: "bg-[#34D399]/10" },
+                      { key: "31-60", tone: "text-[#FB923C]", bg: "bg-[#FB923C]/10" },
+                      { key: "60+", tone: "text-[#E11D48]", bg: "bg-[#E11D48]/10" },
                     ] as const
                   ).map(({ key, tone, bg }) => (
                     <div
@@ -621,11 +641,12 @@ export default function DashboardPage() {
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {key} days
                       </p>
-                      <p className={cn("text-sm font-bold tabular mt-0.5", tone)}>
+                      <p className={cn("text-sm font-bold font-mono tabular-nums mt-0.5", tone)}>
                         {formatCurrency(analytics?.aging[key] ?? 0)}
                       </p>
                     </div>
                   ))}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -688,10 +709,10 @@ export default function DashboardPage() {
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                         isCredit
-                          ? "bg-emerald-500/12 text-emerald-400"
+                          ? "bg-[#34D399]/12 text-[#34D399]"
                           : methodLabel
-                            ? "bg-amber-500/12 text-amber-400"
-                            : "bg-red-500/12 text-red-400"
+                            ? "bg-[#FB923C]/12 text-[#FB923C]"
+                            : "bg-[#E11D48]/12 text-[#E11D48]"
                       )}
                     >
                       {isCredit ? (
@@ -715,12 +736,12 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <span
                         className={cn(
-                          "text-sm font-bold tabular",
+                          "text-sm font-bold font-mono tabular-nums",
                           isCredit
-                            ? "text-emerald-400"
+                            ? "text-[#34D399]"
                             : methodLabel
-                              ? "text-amber-400"
-                              : "text-red-400"
+                              ? "text-[#FB923C]"
+                              : "text-[#E11D48]"
                         )}
                       >
                         {isCredit ? "+" : "−"}

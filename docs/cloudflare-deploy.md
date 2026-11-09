@@ -19,11 +19,15 @@
 ## Web (Pages)
 
 1. In the Cloudflare dashboard create a Pages project from `apps/web`.
-   Build command: `npx @cloudflare/next-on-pages` (or `bun run build` for
-   static output), output directory `.vercel/output/static`.
-2. Environment: `NEXT_PUBLIC_API_URL=https://api.ledgex.mayankxdev.shop`.
+   Build command: `PAGES_EXPORT=1 bun run build` (static export per
+   `apps/web/next.config.ts`), output directory `out/`.
+2. Environment: `NEXT_PUBLIC_API_URL=<deployed API origin>`.
    Production builds fail fast without it (see `apps/web/next.config.ts`).
-3. Rollback: redeploy the previous Pages deployment; redeploy the previous
+3. Add the Pages URL to the API's `TRUSTED_ORIGINS` in
+   `apps/api/wrangler.jsonc` (currently includes
+   `https://ledgerx-613.pages.dev`) and redeploy the API, or browser
+   calls will be blocked by CORS.
+4. Rollback: redeploy the previous Pages deployment; redeploy the previous
    Worker version (`wrangler rollback` / deployments tab).
 
 ## Gate

@@ -5,14 +5,15 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  FaChartBar,
-  FaUsers,
-  FaSignOutAlt,
-  FaChevronRight,
-  FaChevronLeft,
-  FaHandHoldingUsd,
-  FaCog,
-} from "react-icons/fa";
+  LayoutDashboard,
+  Users,
+  HandCoins,
+  Settings,
+  LogOut,
+  ChevronRight,
+  ChevronLeft,
+  TrendingUp,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +34,6 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
-import { TrendingUp } from "lucide-react";
 import {
   avatarInitials,
   deriveFirstName,
@@ -42,25 +42,25 @@ import {
 const navItems = [
   {
     href: "/dashboard",
-    icon: FaChartBar,
+    icon: LayoutDashboard,
     label: "Dashboard",
     exact: true,
   },
   {
     href: "/customers",
-    icon: FaUsers,
+    icon: Users,
     label: "Customers",
     exact: false,
   },
   {
     href: "/collection",
-    icon: FaHandHoldingUsd,
+    icon: HandCoins,
     label: "Collection",
     exact: false,
   },
   {
     href: "/settings",
-    icon: FaCog,
+    icon: Settings,
     label: "Settings",
     exact: false,
   },
@@ -138,9 +138,9 @@ export function AppSidebar() {
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? (
-                <FaChevronRight className="w-2.5 h-2.5" />
+                <ChevronRight className="w-2.5 h-2.5" />
               ) : (
-                <FaChevronLeft className="w-2.5 h-2.5" />
+                <ChevronLeft className="w-2.5 h-2.5" />
               )}
             </button>
           </TooltipTrigger>
@@ -209,7 +209,7 @@ export function AppSidebar() {
                         </Badge>
                       )}
                       {active && (
-                        <FaChevronRight className="w-3 h-3 opacity-40" />
+                        <ChevronRight className="w-3 h-3 opacity-40" />
                       )}
                     </>
                   )}
@@ -284,7 +284,7 @@ export function AppSidebar() {
                 onClick={handleSignOut}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:outline-none cursor-pointer"
               >
-                <FaSignOutAlt className="w-4 h-4" />
+                <LogOut className="w-4 h-4" />
                 Sign out
               </button>
             </div>
