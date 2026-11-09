@@ -18,19 +18,19 @@ export function BrandPanel() {
       <div className="relative z-10 space-y-6">
         <div className="space-y-3">
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand/30 bg-primary/10 text-primary-foreground text-xs font-medium hover:bg-primary/20 transition-colors">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-light animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/20 bg-black/20 text-orange-50 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-200 animate-pulse" />
             Finance Intelligence Platform
           </div>
 
-          <h1 className="text-5xl font-bold text-primary-foreground leading-tight">
+          <h1 className="text-5xl font-bold text-orange-50 leading-tight">
             Track every
             <br />
-            <span className="text-transparent bg-clip-text bg-primary">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-100 to-orange-200">
               transaction.
             </span>
           </h1>
-          <p className="text-slate-400 text-lg leading-relaxed max-w-sm">
+          <p className="text-orange-100/70 text-lg leading-relaxed max-w-sm">
             Manage customers, track balances, and gain financial insights with
             Ledger-X.
           </p>
@@ -44,16 +44,16 @@ export function BrandPanel() {
           ].map(({ value, label }) => (
             <div
               key={label}
-              className="p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 backdrop-blur hover:bg-slate-800/70 transition-colors cursor-pointer flex flex-col items-center justify-center hover:scale-[1.01] hover:shadow-lg hover:shadow-slate-900/50"
+              className="p-4 rounded-xl border border-white/10 bg-black/20 backdrop-blur hover:bg-black/30 transition-colors cursor-pointer flex flex-col items-center justify-center hover:scale-[1.01]"
             >
-              <div className="text-2xl font-bold text-white">{value}</div>
-              <div className="text-xs text-slate-500 mt-1">{label}</div>
+              <div className="text-2xl font-bold text-white font-mono tabular-nums">{value}</div>
+              <div className="text-xs text-orange-100/60 mt-1">{label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="relative z-10 text-slate-500 text-sm">
+      <div className="relative z-10 text-orange-100/60 text-sm">
         &quot;Clarity in every transaction.&quot;
       </div>
     </div>
@@ -63,9 +63,9 @@ export function BrandPanel() {
 function AnimatedBackground() {
   return (
     <>
-      <div className="absolute top-20 left-20 w-64 h-64 bg-brand/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-32 right-16 w-96 h-96 bg-brand-light/8 rounded-full blur-3xl animate-pulse delay-1000" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand/5 rounded-full blur-3xl" />
+      <div className="absolute top-20 left-20 w-64 h-64 rounded-full blur-3xl animate-pulse bg-black/20" />
+      <div className="absolute bottom-32 right-16 w-96 h-96 rounded-full blur-3xl animate-pulse delay-1000 bg-black/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full blur-3xl bg-black/10" />
     </>
   );
 }

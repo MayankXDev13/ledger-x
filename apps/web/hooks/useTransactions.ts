@@ -2,6 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api";
+import { dashboardKeys } from "./useDashboard";
+import { collectionKeys } from "./useCollection";
+import { statementKeys } from "./useStatement";
+import { customerKeys } from "./useCustomers";
 import { toast } from "sonner";
 
 export const transactionKeys = {
@@ -38,9 +42,9 @@ export function useCreateTransaction() {
     mutationFn: transactionsApi.create,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["collection"] });
-      qc.invalidateQueries({ queryKey: ["statements"] });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: collectionKeys.all });
+      qc.invalidateQueries({ queryKey: statementKeys.all });
       toast.success("Transaction created");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -66,9 +70,9 @@ export function useUpdateTransaction() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
       qc.invalidateQueries({ queryKey: transactionKeys.detail(data.id) });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["collection"] });
-      qc.invalidateQueries({ queryKey: ["statements"] });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: collectionKeys.all });
+      qc.invalidateQueries({ queryKey: statementKeys.all });
       toast.success("Transaction updated");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -81,9 +85,10 @@ export function useDeleteTransaction() {
     mutationFn: transactionsApi.delete,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionKeys.all });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["collection"] });
-      qc.invalidateQueries({ queryKey: ["statements"] });
+      qc.invalidateQueries({ queryKey: customerKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: collectionKeys.all });
+      qc.invalidateQueries({ queryKey: statementKeys.all });
       toast.success("Transaction deleted");
     },
     onError: (err: Error) => toast.error(err.message),

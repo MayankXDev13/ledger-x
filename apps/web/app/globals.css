@@ -50,32 +50,37 @@
 
 /* ─── Light Mode ─── */
 :root {
+  --background: oklch(0.986 0.002 67.8);
+  --foreground: oklch(0.147 0.004 49.3);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.147 0.004 49.3);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.147 0.004 49.3);
-  --primary: oklch(0.527 0.154 150.069);
-  --primary-foreground: oklch(0.982 0.018 155.826);
+  --primary: #C2410C;
+  --primary-foreground: #FFF7ED;
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.96 0.002 17.2);
   --muted-foreground: oklch(0.547 0.021 43.1);
-  --accent: oklch(0.527 0.154 150.069);
-  --accent-foreground: oklch(0.982 0.018 155.826);
+  --accent: #C2410C;
+  --accent-foreground: #FFF7ED;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0.005 34.3);
   --input: oklch(0.922 0.005 34.3);
-  --ring: oklch(0.714 0.014 41.2);
-  --chart-1: oklch(0.827 0.119 306.383);
-  --chart-2: oklch(0.627 0.265 303.9);
-  --chart-3: oklch(0.558 0.288 302.321);
-  --chart-4: oklch(0.496 0.265 301.924);
-  --chart-5: oklch(0.438 0.218 303.724);
-  --radius: 0;
+  --ring: #C2410C;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.577 0.245 27.325);
+  --chart-4: oklch(0.75 0.183 55.934);
+  --chart-5: oklch(0.66 0 0);
+  --radius: 0.75rem;
+  --brand: oklch(0.646 0.222 41.116);
+  --brand-fill: oklch(0.523 0.2 38.196);
+  --brand-light: oklch(0.75 0.183 55.934);
   --sidebar: oklch(0.986 0.002 67.8);
   --sidebar-foreground: oklch(0.147 0.004 49.3);
-  --sidebar-primary: oklch(0.627 0.194 149.214);
-  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+  --sidebar-primary: #C2410C;
+  --sidebar-primary-foreground: #FFF7ED;
   --sidebar-accent: oklch(0.96 0.002 17.2);
   --sidebar-accent-foreground: oklch(0.214 0.009 43.1);
   --sidebar-border: oklch(0.922 0.005 34.3);
@@ -84,35 +89,38 @@
 
 
 .dark {
-  --background: oklch(0.147 0.004 49.3);
-  --foreground: oklch(0.986 0.002 67.8);
-  --card: oklch(0.214 0.009 43.1);
-  --card-foreground: oklch(0.986 0.002 67.8);
-  --popover: oklch(0.214 0.009 43.1);
-  --popover-foreground: oklch(0.986 0.002 67.8);
-  --primary: oklch(0.448 0.119 151.328);
-  --primary-foreground: oklch(0.982 0.018 155.826);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.268 0.011 36.5);
-  --muted-foreground: oklch(0.714 0.014 41.2);
-  --accent: oklch(0.448 0.119 151.328);
-  --accent-foreground: oklch(0.982 0.018 155.826);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.547 0.021 43.1);
+  --background: #0A0A0A;
+  --foreground: #FAFAFA;
+  --card: #171717;
+  --card-foreground: #FAFAFA;
+  --popover: #171717;
+  --popover-foreground: #FAFAFA;
+  --primary: #EA580C;
+  --primary-foreground: #0A0A0A;
+  --secondary: #262626;
+  --secondary-foreground: #FAFAFA;
+  --muted: #262626;
+  --muted-foreground: #A3A3A3;
+  --accent: #EA580C;
+  --accent-foreground: #0A0A0A;
+  --destructive: #E11D48;
+  --border: #262626;
+  --input: #262626;
+  --ring: #EA580C;
+  --brand: #EA580C;
+  --brand-fill: #C2410C;
+  --brand-light: #FB923C;
   /* Chart colors */
-  --chart-1: oklch(0.827 0.119 306.383);
-  --chart-2: oklch(0.627 0.265 303.9);
-  --chart-3: oklch(0.558 0.288 302.321);
-  --chart-4: oklch(0.496 0.265 301.924);
-  --chart-5: oklch(0.438 0.218 303.724);
+  --chart-1: #EA580C;
+  --chart-2: #34D399;
+  --chart-3: #E11D48;
+  --chart-4: #FB923C;
+  --chart-5: #A3A3A3;
   /* Sidebar */
-  --sidebar: oklch(0.214 0.009 43.1);
-  --sidebar-foreground: oklch(0.986 0.002 67.8);
-  --sidebar-primary: oklch(0.723 0.219 149.579);
-  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+  --sidebar: #171717;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #EA580C;
+  --sidebar-primary-foreground: #0A0A0A;
   --sidebar-accent: oklch(0.268 0.011 36.5);
   --sidebar-accent-foreground: oklch(0.986 0.002 67.8);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -151,10 +159,10 @@
 /* ─── Custom Utilities ─── */
 @layer utilities {
   .glow-primary {
-    box-shadow: 0 0 20px var(--primary, oklch(58.6% 0.253 17.585)) / 20%;
+    box-shadow: 0 0 20px oklch(0.646 0.222 41.116 / 20%);
   }
   .glow-emerald {
-    box-shadow: 0 0 20px oklch(0.65 0.2 155 / 20%);
+    box-shadow: 0 0 20px oklch(0.696 0.17 162.48 / 20%);
   }
   .text-gradient-primary {
     background: linear-gradient(to right, var(--brand), var(--brand-light));
