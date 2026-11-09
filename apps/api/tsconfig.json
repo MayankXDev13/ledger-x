@@ -10,5 +10,10 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "scripts/openapi/**/*.ts",
+    "scripts/generate-openapi.ts",
+    "drizzle.config.ts"
+  ]
 }
