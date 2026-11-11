@@ -148,12 +148,15 @@ export const exportsApi = {
       "text/csv",
     ),
 
-  transactionsCsv: () =>
-    downloadBlob(
-      "/exports/transactions.csv",
-      "ledger-x-transactions.csv",
-      "text/csv",
-    ),
+  transactionsCsv: (customerId?: string) => {
+    const url = customerId
+      ? `/exports/transactions.csv?customerId=${encodeURIComponent(customerId)}`
+      : "/exports/transactions.csv";
+    const fallbackName = customerId
+      ? "customer-transactions.csv"
+      : "ledger-x-transactions.csv";
+    return downloadBlob(url, fallbackName, "text/csv");
+  },
 };
 
 export const customersApi = {

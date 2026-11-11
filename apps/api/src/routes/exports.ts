@@ -57,22 +57,27 @@ exportsApp.get("/customers.csv", async (ctx) => {
 });
 
 // GET /exports/transactions.csv - Non-deleted, non-sample transactions as CSV.
+// Supports optional ?customerId= to export transactions for a single customer.
 exportsApp.get("/transactions.csv", async (ctx) => {
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
+  const customerId = ctx.req.query("customerId");
 
   const [txRows, customerRows] = await withDb(ctx, async (db) => {
+    const conditions = [
+      eq(transactions.userId, user.id),
+      isNull(transactions.deletedAt),
+      eq(transactions.isSample, false),
+    ];
+    if (customerId) {
+      conditions.push(eq(transactions.customerId, customerId));
+    }
+
     const txRows = (
       await db
         .select()
         .from(transactions)
-        .where(
-          and(
-            eq(transactions.userId, user.id),
-            isNull(transactions.deletedAt),
-            eq(transactions.isSample, false),
-          ),
-        )
+        .where(and(...conditions))
     ).filter((row) => isExportable(row));
 
     const customerRows = await db
@@ -87,12 +92,19 @@ exportsApp.get("/transactions.csv", async (ctx) => {
     customerRows.map((customer) => [customer.id, customer.name]),
   );
 
+  const targetCustomer = customerId
+    ? customerRows.find((c) => c.id === customerId)
+    : undefined;
+
   await writeAudit(ctx, {
     actorUserId: user.id,
     action: "account.export",
-    entityType: "account",
-    entityId: user.id,
-    metadata: { kind: "transactions.csv" },
+    entityType: customerId ? "customer" : "account",
+    entityId: customerId ?? user.id,
+    metadata: {
+      kind: "transactions.csv",
+      ...(customerId ? { customerId } : {}),
+    },
   });
 
   const csv = toCsv(
@@ -120,7 +132,11 @@ exportsApp.get("/transactions.csv", async (ctx) => {
     ]),
   );
 
-  return csvResponse(`ledger-x-transactions-${fileDate()}.csv`, csv);
+  const filePrefix = targetCustomer
+    ? `ledger-x-${targetCustomer.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-transactions`
+    : "ledger-x-transactions";
+
+  return csvResponse(`${filePrefix}-${fileDate()}.csv`, csv);
 });
 
 export default exportsApp;
