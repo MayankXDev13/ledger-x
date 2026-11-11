@@ -70,6 +70,25 @@ The web client SHALL use one Devanagari-capable sans family for UI and headings,
 - **THEN** it truncates with an ellipsis without breaking the row
 - **AND** it does not fall back to a face without Devanagari coverage
 
+#### Scenario: Icons come from one library
+
+- **WHEN** the sidebar, dashboard or any other screen renders an icon
+- **THEN** the icon comes from Lucide with one stroke weight
+
+### Requirement: Aging strip is the web signature
+
+The web client SHALL present the `0-30 / 31-60 / 60+` receivables aging as its signature element on the dashboard, with proportional emphasis, reusing the mobile bucket semantics.
+
+#### Scenario: Aging visible above the fold
+
+- **WHEN** a user with outstanding balances opens the dashboard
+- **THEN** the three aging buckets are visible with values and the oldest-bucket highlight
+
+#### Scenario: Aging colours match the mobile map
+
+- **WHEN** an aging segment or legend swatch renders
+- **THEN** it uses the same bucket colours as the mobile client — neutral up to 30 days, rose for 31–60 and the deeper rose past 60 — and never emerald, which means money received
+
 ### Requirement: Chart series carry meaning and a fallback
 
 Every chart SHALL encode its series with theme-aware tokens, SHALL distinguish series by more than hue, SHALL carry a legend with text labels, SHALL preserve a value's direction in its tooltip, and SHALL expose an accessible name plus a text or table fallback. Credit given SHALL NOT be colored as money received.

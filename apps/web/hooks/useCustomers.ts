@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customersApi, type Customer } from "@/lib/api";
 import { toast } from "sonner";
+import { dashboardKeys } from "./useDashboard";
+import { collectionKeys } from "./useCollection";
 
 export const customerKeys = {
   all: ["customers"] as const,
@@ -31,8 +33,8 @@ export function useCreateCustomer() {
     mutationFn: customersApi.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customerKeys.lists() });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: collectionKeys.all });
       toast.success("Customer created successfully");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -62,8 +64,8 @@ export function useDeleteCustomer() {
       // counters all hold stale data after a delete.
       qc.removeQueries({ queryKey: customerKeys.detail(id) });
       qc.invalidateQueries({ queryKey: customerKeys.lists() });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: collectionKeys.all });
       toast.success("Customer deleted");
     },
     onError: (err: Error) => toast.error(err.message),

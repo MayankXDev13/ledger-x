@@ -7,20 +7,26 @@ import {
   sampleDataApi,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { customerKeys } from "./useCustomers";
+import { transactionKeys } from "./useTransactions";
+import { dashboardKeys } from "./useDashboard";
+import { collectionKeys } from "./useCollection";
+import { settingsKeys } from "./useSettings";
+import { statementKeys } from "./useStatement";
 
 function useInvalidateAccountData() {
   const qc = useQueryClient();
 
   return () => {
     for (const key of [
-      "customers",
-      "transactions",
-      "dashboard",
-      "collection",
-      "settings",
-      "statements",
+      customerKeys.all,
+      transactionKeys.all,
+      dashboardKeys.all,
+      collectionKeys.all,
+      settingsKeys.all,
+      statementKeys.all,
     ]) {
-      qc.invalidateQueries({ queryKey: [key] });
+      qc.invalidateQueries({ queryKey: key });
     }
   };
 }
