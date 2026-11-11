@@ -21,7 +21,7 @@
     }
   ],
   "vars": {
-    "TRUSTED_ORIGINS": "http://localhost:3000,https://ledgerx-613.pages.dev,ledgerx://,exp://",
+    "TRUSTED_ORIGINS": "http://localhost:3000,https://ledgerx-613.pages.dev,https://*.ledgerx-613.pages.dev,ledgerx://,exp://",
     "BETTER_AUTH_URL": "https://server-v2.mayankxdev13.workers.dev"
   },
   // Custom domain re-enabled once mayankxdev.shop is on this Cloudflare account
