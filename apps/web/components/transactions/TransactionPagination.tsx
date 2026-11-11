@@ -19,7 +19,7 @@ export function TransactionPagination({
 }: TransactionPaginationProps) {
   return (
     <div className="flex items-center justify-between px-5 py-3 border-t border-border/40 bg-muted/10">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Showing page{" "}
         <span className="font-semibold text-foreground">{page}</span> of{" "}
         <span className="font-semibold text-foreground">{totalPages}</span>
@@ -43,7 +43,7 @@ export function TransactionPagination({
         </Button>
 
         {/* Page indicator */}
-        <span className="text-xs font-semibold text-muted-foreground px-1 tabular">
+        <span className="text-xs font-semibold text-muted-foreground px-1 tabular-nums">
           {page} / {totalPages}
         </span>
 

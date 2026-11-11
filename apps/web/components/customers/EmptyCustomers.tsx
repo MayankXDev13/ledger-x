@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Plus, Sparkles, TrendingUp } from "lucide-react";
+import { Users, Plus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EmptyCustomersProps {
@@ -66,7 +66,7 @@ export function EmptyCustomers({ search, onAdd }: EmptyCustomersProps) {
             className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border/50 bg-muted/20"
           >
             <span className="text-xl">{f.icon}</span>
-            <span className="text-[10px] font-medium text-muted-foreground text-center leading-tight">
+            <span className="text-xs font-medium text-muted-foreground text-center leading-tight">
               {f.label}
             </span>
           </div>

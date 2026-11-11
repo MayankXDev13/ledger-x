@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Copy,
   HandCoins,
+  Info,
   Loader2,
   Phone,
   QrCode,
@@ -17,7 +17,6 @@ import QRCode from "react-qr-code";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -29,19 +28,22 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useCollection } from "@/hooks/useCollection";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { buildUpiQrPayload } from "@/lib/upi";
 import type { CollectionRow } from "@/lib/api";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/format";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Math.abs(n));
-}
 
 function ageLabel(ageDays: number | null) {
   if (ageDays === null) return "—";
@@ -50,16 +52,23 @@ function ageLabel(ageDays: number | null) {
   return `${ageDays} days`;
 }
 
+/**
+ * Aging tone for an unpaid age.
+ *
+ * The aging map is shared across clients: neutral up to 30 days, rose for
+ * 31–60, and the deeper rose past 60. It is never emerald — emerald means
+ * money received.
+ */
 function ageTone(ageDays: number | null) {
   if (ageDays === null) return "text-muted-foreground";
-  if (ageDays > 60) return "text-red-400";
-  if (ageDays > 30) return "text-amber-400";
-  return "text-emerald-400";
+  if (ageDays > 60) return "text-destructive";
+  if (ageDays > 30) return "text-destructive/80";
+  return "text-muted-foreground";
 }
 
 export default function CollectionPage() {
   const [sort, setSort] = useState<"amount" | "age">("amount");
-  const { data, isLoading } = useCollection(sort);
+  const { data, isLoading, isError, refetch } = useCollection(sort);
   const { data: settings } = useSettings();
   const { user } = useAuth();
 
@@ -100,21 +109,25 @@ export default function CollectionPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full pb-24 lg:pb-8 fade-up">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-xs text-foreground font-medium">Collection</span>
-      </div>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard" className="text-xs">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-xs font-medium">Collection</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-sm shadow-primary/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-brand flex items-center justify-center shadow-sm shadow-primary/20">
             <HandCoins className="w-4 h-4 text-primary-foreground" />
           </div>
           <div>
@@ -131,9 +144,11 @@ export default function CollectionPage() {
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
           <button
             type="button"
+            aria-pressed={sort === "amount"}
             onClick={() => setSort("amount")}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sort === "amount"
                 ? "bg-primary/15 text-primary"
                 : "text-muted-foreground hover:text-foreground",
@@ -143,9 +158,11 @@ export default function CollectionPage() {
           </button>
           <button
             type="button"
+            aria-pressed={sort === "age"}
             onClick={() => setSort("age")}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sort === "age"
                 ? "bg-primary/15 text-primary"
                 : "text-muted-foreground hover:text-foreground",
@@ -160,10 +177,10 @@ export default function CollectionPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="border-primary/20 bg-card">
           <CardContent className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Total receivables
             </p>
-            <p className="text-2xl font-bold text-foreground tabular mt-1">
+            <p className="text-2xl font-bold text-foreground tabular-nums mt-1">
               {isLoading ? "—" : formatCurrency(total)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -173,7 +190,7 @@ export default function CollectionPage() {
         </Card>
         <Card className="border-border/60 bg-card">
           <CardContent className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Collect via UPI
             </p>
             {upiId ? (
@@ -226,10 +243,18 @@ export default function CollectionPage() {
                 </div>
               ))}
             </div>
+          ) : isError ? (
+            <div className="px-5 py-5">
+              <QueryErrorState
+                title="Could not load the collection list"
+                message="The outstanding balances did not load. Nothing has been changed."
+                onRetry={() => refetch()}
+              />
+            </div>
           ) : rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
-                <HandCoins className="w-6 h-6 text-emerald-400" />
+              <div className="w-14 h-14 rounded-2xl bg-positive/10 border border-positive/20 flex items-center justify-center mb-4">
+                <HandCoins className="w-6 h-6 text-positive" />
               </div>
               <h3 className="text-sm font-semibold text-foreground mb-1">
                 Nothing to collect
@@ -266,7 +291,7 @@ export default function CollectionPage() {
                       >
                         {row.name}
                       </Link>
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Phone className="w-3 h-3" />
                         {row.phone}
                       </span>
@@ -274,13 +299,13 @@ export default function CollectionPage() {
                   </div>
 
                   <div className="flex items-center gap-3 sm:gap-5 sm:shrink-0">
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground tabular">
+                    <div className="text-right min-w-0">
+                      <p className="text-sm font-bold text-foreground tabular-nums truncate">
                         {formatCurrency(row.outstanding)}
                       </p>
                       <p
                         className={cn(
-                          "text-[11px] font-medium",
+                          "text-xs font-medium",
                           ageTone(row.ageDays),
                         )}
                       >
@@ -302,7 +327,7 @@ export default function CollectionPage() {
                         }
                       >
                         {copiedId === row.customerId ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-brand-text" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -333,8 +358,8 @@ export default function CollectionPage() {
       </Card>
 
       {!upiId && !isLoading && rows.length > 0 && (
-        <p className="flex items-center gap-1.5 text-xs text-amber-400">
-          <Loader2 className="w-3.5 h-3.5" />
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Info className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           UPI actions are disabled until you add a UPI ID in{" "}
           <Link href="/settings" className="underline underline-offset-2">
             settings
@@ -368,10 +393,10 @@ export default function CollectionPage() {
                 <p className="text-sm font-semibold text-foreground">
                   {formatCurrency(qrRow.outstanding)}
                 </p>
-                <p className="text-[11px] text-muted-foreground break-all">
+                <p className="text-xs text-muted-foreground break-all">
                   {upiId}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Payment completion is recorded manually in the customer ledger.
                 </p>
               </div>

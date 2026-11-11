@@ -53,11 +53,11 @@ export function MobileBottomNav() {
   return (
     <>
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border safe-area-bottom"
         role="navigation"
         aria-label="Mobile navigation"
       >
-        <div className="flex items-center justify-around px-2 py-1.5 safe-area-bottom">
+        <div className="flex items-center justify-around px-2 py-1.5">
           {items.map(({ href, icon: Icon, label, exact }) => {
             const active = isActive(href, exact);
             return (
@@ -65,7 +65,8 @@ export function MobileBottomNav() {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-150",
+                  "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -82,7 +83,7 @@ export function MobileBottomNav() {
                 </div>
                 <span
                   className={cn(
-                    "text-[10px] font-semibold",
+                    "text-xs font-semibold",
                     active ? "text-primary" : "text-muted-foreground"
                   )}
                 >
@@ -98,16 +99,17 @@ export function MobileBottomNav() {
             aria-expanded={accountOpen}
             aria-haspopup="dialog"
             className={cn(
-              "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-150",
+              "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               accountOpen
                 ? "text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             <div className="relative">
-              <Avatar className="w-5 h-5">
+              <Avatar className="w-6 h-6">
                 {user?.image && <AvatarImage src={user.image} alt={firstName} />}
-                <AvatarFallback className="text-[8px] font-semibold">
+                <AvatarFallback className="text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -117,7 +119,7 @@ export function MobileBottomNav() {
             </div>
             <span
               className={cn(
-                "text-[10px] font-semibold",
+                "text-xs font-semibold",
                 accountOpen ? "text-primary" : "text-muted-foreground"
               )}
             >

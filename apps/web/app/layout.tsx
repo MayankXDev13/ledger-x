@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, JetBrains_Mono, Source_Sans_3 } from "next/font/google";
+import { JetBrains_Mono, Mukta } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,21 +7,16 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
-const sourceSans3 = Source_Sans_3({subsets:['latin'],variable:'--font-sans'});
+// Mukta covers Devanagari customer names and matches the mobile UI family.
+const mukta = Mukta({
+  subsets: ["latin", "devanagari"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700"],
+});
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -39,12 +34,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-              "h-full",
-              "antialiased",
-              geistSans.variable,
-              geistMono.variable,
-              jetbrainsMono.variable
-            , "font-sans", sourceSans3.variable)}
+        "h-full",
+        "antialiased",
+        jetbrainsMono.variable,
+        mukta.variable,
+        "font-sans",
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

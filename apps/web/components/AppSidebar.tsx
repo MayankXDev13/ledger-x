@@ -5,15 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  FaChartBar,
-  FaUsers,
-  FaSignOutAlt,
-  FaChevronRight,
-  FaChevronLeft,
-  FaHandHoldingUsd,
-  FaCog,
-} from "react-icons/fa";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -33,7 +24,16 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
-import { TrendingUp } from "lucide-react";
+import {
+  ChartColumnBig,
+  ChevronLeft,
+  ChevronRight,
+  Cog,
+  HandCoins,
+  LogOut,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import {
   avatarInitials,
   deriveFirstName,
@@ -42,25 +42,25 @@ import {
 const navItems = [
   {
     href: "/dashboard",
-    icon: FaChartBar,
+    icon: ChartColumnBig,
     label: "Dashboard",
     exact: true,
   },
   {
     href: "/customers",
-    icon: FaUsers,
+    icon: Users,
     label: "Customers",
     exact: false,
   },
   {
     href: "/collection",
-    icon: FaHandHoldingUsd,
+    icon: HandCoins,
     label: "Collection",
     exact: false,
   },
   {
     href: "/settings",
-    icon: FaCog,
+    icon: Cog,
     label: "Settings",
     exact: false,
   },
@@ -134,13 +134,14 @@ export function AppSidebar() {
                 "bg-sidebar text-sidebar-foreground/30",
                 "hover:bg-sidebar-accent hover:text-sidebar-foreground",
                 "transition-all duration-200 cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
               )}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? (
-                <FaChevronRight className="w-2.5 h-2.5" />
+                <ChevronRight className="w-2.5 h-2.5" />
               ) : (
-                <FaChevronLeft className="w-2.5 h-2.5" />
+                <ChevronLeft className="w-2.5 h-2.5" />
               )}
             </button>
           </TooltipTrigger>
@@ -152,11 +153,12 @@ export function AppSidebar() {
 
       {/* Nav */}
       <nav
+        aria-label="Main navigation"
         className={cn("flex-1 py-3 space-y-0.5", collapsed ? "px-0" : "px-2")}
       >
         {/* Section label */}
         {!collapsed && (
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30 px-2 pb-1 pt-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-2 pb-1 pt-1">
             Main
           </p>
         )}
@@ -171,6 +173,7 @@ export function AppSidebar() {
                   href={href}
                   className={cn(
                     "flex items-center gap-3 px-2.5 py-2 rounded-lg transition-all duration-150 group relative",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     collapsed && "justify-center px-0",
                     active
                       ? "bg-primary/10 text-primary"
@@ -198,7 +201,7 @@ export function AppSidebar() {
                       {isCustomers && customers && customers.length > 0 && (
                         <Badge
                           className={cn(
-                            "text-[10px] px-1.5 py-0 h-4 font-semibold",
+                            "text-xs px-1.5 py-0 h-4 font-semibold",
                             active
                               ? "bg-primary/20 text-primary border-primary/30"
                               : "bg-muted text-muted-foreground border-border",
@@ -209,7 +212,7 @@ export function AppSidebar() {
                         </Badge>
                       )}
                       {active && (
-                        <FaChevronRight className="w-3 h-3 opacity-40" />
+                        <ChevronRight className="w-3 h-3 opacity-40" />
                       )}
                     </>
                   )}
@@ -242,6 +245,7 @@ export function AppSidebar() {
               aria-expanded={identityOpen}
               className={cn(
                 "flex items-center gap-2.5 w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-all group text-left",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 collapsed && "justify-center",
               )}
             >
@@ -282,9 +286,9 @@ export function AppSidebar() {
             <div className="p-1.5">
               <button
                 onClick={handleSignOut}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:outline-none cursor-pointer"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
               >
-                <FaSignOutAlt className="w-4 h-4" />
+                <LogOut className="w-4 h-4" />
                 Sign out
               </button>
             </div>

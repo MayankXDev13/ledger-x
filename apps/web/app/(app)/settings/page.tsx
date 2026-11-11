@@ -5,14 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowLeft,
-  Database,
   Download,
   FileJson,
   FileSpreadsheet,
   Loader2,
   Save,
-  Sparkles,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -22,21 +19,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useCustomers } from "@/hooks/useCustomers";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import {
   useDeleteAccount,
   useDownloadArchive,
   useExportCustomers,
   useExportTransactions,
-  useRemoveSampleData,
-  useSeedSampleData,
 } from "@/hooks/useDataPortability";
 import { isValidUpiId } from "@/lib/upi";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 function Section({
   icon: Icon,
@@ -76,14 +77,11 @@ export default function SettingsPage() {
   const { signOut } = useAuth();
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
-  const { data: customers } = useCustomers();
 
   const exportCustomers = useExportCustomers();
   const exportTransactions = useExportTransactions();
   const downloadArchive = useDownloadArchive();
-  const seedSample = useSeedSampleData();
-  const removeSample = useRemoveSampleData();
-  const deleteAccount = useDeleteAccount();
+  // const deleteAccount = useDeleteAccount();
 
   const [upiId, setUpiId] = useState("");
   const [payeeName, setPayeeName] = useState("");
@@ -95,7 +93,6 @@ export default function SettingsPage() {
     setPayeeName(settings.payeeName ?? "");
   }, [settings]);
 
-  const hasSamples = (customers ?? []).some((customer) => customer.isSample);
   const upiError =
     upiId.trim() && !isValidUpiId(upiId.trim())
       ? "Use a UPI ID like name@bank"
@@ -114,31 +111,37 @@ export default function SettingsPage() {
     );
   };
 
-  const handleDelete = async () => {
-    if (confirmText !== "DELETE") return;
-    try {
-      await deleteAccount.mutateAsync();
-      setConfirmText("");
-      await signOut();
-      router.push("/login");
-    } catch {
-      // The mutation surfaces the error through a toast.
-    }
-  };
+  // const handleDelete = async () => {
+  //   if (confirmText !== "DELETE") return;
+  //   try {
+  //     await deleteAccount.mutateAsync();
+  //     setConfirmText("");
+  //     await signOut();
+  //     router.push("/login");
+  //   } catch {
+  //     // The mutation surfaces the error through a toast.
+  //   }
+  // };
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full pb-24 lg:pb-8 fade-up">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-xs text-foreground font-medium">Settings</span>
-      </div>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard" className="text-xs">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-xs font-medium">
+              Settings
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">
@@ -161,7 +164,13 @@ export default function SettingsPage() {
             <Skeleton className="h-10 w-2/3" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveUpi();
+            }}
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="upi-id" className="text-xs font-semibold">
@@ -169,13 +178,23 @@ export default function SettingsPage() {
                 </Label>
                 <Input
                   id="upi-id"
+                  name="upiId"
+                  autoComplete="off"
                   placeholder="yourname@okhdfcbank"
                   value={upiId}
                   onChange={(event) => setUpiId(event.target.value)}
+                  aria-invalid={upiError ? true : undefined}
+                  aria-describedby={upiError ? "upi-error" : undefined}
                   className="h-10 bg-muted/20 border-border/50"
                 />
                 {upiError && (
-                  <p className="text-[11px] text-destructive">{upiError}</p>
+                  <p
+                    id="upi-error"
+                    role="alert"
+                    className="text-xs text-destructive"
+                  >
+                    {upiError}
+                  </p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -184,6 +203,8 @@ export default function SettingsPage() {
                 </Label>
                 <Input
                   id="payee-name"
+                  name="payeeName"
+                  autoComplete="organization"
                   placeholder="Ramesh Kirana"
                   value={payeeName}
                   onChange={(event) => setPayeeName(event.target.value)}
@@ -194,14 +215,17 @@ export default function SettingsPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                onClick={saveUpi}
+                type="submit"
                 disabled={updateSettings.isPending || !!upiError}
                 className="gap-2 bg-gradient-brand text-primary-foreground font-semibold h-9"
               >
                 {updateSettings.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2
+                    className="w-4 h-4 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4" aria-hidden="true" />
                 )}
                 Save UPI settings
               </Button>
@@ -211,7 +235,7 @@ export default function SettingsPage() {
                 </Button>
               </Link>
             </div>
-          </div>
+          </form>
         )}
       </Section>
 
@@ -228,7 +252,7 @@ export default function SettingsPage() {
             onClick={() => exportCustomers.mutate()}
             disabled={exportCustomers.isPending}
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <FileSpreadsheet className="w-4 h-4 text-brand-text" />
             Customers CSV
           </Button>
           <Button
@@ -237,7 +261,7 @@ export default function SettingsPage() {
             onClick={() => exportTransactions.mutate()}
             disabled={exportTransactions.isPending}
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <FileSpreadsheet className="w-4 h-4 text-brand-text" />
             Transactions CSV
           </Button>
           <Button
@@ -252,55 +276,16 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      {/* Sample data */}
-      <Section
-        icon={Database}
-        title="Sample data"
-        description="Sample customers and entries are clearly labelled and never appear in exports."
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant="outline"
-            className="text-[10px] font-semibold uppercase tracking-wider"
-          >
-            {hasSamples ? "Sample data loaded" : "No sample data"}
-          </Badge>
-          {!hasSamples && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 h-9 text-xs"
-              onClick={() => seedSample.mutate()}
-              disabled={seedSample.isPending}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Load sample data
-            </Button>
-          )}
-          {hasSamples && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 h-9 text-xs"
-              onClick={() => removeSample.mutate()}
-              disabled={removeSample.isPending}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Remove sample data
-            </Button>
-          )}
-        </div>
-      </Section>
-
       {/* Danger zone */}
-      <Section
+      {/* <Section
         icon={AlertTriangle}
         title="Delete account"
         description="This permanently removes your identity, customers, transactions, and settings. Audit markers are retained pseudonymously."
       >
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
           <p className="text-xs text-muted-foreground">
-            Type <span className="font-mono font-bold text-destructive">DELETE</span>{" "}
+            Type{" "}
+            <span className="font-mono font-bold text-destructive">DELETE</span>{" "}
             to confirm. This cannot be undone.
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -326,7 +311,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         </div>
-      </Section>
+      </Section> */}
     </div>
   );
 }

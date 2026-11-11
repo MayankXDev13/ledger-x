@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { FaPlus, FaUsers } from "react-icons/fa";
+import { Plus, Users } from "lucide-react";
 
 interface CustomersHeaderProps {
   total: number;
@@ -10,8 +10,8 @@ export function CustomersHeader({ total, onAdd }: CustomersHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-sm shadow-primary/20">
-          <FaUsers className="w-4 h-4 text-primary-foreground" />
+        <div className="w-9 h-9 rounded-lg bg-gradient-brand flex items-center justify-center shadow-sm shadow-primary/20">
+          <Users className="w-4 h-4 text-primary-foreground" aria-hidden="true" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">
@@ -26,9 +26,9 @@ export function CustomersHeader({ total, onAdd }: CustomersHeaderProps) {
       <Button
         onClick={onAdd}
         id="add-customer-btn"
-        className="gap-2 bg-gradient-brand text-primary-foreground font-semibold shadow-sm shadow-primary/20 hover:opacity-90 h-9"
+        className="hidden lg:inline-flex gap-2 bg-gradient-brand text-primary-foreground font-semibold shadow-sm shadow-primary/20 hover:opacity-90 h-9"
       >
-        <FaPlus className="w-4 h-4" />
+        <Plus className="w-4 h-4" aria-hidden="true" />
         Add Customer
       </Button>
     </div>

@@ -27,6 +27,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -39,47 +40,70 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Brand ramp — orange is the only chromatic brand hue. */
+  --color-brand: var(--brand);
+  --color-brand-light: var(--brand-light);
+  --color-brand-fill: var(--brand-fill);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  /* Emerald is reserved for money received. */
+  --color-positive: var(--positive);
+  /* Radius scale: 12px controls, 16px cards and surfaces, pills for chips. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --radius-3xl: 16px;
+  --radius-4xl: 16px;
 }
 
 /* ─── Light Mode ─── */
 :root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.3);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.147 0.004 49.3);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.147 0.004 49.3);
-  --primary: oklch(0.527 0.154 150.069);
-  --primary-foreground: oklch(0.982 0.018 155.826);
+  /* Brand ramp. #C2410C carries white labels at 5.2:1; #EA580C is identity only. */
+  --brand: #ea580c;
+  --brand-light: #fb923c;
+  --brand-fill: #c2410c;
+  --brand-deep: #9a3412;
+  --brand-text: #c2410c;
+  --brand-soft: #ffedd5;
+  /* Money received only. Emerald-700 keeps 5.5:1 on a white card. */
+  --positive: #047857;
+  --primary: #c2410c;
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.96 0.002 17.2);
-  --muted-foreground: oklch(0.547 0.021 43.1);
-  --accent: oklch(0.527 0.154 150.069);
-  --accent-foreground: oklch(0.982 0.018 155.826);
+  --muted-foreground: oklch(0.466 0.021 43.1);
+  --accent: #c2410c;
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.922 0.005 34.3);
   --input: oklch(0.922 0.005 34.3);
-  --ring: oklch(0.714 0.014 41.2);
-  --chart-1: oklch(0.827 0.119 306.383);
-  --chart-2: oklch(0.627 0.265 303.9);
-  --chart-3: oklch(0.558 0.288 302.321);
-  --chart-4: oklch(0.496 0.265 301.924);
-  --chart-5: oklch(0.438 0.218 303.724);
-  --radius: 0;
+  --ring: oklch(0.547 0.021 43.1);
+  /* Chart ramp: distinct, theme-aware, no blue or purple. */
+  --chart-1: #047857;
+  --chart-2: #57534e;
+  --chart-3: #be123c;
+  --chart-4: #c2410c;
+  --chart-5: #b45309;
+  --radius: 12px;
   --sidebar: oklch(0.986 0.002 67.8);
   --sidebar-foreground: oklch(0.147 0.004 49.3);
-  --sidebar-primary: oklch(0.627 0.194 149.214);
-  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+  --sidebar-primary: #c2410c;
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.96 0.002 17.2);
   --sidebar-accent-foreground: oklch(0.214 0.009 43.1);
   --sidebar-border: oklch(0.922 0.005 34.3);
-  --sidebar-ring: oklch(0.714 0.014 41.2);
+  --sidebar-ring: oklch(0.547 0.021 43.1);
 }
 
 
@@ -90,29 +114,37 @@
   --card-foreground: oklch(0.986 0.002 67.8);
   --popover: oklch(0.214 0.009 43.1);
   --popover-foreground: oklch(0.986 0.002 67.8);
-  --primary: oklch(0.448 0.119 151.328);
-  --primary-foreground: oklch(0.982 0.018 155.826);
+  --brand: #ea580c;
+  --brand-light: #fb923c;
+  --brand-fill: #c2410c;
+  --brand-deep: #9a3412;
+  --brand-text: #fb923c;
+  --brand-soft: #ffedd5;
+  --positive: #34d399;
+  --primary: #c2410c;
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.268 0.011 36.5);
   --muted-foreground: oklch(0.714 0.014 41.2);
-  --accent: oklch(0.448 0.119 151.328);
-  --accent-foreground: oklch(0.982 0.018 155.826);
+  --accent: #c2410c;
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.147 0.004 49.3);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.547 0.021 43.1);
   /* Chart colors */
-  --chart-1: oklch(0.827 0.119 306.383);
-  --chart-2: oklch(0.627 0.265 303.9);
-  --chart-3: oklch(0.558 0.288 302.321);
-  --chart-4: oklch(0.496 0.265 301.924);
-  --chart-5: oklch(0.438 0.218 303.724);
+  --chart-1: #34d399;
+  --chart-2: #a8a29e;
+  --chart-3: #fb7185;
+  --chart-4: #fb923c;
+  --chart-5: #fbbf24;
   /* Sidebar */
   --sidebar: oklch(0.214 0.009 43.1);
   --sidebar-foreground: oklch(0.986 0.002 67.8);
-  --sidebar-primary: oklch(0.723 0.219 149.579);
-  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+  --sidebar-primary: #c2410c;
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.268 0.011 36.5);
   --sidebar-accent-foreground: oklch(0.986 0.002 67.8);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -150,6 +182,21 @@
 
 /* ─── Custom Utilities ─── */
 @layer utilities {
+  /* Keeps fixed bottom chrome clear of the iOS home indicator. */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Shared hover treatment for interactive cards. */
+  .card-hover {
+    transition:
+      border-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .card-hover:hover {
+    box-shadow: 0 10px 25px -14px var(--primary);
+  }
+
   .glow-primary {
     box-shadow: 0 0 20px var(--primary, oklch(58.6% 0.253 17.585)) / 20%;
   }
@@ -157,13 +204,37 @@
     box-shadow: 0 0 20px oklch(0.65 0.2 155 / 20%);
   }
   .text-gradient-primary {
-    background: linear-gradient(to right, var(--brand), var(--brand-light));
+    background: linear-gradient(to right, var(--brand-fill), var(--brand-deep));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
   .bg-gradient-brand {
-    background: linear-gradient(to right, var(--brand), var(--brand-light));
+    background: linear-gradient(to right, var(--brand-fill), var(--brand-deep));
+  }
+}
+
+/* Entrance animation for page shells. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  .fade-up {
+    animation: fade-up 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    animation: none;
   }
 }
 

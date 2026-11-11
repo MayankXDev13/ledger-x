@@ -219,6 +219,8 @@ export interface Customer {
   name: string;
   phone: string;
   isSample?: boolean;
+  /** Creation timestamp, used to show when the customer was added. */
+  createdAt?: string | null;
   deletedAt?: string | null;
 }
 

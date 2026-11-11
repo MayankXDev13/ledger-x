@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Plus,
-  Search,
-} from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +32,14 @@ import {
 } from "@/hooks/useTransactions";
 
 import type { Transaction } from "@/lib/api";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export function CustomerDetailView() {
   const searchParams = useSearchParams();
@@ -49,18 +53,21 @@ export function CustomerDetailView() {
   const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState(false);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">(
+    "all",
+  );
 
   const { data: customer, isLoading: customerLoading } =
     useCustomer(customerId);
 
-  const {
-    data: txns,
-    isLoading: txnsLoading,
-  } = useCustomerTransactions(customerId, { page, pageSize });
+  const { data: txns, isLoading: txnsLoading } = useCustomerTransactions(
+    customerId,
+    { page, pageSize },
+  );
 
   const deleteTransaction = useDeleteTransaction();
   const deleteCustomer = useDeleteCustomer();
+  const router = useRouter();
 
   const pageTransactions = txns?.data ?? [];
 
@@ -89,23 +96,27 @@ export function CustomerDetailView() {
       {/* Page content */}
       <div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 pb-24 lg:pb-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/customers"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            Customers
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          {customerLoading ? (
-            <Skeleton className="h-4 w-20" />
-          ) : (
-            <span className="text-xs text-foreground font-medium truncate max-w-30">
-              {customer?.name}
-            </span>
-          )}
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/customers" className="text-xs">
+                  Customers
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              {customerLoading ? (
+                <Skeleton className="h-4 w-20" />
+              ) : (
+                <BreadcrumbPage className="text-xs font-medium truncate max-w-30">
+                  {customer?.name}
+                </BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         {/* Customer Profile Header */}
         {customerLoading ? (
@@ -144,7 +155,7 @@ export function CustomerDetailView() {
                 Transactions
               </h2>
               {txns && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                   {txns.total}
                 </span>
               )}
@@ -156,6 +167,7 @@ export function CustomerDetailView() {
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                 <Input
                   id="transaction-search"
+                  aria-label="Search this customer's transactions"
                   placeholder="Search transactions…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -166,9 +178,14 @@ export function CustomerDetailView() {
               {/* Type filter */}
               <Select
                 value={typeFilter}
-                onValueChange={(v) => setTypeFilter(v as "all" | "credit" | "debit")}
+                onValueChange={(v) =>
+                  setTypeFilter(v as "all" | "credit" | "debit")
+                }
               >
-                <SelectTrigger className="h-8 w-24 sm:w-28 text-xs border-border/50 bg-muted/30">
+                <SelectTrigger
+                  aria-label="Filter transactions by type"
+                  className="h-8 w-24 sm:w-28 text-xs border-border/50 bg-muted/30"
+                >
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,7 +238,7 @@ export function CustomerDetailView() {
       </div>
 
       {/* Mobile sticky Add Transaction */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40 safe-area-bottom">
         <Button
           className="w-full h-12 gap-2 bg-gradient-brand text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20"
           onClick={() => {
@@ -260,7 +277,12 @@ export function CustomerDetailView() {
         customerName={customer?.name ?? ""}
         onClose={() => setDeletingCustomer(false)}
         onConfirm={() => {
-          deleteCustomer.mutate(customerId);
+          deleteCustomer.mutate(customerId, {
+            onSuccess: () => {
+              // Leave the page for the customer that no longer exists.
+              router.push("/customers");
+            },
+          });
           setDeletingCustomer(false);
         }}
       />

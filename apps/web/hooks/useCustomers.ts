@@ -57,8 +57,12 @@ export function useDeleteCustomer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: customersApi.delete,
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      // The list, the deleted customer's own detail view, and the dashboard
+      // counters all hold stale data after a delete.
+      qc.removeQueries({ queryKey: customerKeys.detail(id) });
       qc.invalidateQueries({ queryKey: customerKeys.lists() });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["collection"] });
       toast.success("Customer deleted");
     },

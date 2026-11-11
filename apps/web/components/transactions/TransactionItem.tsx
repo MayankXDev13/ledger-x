@@ -3,26 +3,20 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FaArrowUp,
-  FaArrowDown,
-  FaStickyNote,
-  FaPencilAlt,
-  FaTrashAlt,
-  FaClock,
-  FaWallet,
-} from "react-icons/fa";
+  ArrowDown,
+  ArrowUp,
+  Clock,
+  Pencil,
+  StickyNote,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/api";
-import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Math.abs(n));
-}
+import { paymentMethodLabel } from "@/lib/payments";
+import { formatCurrency } from "@/lib/format";
+import { moneyPresentation, moneySurfaceClass, moneyTextClass } from "@/lib/money";
 
 interface TransactionItemProps {
   transaction: Transaction & { runningBalance?: number };
@@ -35,34 +29,30 @@ export function TransactionItem({
   onEdit,
   onDelete,
 }: TransactionItemProps) {
-  const isCredit = transaction.type === "credit";
-  const isPayment = isPaymentEntry(transaction);
+  const money = moneyPresentation(transaction);
+  const isPayment = money.tone === "paid";
   const methodLabel = paymentMethodLabel(transaction.paymentMethod);
 
   return (
     <div
       className={cn(
         "flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors group relative",
-        isPayment && "bg-amber-500/[0.03]",
+        isPayment && "bg-positive/[0.06]",
       )}
     >
       {/* Left: type icon */}
       <div
         className={cn(
-          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-          isPayment
-            ? "bg-amber-500/15 text-amber-400"
-            : isCredit
-              ? "bg-emerald-500/12 text-emerald-400"
-              : "bg-red-500/12 text-red-400"
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border",
+          moneySurfaceClass(money.tone),
         )}
       >
         {isPayment ? (
-          <FaWallet className="w-4 h-4" />
-        ) : isCredit ? (
-          <FaArrowUp className="w-4 h-4" />
+          <Wallet className="w-4 h-4" />
+        ) : money.tone === "credit" ? (
+          <ArrowUp className="w-4 h-4" />
         ) : (
-          <FaArrowDown className="w-4 h-4" />
+          <ArrowDown className="w-4 h-4" />
         )}
       </div>
 
@@ -73,17 +63,17 @@ export function TransactionItem({
           <Badge
             variant="outline"
             className={cn(
-              "text-[10px] px-1.5 py-0 h-4 font-semibold uppercase tracking-wider",
+              "px-1.5 py-0 h-4 font-semibold uppercase tracking-wider text-xs",
               isPayment
-                ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
-                : isCredit
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  : "bg-red-500/10 text-red-400 border-red-500/20"
+                ? "bg-positive/10 text-positive border-positive/25"
+                : money.tone === "overdue"
+                  ? "bg-destructive/10 text-destructive border-destructive/25"
+                  : "bg-muted text-foreground border-border",
             )}
           >
             {isPayment
               ? `Payment · ${methodLabel}`
-              : isCredit
+              : money.tone === "credit"
                 ? "↑ Credit"
                 : "↓ Debit"}
           </Badge>
@@ -91,7 +81,7 @@ export function TransactionItem({
           {/* Note */}
           {transaction.note && (
             <span className="text-xs text-muted-foreground flex items-center gap-1 truncate max-w-[200px]">
-              <FaStickyNote className="w-3 h-3 shrink-0" />
+              <StickyNote className="w-3 h-3 shrink-0" />
               {transaction.note}
             </span>
           )}
@@ -99,20 +89,20 @@ export function TransactionItem({
 
         {/* Timestamp + running balance */}
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <FaClock className="w-3 h-3" />
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
             {format(new Date(transaction.createdAt), "MMM d, yyyy • h:mm a")}
           </span>
           {transaction.runningBalance !== undefined && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <FaWallet className="w-3 h-3" />
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Wallet className="w-3 h-3" />
               Balance after:{" "}
               <span
                 className={cn(
-                  "font-semibold",
+                  "font-semibold tabular-nums",
                   transaction.runningBalance >= 0
-                    ? "text-emerald-500"
-                    : "text-red-500"
+                    ? "text-foreground"
+                    : "text-destructive",
                 )}
               >
                 {formatCurrency(transaction.runningBalance)}
@@ -126,33 +116,33 @@ export function TransactionItem({
       <div className="flex items-center gap-2 shrink-0">
         <span
           className={cn(
-            "text-base font-bold tabular",
-            isCredit ? "text-emerald-400" : "text-red-400"
+            "text-base font-bold tabular-nums",
+            moneyTextClass(money.tone),
           )}
         >
-          {isCredit ? "+" : "−"}
+          {money.sign}
           {formatCurrency(transaction.amount)}
         </span>
 
-        {/* Action buttons — reveal on hover */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-150 translate-x-1 group-hover:translate-x-0">
+        {/* Action buttons — always visible so touch and keyboard can reach them */}
+        <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
-            className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="size-11 sm:size-9 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => onEdit(transaction)}
             aria-label="Edit transaction"
           >
-            <FaPencilAlt className="w-3.5 h-3.5" />
+            <Pencil className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="w-7 h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            className="size-11 sm:size-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             onClick={() => onDelete(transaction.id)}
             aria-label="Delete transaction"
           >
-            <FaTrashAlt className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>

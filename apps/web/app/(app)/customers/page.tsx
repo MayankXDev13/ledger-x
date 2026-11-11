@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { CustomersHeader } from "@/components/customers/CustomersHeader";
 import { CustomerSearch } from "@/components/customers/CustomerSearch";
@@ -13,7 +14,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CustomersPage() {
-  const { data: customers, isLoading } = useCustomers();
+  const { data: customers, isLoading, isError, refetch } = useCustomers();
   const deleteCustomer = useDeleteCustomer();
 
   const [search, setSearch] = useState("");
@@ -57,8 +58,14 @@ export default function CustomersPage() {
         </p>
       )}
 
-      {/* Grid or empty state */}
-      {filtered.length > 0 || isLoading ? (
+      {/* Grid, error state, or empty state */}
+      {isError ? (
+        <QueryErrorState
+          title="Could not load your customers"
+          message="The customer list did not load. Nothing has been changed."
+          onRetry={() => refetch()}
+        />
+      ) : filtered.length > 0 || isLoading ? (
         <CustomerGrid
           customers={filtered}
           isLoading={isLoading}
@@ -75,8 +82,8 @@ export default function CustomersPage() {
         />
       )}
 
-      {/* Mobile FAB */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40">
+      {/* Mobile FAB — the only primary action below the lg breakpoint. */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40 safe-area-bottom">
         <Button
           className="w-full h-12 gap-2 bg-gradient-brand text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20"
           onClick={() => {
@@ -85,7 +92,7 @@ export default function CustomersPage() {
           }}
           id="mobile-add-customer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           Add Customer
         </Button>
       </div>

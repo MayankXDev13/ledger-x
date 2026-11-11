@@ -23,7 +23,6 @@ import {
   ChevronRight,
   LayoutDashboard,
   HandCoins,
-  Wallet,
   Clock,
   CheckCircle2,
 } from "lucide-react";
@@ -37,24 +36,34 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  ResponsiveContainer,
   BarChart,
   Bar,
   Cell,
-  Legend,
 } from "recharts";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { useAuth } from "@/hooks/useAuth";
 import { deriveFirstName } from "@/lib/name";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { paymentMethodLabel } from "@/lib/payments";
+import { formatCurrency, formatCompactCurrency } from "@/lib/format";
+import { moneyPresentation, moneyTextClass } from "@/lib/money";
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+/** Chart series colours come from the shared chart tokens, never literals. */
+const flowChartConfig = {
+  amount: { label: "Net flow", color: "var(--chart-4)" },
+} satisfies ChartConfig;
+
+const typeChartConfig = {
+  credit: { label: "Credit given", color: "var(--chart-2)" },
+  paid: { label: "Payment received", color: "var(--chart-1)" },
+} satisfies ChartConfig;
+
+const trendChartConfig = {
+  credit: { label: "Credit given", color: "var(--chart-2)" },
+  debit: { label: "Payment received", color: "var(--chart-1)" },
+} satisfies ChartConfig;
+
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -74,7 +83,7 @@ function MetricCard({
   icon: Icon,
   trend,
   trendLabel,
-  accentColor,
+  accent,
   loading,
 }: {
   title: string;
@@ -82,55 +91,26 @@ function MetricCard({
   icon: React.ElementType;
   trend?: "up" | "down" | "neutral";
   trendLabel?: string;
-  accentColor: string; // e.g. "cyan" | "emerald" | "violet"
+  /** Token-driven accent. No violet, no blue — orange is the only brand hue. */
+  accent: { bg: string; icon: string; ring: string };
   loading?: boolean;
 }) {
-  const colorMap: Record<string, { bg: string; icon: string; ring: string }> = {
-    cyan: {
-      bg: "from-primary/8 to-transparent",
-      icon: "bg-primary/15 text-primary",
-      ring: "border-primary/20",
-    },
-    emerald: {
-      bg: "from-emerald-500/8 to-transparent",
-      icon: "bg-emerald-500/15 text-emerald-400",
-      ring: "border-emerald-500/20",
-    },
-    violet: {
-      bg: "from-violet-500/8 to-transparent",
-      icon: "bg-violet-500/15 text-violet-400",
-      ring: "border-violet-500/20",
-    },
-    amber: {
-      bg: "from-amber-500/8 to-transparent",
-      icon: "bg-amber-500/15 text-amber-400",
-      ring: "border-amber-500/20",
-    },
-  };
-  const colors = colorMap[accentColor] ?? colorMap.cyan;
-
   return (
     <div
       className={cn(
         "relative rounded-xl border bg-card overflow-hidden group card-hover",
-        colors.ring
+        accent.ring
       )}
     >
-      <div
-        className={cn(
-          "absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-          colors.bg
-        )}
-      />
       <div className="relative p-5">
         <div className="flex items-start justify-between mb-3">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             {title}
           </p>
           <div
             className={cn(
               "w-8 h-8 rounded-lg flex items-center justify-center",
-              colors.icon
+              accent.icon
             )}
           >
             <Icon className="w-4 h-4" />
@@ -144,15 +124,15 @@ function MetricCard({
           </div>
         ) : (
           <div>
-            <p className="text-2xl font-bold text-foreground tabular">{value}</p>
+            <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>
             {trendLabel && (
               <div
                 className={cn(
                   "flex items-center gap-1 mt-1 text-xs font-medium",
                   trend === "up"
-                    ? "text-emerald-400"
+                    ? "text-positive"
                     : trend === "down"
-                      ? "text-red-400"
+                      ? "text-destructive"
                       : "text-muted-foreground"
                 )}
               >
@@ -171,35 +151,65 @@ function MetricCard({
   );
 }
 
-/* ── Custom Tooltip ── */
-function CustomTooltip({ active, payload, label }: any) {
+/* ── Tooltips ── */
+
+/** Single-series tooltip that keeps the sign of the value. */
+function FlowTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value?: number; payload?: { toneLabel?: string; sign?: string } }>;
+  label?: string | number;
+}) {
   if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const value = Number(entry.value ?? 0);
+  const meta = entry.payload;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl text-xs">
       <p className="text-muted-foreground mb-1">{label}</p>
-      <p className="font-bold text-foreground">
-        {formatCurrency(Math.abs(payload[0].value))}
+      <p className="font-bold text-foreground tabular-nums">
+        {meta?.sign ?? (value < 0 ? "−" : "+")}
+        {formatCurrency(value)}
       </p>
+      {meta?.toneLabel ? (
+        <p className="text-muted-foreground mt-0.5">{meta.toneLabel}</p>
+      ) : null}
     </div>
   );
 }
 
-/* ── Trend Tooltip (two series) ── */
-function TrendTooltip({ active, payload, label }: any) {
+/** Two-series tooltip that keeps the sign of every value. */
+function TrendTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; color?: string; dataKey?: string }>;
+  label?: string | number;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl text-xs space-y-1">
       <p className="text-muted-foreground">
         {typeof label === "string" ? monthLabel(label) : label}
       </p>
-      {payload.map((entry: any) => (
+      {payload.map((entry) => (
         <p
-          key={entry.dataKey}
+          key={entry.dataKey ?? entry.name}
           className="font-semibold flex items-center justify-between gap-4"
-          style={{ color: entry.color }}
         >
-          <span>{entry.name}</span>
-          <span className="tabular">{formatCurrency(entry.value ?? 0)}</span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: entry.color }}
+            />
+            {entry.name}
+          </span>
+          <span className="tabular-nums">{formatCurrency(entry.value ?? 0)}</span>
         </p>
       ))}
     </div>
@@ -207,9 +217,24 @@ function TrendTooltip({ active, payload, label }: any) {
 }
 
 export default function DashboardPage() {
-  const { data: metrics, isLoading: metricsLoading, refetch } = useDashboardMetrics();
-  const { data: recentTxns, isLoading: txnsLoading } = useRecentTransactions();
-  const { data: analytics, isLoading: analyticsLoading } = useDashboardAnalytics();
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    isError: metricsError,
+    refetch: refetchMetrics,
+  } = useDashboardMetrics();
+  const {
+    data: recentTxns,
+    isLoading: txnsLoading,
+    isError: txnsError,
+    refetch: refetchTxns,
+  } = useRecentTransactions();
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+    refetch: refetchAnalytics,
+  } = useDashboardAnalytics();
   const { data: customers } = useCustomers();
   const { user } = useAuth();
 
@@ -218,12 +243,38 @@ export default function DashboardPage() {
   const firstName = user ? deriveFirstName(user.name, user.email) : "there";
 
   const chartData = recentTxns
-    ? [...recentTxns].reverse().map((tx) => ({
-        name: format(new Date(tx.createdAt), "MMM d"),
-        amount: tx.type === "credit" ? tx.amount : -tx.amount,
-        type: tx.type,
-      }))
+    ? [...recentTxns].reverse().map((tx) => {
+        const money = moneyPresentation(tx);
+        return {
+          name: format(new Date(tx.createdAt), "MMM d"),
+          amount: tx.type === "credit" ? tx.amount : -tx.amount,
+          type: tx.type,
+          tone: money.tone,
+          sign: money.sign,
+          toneLabel: money.label,
+        };
+      })
     : [];
+
+  /** Totals behind the "Transaction Flow" summary sentence. */
+  const flowTotals = chartData.reduce(
+    (acc, row) => {
+      if (row.amount >= 0) acc.credit += row.amount;
+      else acc.paid += Math.abs(row.amount);
+      return acc;
+    },
+    { credit: 0, paid: 0 }
+  );
+
+  /** Totals behind the 12-month trend summary sentence. */
+  const trendTotals = (analytics?.trend ?? []).reduce(
+    (acc, row) => {
+      acc.credit += row.credit ?? 0;
+      acc.paid += row.debit ?? 0;
+      return acc;
+    },
+    { credit: 0, paid: 0 }
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full fade-up">
@@ -251,7 +302,11 @@ export default function DashboardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
+            onClick={() => {
+              refetchMetrics();
+              refetchTxns();
+              refetchAnalytics();
+            }}
             className="gap-1.5 border-border/50 hover:border-primary/40 text-xs h-8"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -270,6 +325,13 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Metric Cards ─── */}
+      {metricsError ? (
+        <QueryErrorState
+          title="Could not load your overview"
+          message="The dashboard numbers did not load. Nothing has been changed."
+          onRetry={() => refetchMetrics()}
+        />
+      ) : null}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricCard
           title="Total Balance"
@@ -283,7 +345,11 @@ export default function DashboardPage() {
               : "neutral"
           }
           trendLabel="Overall ledger balance"
-          accentColor="cyan"
+          accent={{
+            bg: "bg-primary/10",
+            icon: "bg-primary/15 text-primary",
+            ring: "border-primary/20",
+          }}
           loading={metricsLoading}
         />
         <MetricCard
@@ -292,7 +358,11 @@ export default function DashboardPage() {
           icon={Users}
           trend="neutral"
           trendLabel="Active customers"
-          accentColor="violet"
+          accent={{
+            bg: "bg-muted",
+            icon: "bg-muted text-foreground",
+            ring: "border-border",
+          }}
           loading={metricsLoading}
         />
         <MetricCard
@@ -307,7 +377,11 @@ export default function DashboardPage() {
               : "neutral"
           }
           trendLabel="This month's net flow"
-          accentColor="emerald"
+          accent={{
+            bg: "bg-muted",
+            icon: "bg-muted text-foreground",
+            ring: "border-border",
+          }}
           loading={metricsLoading}
         />
       </div>
@@ -327,7 +401,7 @@ export default function DashboardPage() {
             </div>
             <Badge
               variant="outline"
-              className="text-primary border-primary/30 bg-primary/5 text-[10px] font-semibold"
+              className="text-primary border-primary/30 bg-primary/5 text-xs font-semibold"
             >
               Last 5 entries
             </Badge>
@@ -335,61 +409,90 @@ export default function DashboardPage() {
           <CardContent className="pt-4 px-2 pb-4">
             {txnsLoading ? (
               <Skeleton className="h-52 w-full" />
+            ) : txnsError ? (
+              <QueryErrorState
+                title="Could not load the transaction flow"
+                onRetry={() => refetchTxns()}
+              />
             ) : chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+              <>
+                <ChartContainer
+                  config={flowChartConfig}
+                  className="h-[200px] w-full aspect-auto"
+                  role="img"
+                  aria-label={`Net money flow across the last ${chartData.length} ledger entries`}
                 >
-                  <defs>
-                    <linearGradient
-                      id="colorFlowPos"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.04)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={50}
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
-                    }
-                  />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="#DC2626"
-                    strokeWidth={2}
-                    fill="url(#colorFlowPos)"
-                    dot={{
-                      fill: "#DC2626",
-                      r: 4,
-                      strokeWidth: 2,
-                      stroke: "var(--card)",
-                    }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                  <AreaChart
+                    data={chartData}
+                    margin={{ top: 10, right: 16, left: 8, bottom: 0 }}
+                    accessibilityLayer
+                  >
+                    <defs>
+                      <linearGradient
+                        id="colorFlow"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="5%" stopColor="var(--chart-4)" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="var(--chart-4)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={56}
+                      tickFormatter={(v) => formatCompactCurrency(v)}
+                    />
+                    <RechartsTooltip
+                      content={<FlowTooltip />}
+                      cursor={{ stroke: "var(--border)" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="amount"
+                      name="Net flow"
+                      stroke="var(--chart-4)"
+                      strokeWidth={2}
+                      fill="url(#colorFlow)"
+                      dot={{
+                        fill: "var(--chart-4)",
+                        r: 4,
+                        strokeWidth: 2,
+                        stroke: "var(--card)",
+                      }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+                <div className="flex flex-wrap items-center gap-3 px-3 pt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: "var(--chart-4)" }}
+                    />
+                    Net flow — credit given above the line, payment received below
+                  </span>
+                </div>
+                <p className="px-3 pt-1 text-xs text-muted-foreground">
+                  Across the last {chartData.length} entries you gave{" "}
+                  {formatCurrency(flowTotals.credit)} in credit and received{" "}
+                  {formatCurrency(flowTotals.paid)} in payments.
+                </p>
+              </>
             ) : (
               <div className="h-52 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <Activity className="w-8 h-8 opacity-30" />
@@ -412,42 +515,101 @@ export default function DashboardPage() {
           <CardContent className="pt-4 px-2 pb-4">
             {txnsLoading ? (
               <Skeleton className="h-52 w-full" />
+            ) : txnsError ? (
+              <QueryErrorState
+                title="Could not load the breakdown"
+                onRetry={() => refetchTxns()}
+              />
             ) : chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
+              <>
+                <ChartContainer
+                  config={typeChartConfig}
+                  className="h-[200px] w-full aspect-auto"
+                  role="img"
+                  aria-label={`Credit given versus payment received across the last ${chartData.length} ledger entries`}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.04)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={40}
-                    tickFormatter={(v) => `₹${Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(0) + "k" : Math.abs(v)}`}
-                  />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={entry.type === "credit" ? "#22C55E" : "#EF4444"}
-                        fillOpacity={0.85}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 10, right: 8, left: 8, bottom: 0 }}
+                    accessibilityLayer
+                  >
+                    <defs>
+                      <pattern
+                        id="hatchTypeCredit"
+                        width="6"
+                        height="6"
+                        patternUnits="userSpaceOnUse"
+                        patternTransform="rotate(45)"
+                      >
+                        <rect width="6" height="6" fill="var(--chart-2)" fillOpacity={0.35} />
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="6"
+                          stroke="var(--chart-2)"
+                          strokeWidth="2.5"
+                        />
+                      </pattern>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={46}
+                      tickFormatter={(v) => formatCompactCurrency(v)}
+                    />
+                    <RechartsTooltip
+                      content={<FlowTooltip />}
+                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={index}
+                          fill={
+                            entry.tone === "paid"
+                              ? "var(--chart-1)"
+                              : "url(#hatchTypeCredit)"
+                          }
+                          fillOpacity={0.9}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+                <div className="flex flex-wrap items-center gap-4 px-3 pt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor:
+                          "repeating-linear-gradient(45deg, var(--chart-2) 0 2px, transparent 2px 4px)",
+                        boxShadow: "inset 0 0 0 1px var(--chart-2)",
+                      }}
+                    />
+                    Credit given (hatched)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: "var(--chart-1)" }}
+                    />
+                    Payment received
+                  </span>
+                </div>
+              </>
             ) : (
               <div className="h-52 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <TrendingUp className="w-8 h-8 opacity-30" />
@@ -471,66 +633,152 @@ export default function DashboardPage() {
                 Credit given vs payments received
               </p>
             </div>
-            <div className="flex items-center gap-3 text-[10px] font-semibold text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                Credit
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-sm shrink-0"
+                  style={{
+                    backgroundColor:
+                      "repeating-linear-gradient(45deg, var(--chart-2) 0 2px, transparent 2px 4px)",
+                    boxShadow: "inset 0 0 0 1px var(--chart-2)",
+                  }}
+                />
+                Credit given (hatched)
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-400" />
-                Paid
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: "var(--chart-1)" }}
+                />
+                Payment received
               </span>
             </div>
           </CardHeader>
           <CardContent className="pt-4 px-2 pb-4">
             {analyticsLoading ? (
               <Skeleton className="h-56 w-full" />
+            ) : analyticsError ? (
+              <QueryErrorState
+                title="Could not load the 12-month trend"
+                onRetry={() => refetchAnalytics()}
+              />
             ) : analytics && analytics.trend.some((t) => t.credit || t.debit) ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart
-                  data={analytics.trend}
-                  margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+              <>
+                <ChartContainer
+                  config={trendChartConfig}
+                  className="h-[220px] w-full aspect-auto"
+                  role="img"
+                  aria-label="Twelve month trend of credit given versus payments received"
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.04)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    tickFormatter={monthLabel}
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={46}
-                    tickFormatter={(v) =>
-                      Math.abs(v) >= 1000
-                        ? `₹${(Math.abs(v) / 1000).toFixed(0)}k`
-                        : `₹${Math.abs(v)}`
-                    }
-                  />
-                  <RechartsTooltip content={<TrendTooltip />} />
-                  <Bar
-                    dataKey="credit"
-                    name="Credit"
-                    fill="#22C55E"
-                    fillOpacity={0.85}
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="debit"
-                    name="Paid"
-                    fill="#EF4444"
-                    fillOpacity={0.85}
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+                  <BarChart
+                    data={analytics.trend}
+                    margin={{ top: 10, right: 16, left: 8, bottom: 0 }}
+                    accessibilityLayer
+                  >
+                    <defs>
+                      <pattern
+                        id="hatchCredit"
+                        width="6"
+                        height="6"
+                        patternUnits="userSpaceOnUse"
+                        patternTransform="rotate(45)"
+                      >
+                        <rect width="6" height="6" fill="var(--chart-2)" fillOpacity={0.35} />
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="6"
+                          stroke="var(--chart-2)"
+                          strokeWidth="2.5"
+                        />
+                      </pattern>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tickFormatter={monthLabel}
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={52}
+                      tickFormatter={(v) => formatCompactCurrency(v)}
+                    />
+                    <RechartsTooltip
+                      content={<TrendTooltip />}
+                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    />
+                    <Bar
+                      dataKey="credit"
+                      name="Credit given"
+                      fill="url(#hatchCredit)"
+                      fillOpacity={0.9}
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="debit"
+                      name="Payment received"
+                      fill="var(--chart-1)"
+                      fillOpacity={0.9}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
+                <p className="px-3 pt-2 text-xs text-muted-foreground">
+                  Over the last 12 months you gave {formatCurrency(trendTotals.credit)} in
+                  credit and received {formatCurrency(trendTotals.paid)} in payments.
+                </p>
+                <details className="px-3 pt-2">
+                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                    Show the monthly figures
+                  </summary>
+                  <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th scope="col" className="px-3 py-2 text-left font-semibold">
+                            Month
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-right font-semibold"
+                          >
+                            Credit given
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-right font-semibold"
+                          >
+                            Payment received
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.trend.map((row) => (
+                          <tr key={row.month} className="border-b border-border/40 last:border-0">
+                            <td className="px-3 py-1.5">{monthLabel(row.month)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">
+                              {formatCurrency(row.credit ?? 0)}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">
+                              {formatCurrency(row.debit ?? 0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </>
             ) : (
               <div className="h-56 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <TrendingUp className="w-8 h-8 opacity-30" />
@@ -557,6 +805,13 @@ export default function DashboardPage() {
                     <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
+              ) : analyticsError ? (
+                <div className="px-5 py-4">
+                  <QueryErrorState
+                    title="Could not load the debtors"
+                    onRetry={() => refetchAnalytics()}
+                  />
+                </div>
               ) : analytics && analytics.topDebtors.length > 0 ? (
                 <div className="divide-y divide-border/40">
                   {analytics.topDebtors.map((debtor) => (
@@ -572,7 +827,7 @@ export default function DashboardPage() {
                         <p className="text-xs font-semibold text-foreground truncate">
                           {debtor.name}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {debtor.ageDays === null
                             ? "No unpaid credit"
                             : debtor.ageDays === 0
@@ -580,7 +835,7 @@ export default function DashboardPage() {
                               : `Unpaid ${debtor.ageDays}d`}
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-foreground tabular shrink-0">
+                      <span className="text-xs font-bold text-foreground tabular-nums shrink-0">
                         {formatCurrency(debtor.outstanding)}
                       </span>
                     </Link>
@@ -609,21 +864,24 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {(
                     [
-                      { key: "0-30", tone: "text-emerald-400", bg: "bg-emerald-500/10" },
-                      { key: "31-60", tone: "text-amber-400", bg: "bg-amber-500/10" },
-                      { key: "60+", tone: "text-red-400", bg: "bg-red-500/10" },
+                      { key: "0-30", tone: "text-foreground", bg: "bg-muted", strong: false },
+                      { key: "31-60", tone: "text-destructive", bg: "bg-destructive/10", strong: false },
+                      { key: "60+", tone: "text-destructive", bg: "bg-destructive/20", strong: true },
                     ] as const
-                  ).map(({ key, tone, bg }) => (
+                  ).map(({ key, tone, bg, strong }) => (
                     <div
                       key={key}
                       className={cn("rounded-lg border border-border/40 p-2.5", bg)}
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {key} days
                       </p>
-                      <p className={cn("text-sm font-bold tabular mt-0.5", tone)}>
+                      <p className={cn("text-sm font-bold tabular-nums mt-0.5", tone)}>
                         {formatCurrency(analytics?.aging[key] ?? 0)}
                       </p>
+                      {strong ? (
+                        <p className="text-xs font-semibold text-destructive">Overdue</p>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -672,11 +930,18 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          ) : txnsError ? (
+            <div className="px-5 py-5">
+              <QueryErrorState
+                title="Could not load recent transactions"
+                onRetry={() => refetchTxns()}
+              />
+            </div>
           ) : recentTxns && recentTxns.length > 0 ? (
             <div className="divide-y divide-border/40">
               {recentTxns.map((tx) => {
                 const customer = customers?.find((c) => c.id === tx.customerId);
-                const isCredit = tx.type === "credit";
+                const money = moneyPresentation(tx);
                 const methodLabel = paymentMethodLabel(tx.paymentMethod);
                 return (
                   <Link
@@ -687,14 +952,14 @@ export default function DashboardPage() {
                     <div
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                        isCredit
-                          ? "bg-emerald-500/12 text-emerald-400"
-                          : methodLabel
-                            ? "bg-amber-500/12 text-amber-400"
-                            : "bg-red-500/12 text-red-400"
+                        money.tone === "paid"
+                          ? "bg-positive/12 text-positive"
+                          : money.tone === "credit"
+                            ? "bg-muted text-foreground"
+                            : "bg-destructive/12 text-destructive"
                       )}
                     >
-                      {isCredit ? (
+                      {money.tone === "credit" ? (
                         <TrendingUp className="w-4 h-4" />
                       ) : (
                         <TrendingDown className="w-4 h-4" />
@@ -706,7 +971,7 @@ export default function DashboardPage() {
                         {customer?.name || "Unknown Customer"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {tx.note || tx.type}
+                        {tx.note || money.label}
                         {methodLabel ? ` · ${methodLabel}` : ""} ·{" "}
                         {format(new Date(tx.createdAt), "MMM d, yyyy")}
                       </p>
@@ -715,15 +980,11 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <span
                         className={cn(
-                          "text-sm font-bold tabular",
-                          isCredit
-                            ? "text-emerald-400"
-                            : methodLabel
-                              ? "text-amber-400"
-                              : "text-red-400"
+                          "text-sm font-bold tabular-nums",
+                          moneyTextClass(money.tone)
                         )}
                       >
-                        {isCredit ? "+" : "−"}
+                        {money.sign}
                         {formatCurrency(tx.amount)}
                       </span>
                       <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />

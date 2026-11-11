@@ -4,6 +4,7 @@
 // contract; see docs/auth-migration.md).
 
 import { createAuthClient } from "better-auth/react";
+import { LANDING_ROUTE } from "@/lib/routes";
 
 const TOKEN_KEY = "ledgerx_token";
 
@@ -43,7 +44,7 @@ export async function signInWithGoogle() {
   // Navigate directly to the API domain so the OAuth state cookie is set
   // same-site (not via cross-origin fetch). This prevents the state_mismatch
   // error caused by browsers blocking third-party cookies.
-  const callbackURL = `${window.location.origin}/dashboard`;
+  const callbackURL = `${window.location.origin}${LANDING_ROUTE}`;
   window.location.href = `${baseUrl()}/api/auth/redirect/google?callbackURL=${encodeURIComponent(callbackURL)}`;
 }
 

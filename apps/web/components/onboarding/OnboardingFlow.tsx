@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { needsOnboarding, useSettings, useUpdateSettings } from "@/hooks/useSettings";
-import { useSeedSampleData } from "@/hooks/useDataPortability";
 
 const steps = [
   {
@@ -44,7 +43,6 @@ const steps = [
 export function OnboardingFlow() {
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
-  const seedSample = useSeedSampleData();
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
@@ -97,7 +95,7 @@ export function OnboardingFlow() {
               />
             ))}
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Step {step + 1} of {steps.length}
           </span>
         </div>
@@ -114,23 +112,6 @@ export function OnboardingFlow() {
           </DialogDescription>
         </div>
 
-        {step === 0 && (
-          <div className="flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-muted/20 p-3">
-            <HandCoins className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-muted-foreground">
-              Want to look around first?
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={() => seedSample.mutate()}
-              disabled={seedSample.isPending}
-            >
-              Load sample data
-            </Button>
-          </div>
-        )}
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <Button
@@ -179,7 +160,7 @@ export function OnboardingFlow() {
         </div>
 
         {isLast && (
-          <p className="text-center text-[11px] text-muted-foreground">
+          <p className="text-center text-xs text-muted-foreground">
             You can change UPI settings any time in{" "}
             <Link href="/settings" className="text-primary underline underline-offset-2">
               Settings

@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
-  ArrowLeft,
   CalendarRange,
   FileText,
   Printer,
@@ -17,18 +16,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 import { useStatement } from "@/hooks/useStatement";
 import { paymentMethodLabel } from "@/lib/payments";
+import { formatCurrency } from "@/lib/format";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 export function StatementView() {
   const searchParams = useSearchParams();
@@ -40,6 +40,17 @@ export function StatementView() {
     start: searchParams.get("start") ?? "",
     end: searchParams.get("end") ?? "",
   });
+  const [periodError, setPeriodError] = useState<string | null>(null);
+
+  /** Applies the period, refusing a range whose start is after its end. */
+  const applyPeriod = () => {
+    if (start && end && start > end) {
+      setPeriodError("The start date must be on or before the end date.");
+      return;
+    }
+    setPeriodError(null);
+    setApplied({ start, end });
+  };
 
   const { data: statement, isLoading } = useStatement(customerId, {
     start: applied.start || undefined,
@@ -68,17 +79,21 @@ export function StatementView() {
     <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full pb-24 lg:pb-8 fade-up">
       {/* Screen-only toolbar */}
       <div className="print:hidden flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/customers/detail?id=${customerId}`}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            Customer
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          <span className="text-xs text-foreground font-medium">Statement</span>
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/customers/detail?id=${customerId}`} className="text-xs">
+                  Customer
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-xs font-medium">Statement</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
@@ -101,16 +116,25 @@ export function StatementView() {
         </div>
 
         {/* Period filter */}
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 bg-card p-4">
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 bg-card p-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyPeriod();
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="statement-start" className="text-xs font-semibold">
               Start date
             </Label>
             <Input
               id="statement-start"
+              name="start"
               type="date"
               value={start}
               onChange={(event) => setStart(event.target.value)}
+              aria-invalid={periodError ? true : undefined}
+              aria-describedby={periodError ? "statement-period-error" : undefined}
               className="h-9 w-40 bg-muted/20 border-border/50"
             />
           </div>
@@ -120,34 +144,48 @@ export function StatementView() {
             </Label>
             <Input
               id="statement-end"
+              name="end"
               type="date"
               value={end}
               onChange={(event) => setEnd(event.target.value)}
+              aria-invalid={periodError ? true : undefined}
+              aria-describedby={periodError ? "statement-period-error" : undefined}
               className="h-9 w-40 bg-muted/20 border-border/50"
             />
           </div>
           <Button
+            type="submit"
             variant="outline"
             size="sm"
             className="h-9 gap-1.5 text-xs"
-            onClick={() => setApplied({ start, end })}
           >
-            <CalendarRange className="w-3.5 h-3.5" />
+            <CalendarRange className="w-3.5 h-3.5" aria-hidden="true" />
             Apply
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             className="h-9 text-xs"
             onClick={() => {
               setStart("");
               setEnd("");
+              setPeriodError(null);
               setApplied({ start: "", end: "" });
             }}
           >
             Clear
           </Button>
-        </div>
+          {periodError ? (
+            <p
+              id="statement-period-error"
+              role="alert"
+              className="w-full text-xs font-medium text-destructive"
+            >
+              {periodError}
+            </p>
+          ) : null}
+        </form>
       </div>
 
       {/* Printable document */}
@@ -162,11 +200,11 @@ export function StatementView() {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-muted-foreground">Statement period</p>
+            <p className="text-xs text-muted-foreground">Statement period</p>
             <p className="text-sm font-semibold text-foreground">
               {periodLabel}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Generated {format(new Date(), "dd MMM yyyy, h:mm a")}
             </p>
           </div>
@@ -189,7 +227,7 @@ export function StatementView() {
             {/* Customer block */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 py-5">
               <div>
-                <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">
                   Customer
                 </p>
                 <p className="text-base font-bold text-foreground mt-0.5">
@@ -201,45 +239,45 @@ export function StatementView() {
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-right">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Opening balance
                 </span>
-                <span className="text-xs font-semibold text-foreground tabular">
+                <span className="text-xs font-semibold text-foreground tabular-nums">
                   {formatCurrency(statement.openingBalance)}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Total credit
                 </span>
-                <span className="text-xs font-semibold text-emerald-500 tabular">
+                <span className="text-xs font-semibold text-foreground tabular-nums">
                   {formatCurrency(statement.totalCredit)}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Total paid
                 </span>
-                <span className="text-xs font-semibold text-red-400 tabular">
+                <span className="text-xs font-semibold text-positive tabular-nums">
                   {formatCurrency(statement.totalDebit)}
                 </span>
-                <span className="text-[11px] font-semibold text-foreground">
+                <span className="text-xs font-semibold text-foreground">
                   Closing balance
                 </span>
-                <span className="text-sm font-bold text-foreground tabular">
+                <span className="text-sm font-bold text-foreground tabular-nums">
                   {formatCurrency(statement.closingBalance)}
                 </span>
               </div>
             </div>
 
             {/* Entries */}
-            <div className="rounded-lg border border-border overflow-hidden print:border-border">
-              <table className="w-full text-left text-xs">
+            <div className="rounded-lg border border-border overflow-x-auto print:border-border print:overflow-visible">
+              <table className="w-full min-w-[520px] text-left text-xs">
                 <thead className="bg-muted/40">
-                  <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <th className="px-3 py-2 font-semibold">Date</th>
-                    <th className="px-3 py-2 font-semibold">Description</th>
-                    <th className="px-3 py-2 font-semibold text-right">
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-3 py-2 font-semibold">Date</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Description</th>
+                    <th scope="col" className="px-3 py-2 font-semibold text-right">
                       Credit
                     </th>
-                    <th className="px-3 py-2 font-semibold text-right">Paid</th>
-                    <th className="px-3 py-2 font-semibold text-right">
+                    <th scope="col" className="px-3 py-2 font-semibold text-right">Paid</th>
+                    <th scope="col" className="px-3 py-2 font-semibold text-right">
                       Balance
                     </th>
                   </tr>
@@ -263,23 +301,23 @@ export function StatementView() {
                             {method && (
                               <Badge
                                 variant="outline"
-                                className="ml-2 text-[9px] px-1.5 py-0 h-4 font-semibold bg-amber-500/10 text-amber-500 border-amber-500/25"
+                                className="ml-2 text-xs px-1.5 py-0 h-4 font-semibold bg-positive/10 text-positive border-positive/25"
                               >
                                 {method}
                               </Badge>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular text-emerald-500">
+                          <td className="px-3 py-2.5 text-right tabular-nums text-foreground">
                             {entry.type === "credit"
                               ? formatCurrency(entry.amount)
                               : "—"}
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular text-red-400">
+                          <td className="px-3 py-2.5 text-right tabular-nums text-positive">
                             {entry.type === "debit"
                               ? formatCurrency(entry.amount)
                               : "—"}
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular font-semibold text-foreground">
+                          <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-foreground">
                             {formatCurrency(entry.runningBalance)}
                           </td>
                         </tr>
@@ -300,7 +338,7 @@ export function StatementView() {
               </table>
             </div>
 
-            <p className="text-[10px] text-muted-foreground mt-4">
+            <p className="text-xs text-muted-foreground mt-4">
               Balances are computed over the customer&apos;s full history.
               Soft-deleted entries are excluded. This statement is generated by
               Ledger-X and is not a tax invoice.

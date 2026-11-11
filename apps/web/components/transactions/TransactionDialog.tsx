@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -17,15 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
 import {
-  FaArrowUp,
-  FaArrowDown,
-  FaRupeeSign,
-  FaSpinner,
-  FaMoneyBillWave,
-  FaMobileAlt,
-  FaEllipsisH,
-  FaTimes,
-} from "react-icons/fa";
+  ArrowDown,
+  ArrowUp,
+  Banknote,
+  CircleEllipsis,
+  Loader2,
+  Smartphone,
+  X,
+  IndianRupee,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -52,18 +53,20 @@ export function TransactionDialog({
 }: TransactionDialogProps) {
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isEditing = !!transaction;
 
   const paymentOptions = [
-    { value: "cash", label: "Cash", icon: FaMoneyBillWave },
-    { value: "upi", label: "UPI", icon: FaMobileAlt },
-    { value: "other", label: "Other", icon: FaEllipsisH },
-    { value: null, label: "None", icon: FaTimes },
+    { value: "cash", label: "Cash", icon: Banknote },
+    { value: "upi", label: "UPI", icon: Smartphone },
+    { value: "other", label: "Other", icon: CircleEllipsis },
+    { value: null, label: "None", icon: X },
   ] as const;
 
   const form = useForm({
     resolver: zodResolver(transactionSchema),
+    mode: "onBlur",
     defaultValues: transaction
       ? {
           amount: transaction.amount,
@@ -80,6 +83,7 @@ export function TransactionDialog({
   });
 
   const handleSubmit = async (data: TransactionFormData) => {
+    setSubmitError(null);
     try {
       const paymentMethod = data.paymentMethod ?? null;
 
@@ -100,7 +104,11 @@ export function TransactionDialog({
 
       onClose();
     } catch (error) {
-      console.error(error);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Could not save the transaction. Please try again.",
+      );
     }
   };
 
@@ -125,6 +133,9 @@ export function TransactionDialog({
   const loading =
     createTransaction.isPending || updateTransaction.isPending;
 
+  const isCredit = form.watch("transactionType") === "credit";
+  const amountError = form.formState.errors.amount?.message;
+
   return (
     <FormProvider {...form}>
       <Dialog
@@ -138,9 +149,9 @@ export function TransactionDialog({
           <div
             className={cn(
               "absolute top-0 left-0 right-0 h-px rounded-t-lg",
-              form.watch("transactionType") === "credit"
-                ? "bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"
-                : "bg-gradient-to-r from-transparent via-red-500/50 to-transparent"
+              isCredit
+                ? "bg-gradient-to-r from-transparent via-primary/50 to-transparent"
+                : "bg-gradient-to-r from-transparent via-positive/50 to-transparent"
             )}
           />
 
@@ -148,48 +159,54 @@ export function TransactionDialog({
             <DialogTitle className="text-base font-bold">
               {isEditing ? "Edit Transaction" : "New Transaction"}
             </DialogTitle>
-            <p className="text-xs text-muted-foreground">
+            <DialogDescription className="text-xs text-muted-foreground">
               {isEditing
                 ? "Update the transaction details below"
                 : "Record a payment or receipt for this customer"}
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-1">
-          {/* Type selector — pill style */}
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {/* Type selector — radiogroup */}
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Type
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
+            </legend>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Transaction type">
               <button
                 type="button"
+                role="radio"
+                aria-checked={isCredit}
                 onClick={() => form.setValue("transactionType", "credit")}
                 className={cn(
-                  "flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-semibold transition-all",
-                  form.watch("transactionType") === "credit"
-                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/10"
-                    : "border-border/60 text-muted-foreground hover:border-emerald-500/30 hover:bg-emerald-500/5"
+                  "flex items-center justify-center gap-2 h-11 rounded-lg border text-sm font-semibold transition-all",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isCredit
+                    ? "bg-primary/10 border-primary/40 text-primary"
+                    : "border-border/60 text-muted-foreground hover:border-primary/30 hover:bg-primary/5"
                 )}
               >
-                <FaArrowUp className="w-4 h-4" />
+                <ArrowUp className="w-4 h-4" />
                 Credit
               </button>
               <button
                 type="button"
+                role="radio"
+                aria-checked={!isCredit}
                 onClick={() => form.setValue("transactionType", "debit")}
                 className={cn(
-                  "flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-semibold transition-all",
-                  form.watch("transactionType") === "debit"
-                    ? "bg-red-500/15 border-red-500/40 text-red-400 shadow-sm shadow-red-500/10"
-                    : "border-border/60 text-muted-foreground hover:border-red-500/30 hover:bg-red-500/5"
+                  "flex items-center justify-center gap-2 h-11 rounded-lg border text-sm font-semibold transition-all",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  !isCredit
+                    ? "bg-positive/10 border-positive/40 text-positive"
+                    : "border-border/60 text-muted-foreground hover:border-positive/30 hover:bg-positive/5"
                 )}
               >
-                <FaArrowDown className="w-4 h-4" />
-                Debit
+                <ArrowDown className="w-4 h-4" />
+                Payment
               </button>
             </div>
-          </div>
+          </fieldset>
 
           {/* Amount */}
           <div className="space-y-2">
@@ -198,23 +215,24 @@ export function TransactionDialog({
             </Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md bg-muted flex items-center justify-center">
-                <FaRupeeSign className="w-3 h-3 text-muted-foreground" />
+                <IndianRupee className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
               </div>
               <Input
                 id="amount"
                 type="number"
+                inputMode="decimal"
                 min="0.01"
                 step="0.01"
-                placeholder="0.00"
+                placeholder="0"
+                aria-invalid={amountError ? true : undefined}
+                aria-describedby={amountError ? "amount-error" : undefined}
                 {...form.register("amount", { valueAsNumber: true })}
                 className={cn(
-                  "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all",
-                  form.watch("transactionType") === "credit" && form.getValues("amount") > 0
-                    ? "text-emerald-400"
-                    : form.watch("transactionType") === "debit" && form.getValues("amount") > 0
-                      ? "text-red-400"
-                      : "",
-                  form.formState.errors.amount && "border-destructive"
+                  "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all tabular-nums",
+                  !isCredit && form.getValues("amount") > 0
+                    ? "text-positive"
+                    : "",
+                  amountError && "border-destructive"
                 )}
               />
             </div>
@@ -222,13 +240,13 @@ export function TransactionDialog({
           </div>
 
           {/* Payment method */}
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Payment method{" "}
               <span className="normal-case font-normal text-muted-foreground/60">
                 (optional)
               </span>
-            </Label>
+            </legend>
             <div className="grid grid-cols-4 gap-1.5">
               {paymentOptions.map(({ value, label, icon: Icon }) => {
                 const selected =
@@ -245,9 +263,10 @@ export function TransactionDialog({
                     }
                     aria-pressed={selected}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-1 h-14 rounded-xl border text-[11px] font-semibold transition-all",
+                      "flex flex-col items-center justify-center gap-1 h-14 rounded-lg border text-xs font-semibold transition-all",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selected
-                        ? "bg-primary/10 border-primary/40 text-primary shadow-sm shadow-primary/10"
+                        ? "bg-primary/10 border-primary/40 text-primary"
                         : "border-border/60 text-muted-foreground hover:border-primary/25 hover:bg-primary/5",
                     )}
                   >
@@ -258,7 +277,7 @@ export function TransactionDialog({
               })}
             </div>
             <FormError name="paymentMethod" />
-          </div>
+          </fieldset>
 
           {/* Note */}
           <div className="space-y-2">
@@ -277,6 +296,12 @@ export function TransactionDialog({
             <FormError name="note" />
           </div>
 
+          {submitError ? (
+            <p role="alert" className="text-xs font-medium text-destructive">
+              {submitError}
+            </p>
+          ) : null}
+
           {/* Footer */}
           <DialogFooter className="gap-2 pt-2">
             <Button
@@ -289,16 +314,20 @@ export function TransactionDialog({
             </Button>
             <Button
               type="submit"
-              disabled={loading || !form.formState.isValid}
+              disabled={loading}
               className={cn(
                 "flex-1 h-10 font-bold transition-all",
-                form.watch("transactionType") === "credit"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90 shadow-sm shadow-emerald-500/20"
-                  : "bg-gradient-to-r from-red-500 to-rose-500 text-white hover:opacity-90 shadow-sm shadow-red-500/20"
+                isCredit
+                  ? "bg-gradient-to-r from-brand-fill to-brand-deep text-primary-foreground hover:opacity-90"
+                  : "bg-gradient-to-r from-positive to-positive/80 text-white hover:opacity-90"
               )}
             >
-              {loading && <FaSpinner className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditing ? "Update" : form.watch("transactionType") === "credit" ? "Record Credit" : "Record Debit"}
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
+              {isEditing
+                ? "Update"
+                : isCredit
+                  ? "Record Credit"
+                  : "Record Payment"}
             </Button>
           </DialogFooter>
         </form>

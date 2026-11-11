@@ -1,14 +1,8 @@
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Scale, Hash } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/format";
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Math.abs(n));
-}
 
 interface AnalyticsCardProps {
   label: string;
@@ -54,18 +48,18 @@ function AnalyticsCard({
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
             {label}
           </p>
           {loading ? (
             <Skeleton className="h-7 w-24 mb-1" />
           ) : (
-            <p className={cn("text-2xl font-bold tabular tracking-tight", valueClass)}>
+            <p className={cn("text-2xl font-bold tabular-nums tracking-tight", valueClass)}>
               {value}
             </p>
           )}
           {sub && !loading && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
           )}
         </div>
 
@@ -101,21 +95,21 @@ export function CustomerAnalyticsCards({
     {
       label: "Total Credit",
       value: formatCurrency(totalCredit),
-      sub: "Money received",
+      sub: "Credit given",
       icon: TrendingUp,
-      iconClass: "bg-brand/15 text-brand-light",
-      valueClass: "text-brand-light",
+      iconClass: "bg-brand/15 text-brand-text",
+      valueClass: "text-foreground",
       bgClass: "bg-gradient-to-br from-brand/5 to-transparent",
       loading,
     },
     {
-      label: "Total Debit",
+      label: "Total Paid",
       value: formatCurrency(totalDebit),
-      sub: "Money paid out",
+      sub: "Payment received",
       icon: TrendingDown,
-      iconClass: "bg-red-500/15 text-red-400",
-      valueClass: "text-red-400",
-      bgClass: "bg-gradient-to-br from-red-500/5 to-transparent",
+      iconClass: "bg-positive/15 text-positive",
+      valueClass: "text-positive",
+      bgClass: "bg-gradient-to-br from-positive/5 to-transparent",
       loading,
     },
     {
@@ -125,16 +119,13 @@ export function CustomerAnalyticsCards({
       icon: Scale,
       iconClass:
         netBalance >= 0
-          ? "bg-primary/15 text-primary"
-          : "bg-amber-500/15 text-amber-400",
-      valueClass:
-        netBalance >= 0
-          ? "text-primary"
-          : "text-amber-400",
+          ? "bg-brand/15 text-brand-text"
+          : "bg-destructive/15 text-destructive",
+      valueClass: "text-foreground",
       bgClass:
         netBalance >= 0
-          ? "bg-gradient-to-br from-primary/5 to-transparent"
-          : "bg-gradient-to-br from-amber-500/5 to-transparent",
+          ? "bg-gradient-to-br from-brand/5 to-transparent"
+          : "bg-gradient-to-br from-destructive/5 to-transparent",
       loading,
     },
     {
@@ -142,9 +133,9 @@ export function CustomerAnalyticsCards({
       value: loading ? "—" : String(txCount),
       sub: "Total entries",
       icon: Hash,
-      iconClass: "bg-violet-500/15 text-violet-400",
+      iconClass: "bg-muted text-muted-foreground",
       valueClass: "text-foreground",
-      bgClass: "bg-gradient-to-br from-violet-500/5 to-transparent",
+      bgClass: "bg-gradient-to-br from-muted/30 to-transparent",
       loading,
     },
   ];

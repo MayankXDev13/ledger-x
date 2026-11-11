@@ -9,7 +9,11 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "check:tokens": "bun run scripts/check-web-tokens.ts",
+    "check:contrast": "bun run scripts/check-contrast.ts",
+    "check:colors": "bun run scripts/check-web-colors.ts",
+    "check:visual": "bun run scripts/check-web-tokens.ts && bun run scripts/check-contrast.ts && bun run scripts/check-web-colors.ts && bun run --cwd apps/app check:visual-tokens"
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "^7.29.7",
