@@ -6,10 +6,14 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import type { PaymentMethod, Transaction } from "@/lib/api";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 interface EditTransactionModalProps {
   visible: boolean;
@@ -37,6 +41,7 @@ export function EditTransactionModal({
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (transaction) {
@@ -50,9 +55,14 @@ export function EditTransactionModal({
   const handleSave = async () => {
     if (!transaction) return;
     const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
+    if (!amount || isNaN(amountNum) || amountNum <= 0) {
+      setError("Enter an amount greater than zero");
+      announce("Enter an amount greater than zero");
+      return;
+    }
 
     setSaving(true);
+    setError(null);
     try {
       await onSave(
         transaction.id,
@@ -82,16 +92,28 @@ export function EditTransactionModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-[#1A1A1A]">
-        <View className="flex-row justify-between items-center px-4 py-4 border-b border-[#2D2D2D]">
-          <Pressable onPress={onClose}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+      <KeyboardAvoidingView
+        className="flex-1 bg-bg"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View className="flex-row justify-between items-center px-4 py-4 border-b border-line">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+            onPress={onClose}>
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
           <Text className="text-white text-lg font-semibold">
             Edit Transaction
           </Text>
-          <Pressable onPress={handleSave} disabled={saving}>
-            <Text className="text-blue-500 text-base font-semibold">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save transaction"
+            accessibilityState={{ disabled: saving, busy: saving }}
+            onPress={handleSave}
+            disabled={saving}>
+            <Text className="text-brand-primary text-base font-semibold">
               {saving ? "Saving…" : "Save"}
             </Text>
           </Pressable>
@@ -100,15 +122,15 @@ export function EditTransactionModal({
         <ScrollView className="flex-1">
           <View className="p-4">
             <View className="mb-6">
-              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+              <Text className="text-ink-muted text-sm font-medium mb-2">
                 Amount
               </Text>
-              <View className="flex-row items-center bg-[#2D2D2D] rounded-xl px-4">
+              <View className="flex-row items-center bg-surface-raised rounded-xl px-4">
                 <Text className="text-white text-xl font-semibold mr-1">₹</Text>
                 <TextInput
                   className="flex-1 text-white text-xl font-semibold py-4"
                   placeholder="0.00"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={colors.inkFaint}
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={setAmount}
@@ -117,26 +139,29 @@ export function EditTransactionModal({
             </View>
 
             <View className="mb-6">
-              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+              <Text className="text-ink-muted text-sm font-medium mb-2">
                 Type
               </Text>
               <View className="flex-row gap-3">
                 <Pressable
+            accessibilityRole="radio"
+                  accessibilityLabel="Credit given"
+                  accessibilityState={{ checked: type === "credit" }}
                   className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${
                     type === "credit"
-                      ? "border-[#3D3D3D] bg-[#3D3D3D]"
-                      : "border-transparent bg-[#2D2D2D]"
+                      ? "border-line bg-surface-raised"
+                      : "border-transparent bg-surface-raised"
                   }`}
                   onPress={() => setType("credit")}
                 >
                   <Ionicons
                     name="arrow-down-circle"
                     size={20}
-                    color={type === "credit" ? "#10B981" : "#666"}
+                    color={type === "credit" ? colors.ink : colors.inkMuted}
                   />
                   <Text
                     className={`text-sm font-medium ${
-                      type === "credit" ? "text-white" : "text-[#666]"
+                      type === "credit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
                     Credit
@@ -144,21 +169,24 @@ export function EditTransactionModal({
                 </Pressable>
 
                 <Pressable
+            accessibilityRole="radio"
+                  accessibilityLabel="Payment received"
+                  accessibilityState={{ checked: type === "debit" }}
                   className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 ${
                     type === "debit"
-                      ? "border-[#3D3D3D] bg-[#3D3D3D]"
-                      : "border-transparent bg-[#2D2D2D]"
+                      ? "border-line bg-surface-raised"
+                      : "border-transparent bg-surface-raised"
                   }`}
                   onPress={() => setType("debit")}
                 >
                   <Ionicons
                     name="arrow-up-circle"
                     size={20}
-                    color={type === "debit" ? "#EF4444" : "#666"}
+                    color={type === "debit" ? colors.positive : colors.inkMuted}
                   />
                   <Text
                     className={`text-sm font-medium ${
-                      type === "debit" ? "text-white" : "text-[#666]"
+                      type === "debit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
                     {type === "debit" ? "Payment" : "Debit"}
@@ -176,13 +204,13 @@ export function EditTransactionModal({
             </View>
 
             <View className="mb-6">
-              <Text className="text-[#A0A0A0] text-sm font-medium mb-2">
+              <Text className="text-ink-muted text-sm font-medium mb-2">
                 Note (Optional)
               </Text>
               <TextInput
-                className="bg-[#2D2D2D] rounded-xl p-4 text-white text-sm min-[80px]"
+                className="bg-surface-raised rounded-xl p-4 text-ink text-sm min-h-[80px]"
                 placeholder="Add a note..."
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.inkFaint}
                 value={note}
                 onChangeText={setNote}
                 multiline
@@ -191,12 +219,19 @@ export function EditTransactionModal({
               />
             </View>
 
-            <View className="mt-8 pt-6 border-t border-[#2D2D2D]">
+            {error ? (
+              <Text accessibilityLiveRegion="polite" className="mt-3 text-danger-text text-sm">
+                {error}
+              </Text>
+            ) : null}
+
+            <View className="mt-8 pt-6 border-t border-line">
               <Pressable
-                className="flex-row items-center justify-center gap-2 py-3"
+            accessibilityRole="button"
+                accessibilityLabel="Delete transaction"
                 onPress={handleDelete}
               >
-                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                <Ionicons name="trash-outline" size={20} color={colors.dangerText} />
                 <Text className="text-red-500 text-sm font-medium">
                   Delete Transaction
                 </Text>
@@ -204,7 +239,7 @@ export function EditTransactionModal({
             </View>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

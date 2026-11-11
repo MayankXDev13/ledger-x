@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  ScrollView,
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,6 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { router } from "expo-router";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 export default function AddCustomerScreen() {
   const insets = useSafeAreaInsets();
@@ -57,6 +60,7 @@ export default function AddCustomerScreen() {
       // Goes through the offline queue: online it lands immediately,
       // offline the device UUID keeps the retry idempotent.
       await queueCustomer({ name: name.trim(), phone: phone.trim() });
+      announce("Customer added");
       router.back();
     } catch (err) {
       setError(
@@ -68,24 +72,34 @@ export default function AddCustomerScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-brand-dark"
+      className="flex-1 bg-bg"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
-        <Text className="text-3xl font-bold text-white mb-2">Add Customer</Text>
-        <Text className="text-lg text-[#888888] mb-8">
+      <ScrollView
+        className="flex-1"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 32,
+        }}
+      >
+        <Text className="text-3xl font-bold text-ink mb-2">Add Customer</Text>
+        <Text className="text-lg text-ink-muted mb-8">
           Enter customer details
         </Text>
 
         <View className="flex-1 gap-5">
           <View className="gap-2">
-            <Text className="text-sm font-medium text-[#A0A0A0]">
+            <Text className="text-sm font-medium text-ink-muted">
               Customer Name
             </Text>
             <TextInput
-              className="border border-[#3D3D3D] rounded-lg px-4 py-3.5 text-base text-white bg-[#2D2D2D]"
+              className="border border-line rounded-xl px-4 py-3.5 text-base text-ink bg-surface-raised"
               placeholder="Full Name"
-              placeholderTextColor="#666"
+              accessibilityLabel="Customer name"
+              autoCapitalize="words"
+              placeholderTextColor={colors.inkFaint}
               value={name}
               onChangeText={(text) => {
                 setName(text);
@@ -98,19 +112,22 @@ export default function AddCustomerScreen() {
           </View>
 
           <View className="gap-2">
-            <Text className="text-sm font-medium text-[#A0A0A0]">
+            <Text className="text-sm font-medium text-ink-muted">
               Phone Number
             </Text>
             <TextInput
-              className="border border-[#3D3D3D] rounded-lg px-4 py-3.5 text-base text-white bg-[#2D2D2D]"
+              className="border border-line rounded-xl px-4 py-3.5 text-base text-ink bg-surface-raised"
               placeholder="+91 99999 99999"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.inkFaint}
               value={phone}
               onChangeText={(text) => {
                 setPhone(text);
                 setPhoneError(null);
               }}
               keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Phone number"
             />
             {phoneError && (
               <Text className="text-red-500 text-sm">{phoneError}</Text>
@@ -120,25 +137,30 @@ export default function AddCustomerScreen() {
           {error && <Text className="text-red-500 text-sm">{error}</Text>}
 
           {!isOnline && (
-            <Text className="text-[#F59E0B] text-xs">
+            <Text className="text-ink-muted text-xs">
               Offline — saved on device and synced when you reconnect.
             </Text>
           )}
 
           <View className="flex-row gap-4 mt-4">
             <Pressable
-              className="flex-1 py-4 rounded-lg items-center bg-[#2D2D2D]"
+            accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              className="flex-1 py-4 rounded-xl items-center bg-surface-raised"
               onPress={() => router.back()}
             >
               <Text className="text-white text-base font-semibold">Cancel</Text>
             </Pressable>
             <Pressable
-              className={`flex-1 py-4 rounded-lg items-center ${loading ? "opacity-60" : "bg-blue-500"}`}
+            accessibilityRole="button"
+              accessibilityLabel="Save customer"
+              accessibilityState={{ disabled: loading, busy: loading }}
+              className={`flex-1 py-4 rounded-xl items-center ${loading ? "opacity-60" : "bg-brand-primary-fill"}`}
               onPress={onSubmit}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={colors.ink} />
               ) : (
                 <Text className="text-white text-base font-semibold">
                   Save Customer
@@ -147,9 +169,9 @@ export default function AddCustomerScreen() {
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </KeyboardAvoidingView>
   );
 }

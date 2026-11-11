@@ -1,19 +1,11 @@
-import { useEffect, useState } from "react";
-import { getSessionUser, type SessionUser } from "@/lib/auth-session";
+import { useSession, type SessionValue } from "@/lib/session-provider";
 
-export function useAuth() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [session, setSession] = useState<{ user: SessionUser } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getSessionUser()
-      .then((u) => {
-        setUser(u);
-        setSession(u ? { user: u } : null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { user, session, loading };
+/**
+ * The signed-in session, resolved once by `SessionProvider`.
+ *
+ * Call sites keep the same shape; the difference is that the session is
+ * fetched once for the app instead of once per screen.
+ */
+export function useAuth(): SessionValue {
+  return useSession();
 }

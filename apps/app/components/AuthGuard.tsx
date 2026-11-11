@@ -2,6 +2,8 @@ import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { publicRoutes } from "@/lib/auth";
 import { usePathname, Redirect } from "expo-router";
+import { colors } from "@/lib/theme";
+import { LANDING_ROUTE } from "@/lib/routes";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -12,12 +14,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       <View
         style={{
           flex: 1,
-          backgroundColor: "#0A0A0A",
+          backgroundColor: colors.bg,
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={colors.ink} />
       </View>
     );
   }
@@ -29,7 +31,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (session && isPublicRoute) {
-    return <Redirect href="/(tabs)/home" />;
+    // One canonical landing route for every sign-in path.
+    return <Redirect href={LANDING_ROUTE} />;
   }
 
   return <>{children}</>;

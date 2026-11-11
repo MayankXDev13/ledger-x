@@ -112,9 +112,9 @@ export function renderStatementHtml(
   th { text-align: left; border-bottom: 1px solid #ddd; padding: 6px 8px; font-size: 10px; text-transform: uppercase; color: #666; }
   td { padding: 8px; border-bottom: 1px solid #eee; }
   .num { text-align: right; white-space: nowrap; }
-  .credit { color: #047857; }
-  .debit { color: #b91c1c; }
-  .method { background: #fef3c7; color: #92400e; font-size: 9px; padding: 1px 5px; border-radius: 4px; }
+  .credit { color: #171717; }
+  .debit { color: #047857; }
+  .method { background: #d1fae5; color: #065f46; font-size: 11px; padding: 1px 5px; border-radius: 4px; }
   .empty { text-align: center; color: #888; padding: 32px 0; }
   .footnote { margin-top: 16px; font-size: 10px; color: #888; }
 </style>

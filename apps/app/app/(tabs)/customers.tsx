@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   View,
@@ -11,11 +11,20 @@ import {
 import { useFocusEffect, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
-import { customersApi, type Customer } from "@/lib/api";
+import { customersApi, collectionApi, type Customer } from "@/lib/api";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { OfflinePendingBar } from "@/components/OfflinePendingBar";
+import { CustomerAvatar } from "@/components/CustomerAvatar";
+import { MoneyText } from "@/components/MoneyText";
+import { AgingStrip } from "@/components/AgingStrip";
+import { colors } from "@/lib/theme";
+import { usePressable } from "@/lib/press-feedback";
+import { ErrorState } from "@/components/ErrorState";
+
+type Balance = { outstanding: number; ageDays: number | null };
 
 export default function CustomersScreen() {
+  const press = usePressable();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const {
@@ -25,17 +34,31 @@ export default function CustomersScreen() {
     isOnline,
     retry,
     discard,
+    pendingCustomers,
   } = useOfflineQueue();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [balances, setBalances] = useState<Record<string, Balance>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCustomers = useCallback(async () => {
     try {
-      setCustomers(await customersApi.list());
-    } catch (error) {
-      console.error("Error fetching customers:", error);
+      const [list, coll] = await Promise.all([
+        customersApi.list(),
+        collectionApi.list("amount").catch(() => null),
+      ]);
+      setCustomers(list);
+      if (coll) {
+        const map: Record<string, Balance> = {};
+        for (const r of coll.data) {
+          map[r.customerId] = { outstanding: r.outstanding, ageDays: r.ageDays };
+        }
+        setBalances(map);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load your customers");
     } finally {
       setLoading(false);
     }
@@ -47,60 +70,127 @@ export default function CustomersScreen() {
     }, [fetchCustomers]),
   );
 
+  /**
+   * Customers created offline are queued locally, so they are merged into the
+   * list here instead of waiting for the server. Once they sync, the server
+   * list contains them and the queue drops them, so nothing appears twice.
+   */
+  const visibleCustomers = useMemo<Customer[]>(
+    () => [
+      ...pendingCustomers.map((customer) => ({
+        id: customer.id,
+        userId: "",
+        name: customer.name,
+        phone: customer.phone,
+      })),
+      ...customers,
+    ],
+    [customers, pendingCustomers],
+  );
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredCustomers = visibleCustomers.filter(
+    (contact) =>
+      contact.name.toLowerCase().includes(q) || contact.phone.includes(q),
+  );
+
   if (!session) {
     return null;
   }
 
-  const filteredCustomers = customers.filter((contact) => {
-    const matchesSearch =
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.includes(searchQuery);
-
-    return matchesSearch;
-  });
-
-  const renderCustomer = ({ item }: { item: Customer }) => (
-    <Link href={`/customers/details?id=${item.id}`} asChild>
-      <Pressable className="flex-row items-center justify-between py-4 border-b border-brand-border">
-        <View className="flex-1">
-          <View className="flex-row items-center gap-2">
-            <Text className="text-white font-medium text-lg">{item.name}</Text>
-            {item.isSample && (
-              <View className="rounded bg-[#F59E0B]/15 px-1.5 py-0.5">
-                <Text className="text-[#F59E0B] text-[9px] font-bold uppercase">
-                  Sample
-                </Text>
-              </View>
-            )}
+  const renderCustomer = ({ item }: { item: Customer }) => {
+    const b = balances[item.id];
+    const hasBalance = !!b && b.outstanding > 0;
+    return (
+      <Link href={`/customers/details?id=${item.id}`} asChild>
+        <Pressable
+          onPressIn={press.onPressIn}
+          onPressOut={press.onPressOut}
+          style={press.animatedStyle}
+          className="flex-row items-center gap-3 border-b border-line py-3.5 active:opacity-80"
+          accessibilityRole="button"
+          accessibilityLabel={`${item.name}, ${item.phone}${
+            hasBalance ? `, ${b.ageDays ?? 0} days unpaid` : ""
+          }`}
+        >
+          <CustomerAvatar name={item.name} size={40} />
+          <View className="flex-1">
+            <Text
+              className="font-mukta-semibold text-[15px] text-ink"
+              numberOfLines={1}
+            >
+              {item.name}
+            </Text>
+            <Text
+              className="mt-0.5 font-mukta text-[12px] text-ink-muted"
+              numberOfLines={1}
+            >
+              {item.phone}
+            </Text>
           </View>
-          <Text className="text-[#888888] text-sm mt-1">{item.phone}</Text>
-        </View>
-        <Text className="text-[#666666] text-xl ml-3">›</Text>
-      </Pressable>
-    </Link>
-  );
+          {hasBalance ? (
+            <View className="w-[92px] items-end">
+              <MoneyText value={b.outstanding} numberOfLines={1} />
+              <Text
+                className={`mt-0.5 font-mukta text-[11px] ${
+                  b.ageDays !== null && b.ageDays > 60
+                    ? "text-danger-text"
+                    : "text-ink-muted"
+                }`}
+              >
+                {b.ageDays === null ? "Unpaid" : `Unpaid ${b.ageDays}d`}
+              </Text>
+              <AgingStrip
+                mode="bucket"
+                ageDays={b.ageDays}
+                className="mt-2 w-[64px]"
+              />
+            </View>
+          ) : (
+            <Text className="font-mukta text-[12px] text-ink-muted">Settled</Text>
+          )}
+          <Ionicons name="chevron-forward" size={17} color={colors.inkMuted} />
+        </Pressable>
+      </Link>
+    );
+  };
 
   return (
-    <View className="flex-1 bg-brand-dark">
-      <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
-        <Text className="text-3xl font-bold text-white">Customers</Text>
-        <Text className="text-base text-[#888888] mt-1">
-          {filteredCustomers.length} contacts
-          {!isOnline && " · showing cached data (offline)"}
-        </Text>
+    <View className="flex-1 bg-bg">
+      <View className="px-5 pb-3" style={{ paddingTop: insets.top + 12 }}>
+        <View className="flex-row items-baseline justify-between">
+          <Text className="font-mukta-bold text-[24px] leading-[30px] text-ink">
+            Customers
+          </Text>
+          <Text className="font-plex text-[11px] uppercase tracking-[1.2px] text-ink-muted">
+            {customers.length} total
+          </Text>
+        </View>
+
+        <View className="mt-3 flex-row items-center gap-2 rounded-xl border border-line bg-surface-raised px-3">
+          <Ionicons name="search" size={16} color={colors.inkMuted} />
+          <TextInput
+            className="flex-1 py-3 font-mukta text-[15px] text-ink"
+            placeholder="Search by name or phone"
+            placeholderTextColor={colors.inkFaint}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            accessibilityLabel="Search customers"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery("")}
+              className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <Ionicons name="close" size={16} color={colors.inkMuted} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
-      <View className="px-6 mb-3">
-        <TextInput
-          className="border border-brand-border rounded-lg px-4 py-3 text-base text-white bg-brand-card mb-1"
-          placeholder="Search customers..."
-          placeholderTextColor="#666666"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <View className="px-6">
+      <View className="px-5">
         <OfflinePendingBar
           outstanding={outstanding}
           syncing={syncing}
@@ -113,22 +203,33 @@ export default function CustomersScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#ffffff" />
+          <ActivityIndicator size="large" color={colors.brand} />
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center px-5">
+          <ErrorState
+            title="Could not load your customers"
+            message={error}
+            onRetry={fetchCustomers}
+          />
         </View>
       ) : filteredCustomers.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="people-outline" size={44} color="#444" />
-          <Text className="text-[#888888] text-lg mt-4">
+          <Ionicons name="people-outline" size={40} color={colors.inkFaint} />
+          <Text className="mt-4 font-mukta-semibold text-[17px] text-ink">
             {searchQuery ? "No customers found" : "No customers yet"}
           </Text>
           {!searchQuery && (
             <>
-              <Text className="text-[#666666] text-sm text-center mt-2">
+              <Text className="mt-2 text-center font-mukta text-[13px] text-ink-muted">
                 Add a customer to start recording credits and payments.
               </Text>
               <Link href="/customers/add" asChild>
-                <Pressable className="mt-5 rounded-lg bg-[#10B981] px-5 py-3">
-                  <Text className="text-black text-sm font-bold">
+                <Pressable
+                  className="mt-5 min-h-[48px] items-center justify-center rounded-xl bg-brand-primary-fill px-5 active:opacity-80"
+                  accessibilityRole="button"
+                >
+                  <Text className="font-mukta-semibold text-[15px] text-white">
                     Add your first customer
                   </Text>
                 </Pressable>
@@ -142,8 +243,8 @@ export default function CustomersScreen() {
           renderItem={renderCustomer}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingBottom: insets.bottom + 88,
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 96,
           }}
           showsVerticalScrollIndicator={false}
         />
@@ -154,16 +255,16 @@ export default function CustomersScreen() {
           style={{
             position: "absolute",
             bottom: insets.bottom + 16,
-            right: 16,
+            right: 20,
             width: 56,
             height: 56,
             borderRadius: 28,
-            backgroundColor: "#ffffff",
-            alignItems: "center",
-            justifyContent: "center",
           }}
+          className="items-center justify-center bg-brand-primary-fill active:opacity-80"
+          accessibilityRole="button"
+          accessibilityLabel="Add customer"
         >
-          <Ionicons name="add" size={28} color="#000000" />
+          <Ionicons name="add" size={28} color={colors.ink} />
         </Pressable>
       </Link>
     </View>

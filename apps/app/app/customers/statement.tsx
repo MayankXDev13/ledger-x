@@ -22,6 +22,7 @@ import {
   statementFileName,
 } from "@/lib/statements";
 import { useSettings } from "@/hooks/useSettings";
+import { colors } from "@/lib/theme";
 
 /**
  * Mobile statement flow (task 5.3): the API statement model is rendered into
@@ -120,18 +121,29 @@ export default function StatementScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={12}
+            style={{ minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+            onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
         <Text style={styles.headerTitle}>Statement</Text>
-        <Pressable onPress={sharePdf} disabled={!statement || sharing}>
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Share statement"
+            accessibilityState={{ disabled: !statement || sharing, busy: sharing }}
+            style={{ minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+            onPress={sharePdf}
+            disabled={!statement || sharing}>
           {sharing ? (
-            <ActivityIndicator size="small" color="#10B981" />
+            <ActivityIndicator size="small" color={colors.brand} />
           ) : (
             <Ionicons
               name="share-social-outline"
               size={22}
-              color={statement ? "#10B981" : "#555555"}
+              color={statement ? colors.brand : colors.inkFaint}
             />
           )}
         </Pressable>
@@ -144,7 +156,7 @@ export default function StatementScreen() {
           <TextInput
             style={styles.filterInput}
             placeholder="2026-01-01"
-            placeholderTextColor="#555555"
+            placeholderTextColor={colors.inkFaint}
             value={start}
             onChangeText={setStart}
             autoCapitalize="none"
@@ -155,13 +167,15 @@ export default function StatementScreen() {
           <TextInput
             style={styles.filterInput}
             placeholder="2026-01-31"
-            placeholderTextColor="#555555"
+            placeholderTextColor={colors.inkFaint}
             value={end}
             onChangeText={setEnd}
             autoCapitalize="none"
           />
         </View>
         <Pressable
+            accessibilityRole="button"
+          accessibilityLabel="Apply date filter"
           style={styles.applyBtn}
           onPress={() => setApplied({ start, end })}
         >
@@ -171,11 +185,11 @@ export default function StatementScreen() {
 
       {loading ? (
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#ffffff" />
+          <ActivityIndicator size="large" color={colors.ink} />
         </View>
       ) : !statement ? (
         <View style={styles.loader}>
-          <Text style={{ color: "#888888" }}>No statement available.</Text>
+          <Text style={{ color: colors.inkMuted }}>No statement available.</Text>
         </View>
       ) : (
         <ScrollView
@@ -210,18 +224,18 @@ export default function StatementScreen() {
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.muted}>Credit</Text>
-              <Text style={[styles.totalValue, { color: "#10B981" }]}>
+              <Text style={[styles.totalValue, { color: colors.ink }]}>
                 {formatMoney(statement.totalCredit)}
               </Text>
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.muted}>Paid</Text>
-              <Text style={[styles.totalValue, { color: "#EF4444" }]}>
+              <Text style={[styles.totalValue, { color: colors.positive }]}>
                 {formatMoney(statement.totalDebit)}
               </Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.muted, { color: "#CCCCCC" }]}>Closing</Text>
+              <Text style={[styles.muted, { color: colors.inkMuted }]}>Closing</Text>
               <Text style={styles.totalValue}>
                 {formatMoney(statement.closingBalance)}
               </Text>
@@ -249,7 +263,7 @@ export default function StatementScreen() {
                 <Text
                   style={[
                     styles.entryAmount,
-                    { color: entry.type === "credit" ? "#10B981" : "#EF4444" },
+                    { color: entry.type === "credit" ? colors.ink : colors.positive },
                   ]}
                 >
                   {entry.type === "credit" ? "+" : "-"}
@@ -267,8 +281,13 @@ export default function StatementScreen() {
             entries are excluded. Generated by Ledger-X; not a tax invoice.
           </Text>
 
-          <Pressable style={styles.shareButton} onPress={sharePdf}>
-            <Ionicons name="share-social" size={18} color="#000000" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Share statement"
+            style={styles.shareButton}
+            onPress={sharePdf}
+          >
+            <Ionicons name="share-social" size={18} color={colors.ink} />
             <Text style={styles.shareText}>
               {sharing ? "Preparing PDF…" : "Share as PDF"}
             </Text>
@@ -280,7 +299,7 @@ export default function StatementScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -288,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#ffffff" },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: colors.ink },
   filter: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -297,73 +316,73 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   filterField: { flex: 1 },
-  filterLabel: { color: "#888888", fontSize: 10, marginBottom: 4 },
+  filterLabel: { color: colors.inkMuted, fontSize: 11, marginBottom: 4 },
   filterInput: {
     borderWidth: 1,
-    borderColor: "#333333",
-    borderRadius: 8,
-    backgroundColor: "#171717",
-    color: "#ffffff",
+    borderColor: colors.line,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    color: colors.ink,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    fontSize: 12,
+    fontSize: 13,
   },
   applyBtn: {
-    backgroundColor: "#1F1F1F",
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  applyText: { color: "#ffffff", fontSize: 12, fontWeight: "600" },
+  applyText: { color: colors.ink, fontSize: 13, fontWeight: "600" },
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  document: { flex: 1, backgroundColor: "#121212", paddingHorizontal: 20 },
+  document: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20 },
   docHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#2D2D2D",
+    borderBottomColor: colors.line,
     paddingVertical: 14,
   },
-  businessName: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
-  muted: { color: "#888888", fontSize: 11 },
-  period: { color: "#ffffff", fontSize: 12, fontWeight: "600" },
+  businessName: { color: colors.ink, fontSize: 16, fontWeight: "700" },
+  muted: { color: colors.inkMuted, fontSize: 11 },
+  period: { color: colors.ink, fontSize: 13, fontWeight: "600" },
   customerBlock: { paddingVertical: 14 },
-  customerName: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  customerName: { color: colors.ink, fontSize: 15, fontWeight: "700" },
   totalsRow: {
     flexDirection: "row",
     gap: 12,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surfaceRaised,
     borderRadius: 12,
     padding: 14,
   },
   totalItem: { flex: 1 },
-  totalValue: { color: "#ffffff", fontSize: 12, fontWeight: "700", marginTop: 2 },
+  totalValue: { color: colors.ink, fontSize: 13, fontWeight: "700", marginTop: 2, fontVariant: ["tabular-nums"] },
   entryRow: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#222222",
+    borderBottomColor: colors.line,
     paddingVertical: 10,
   },
-  entryNoteText: { color: "#ffffff", fontSize: 12, fontWeight: "500" },
-  entryAmount: { fontSize: 12, fontWeight: "700", width: 90, textAlign: "right" },
+  entryNoteText: { color: colors.ink, fontSize: 13, fontWeight: "500" },
+  entryAmount: { fontSize: 13, fontWeight: "700", width: 90, textAlign: "right", fontVariant: ["tabular-nums"] },
   entryBalance: {
-    color: "#888888",
+    color: colors.inkMuted,
     fontSize: 11,
     width: 90,
     textAlign: "right",
   },
-  empty: { color: "#888888", textAlign: "center", paddingVertical: 32 },
-  footnote: { color: "#666666", fontSize: 10, marginTop: 16 },
+  empty: { color: colors.inkMuted, textAlign: "center", paddingVertical: 32 },
+  footnote: { color: colors.inkMuted, fontSize: 11, marginTop: 16 },
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#10B981",
+    backgroundColor: colors.brandFill,
     borderRadius: 10,
     paddingVertical: 14,
     marginTop: 20,
   },
-  shareText: { color: "#000000", fontSize: 14, fontWeight: "700" },
+  shareText: { color: colors.ink, fontSize: 14, fontWeight: "700" },
 });

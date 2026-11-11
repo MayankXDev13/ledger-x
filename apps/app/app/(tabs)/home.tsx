@@ -8,25 +8,26 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
-import { Link } from "expo-router";
+import { useFocusEffect, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  customersApi,
   dashboardApi,
   type Analytics,
-  type Customer,
   type DashboardMetrics,
-  type Transaction,
 } from "@/lib/api";
-import { MetricCard } from "@/components/MetricCard";
 import { QuickEntryModal } from "@/components/QuickEntryModal";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { OfflinePendingBar } from "@/components/OfflinePendingBar";
+import { CustomerAvatar } from "@/components/CustomerAvatar";
+import { Button } from "@/components/Button";
+import { MoneyText } from "@/components/MoneyText";
+import { AgingLegend, AgingStrip } from "@/components/AgingStrip";
+import { SectionHeader } from "@/components/SectionHeader";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
-import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
-import { formatCurrency, formatRelativeTime } from "@/types/database";
+import { colors } from "@/lib/theme";
+import { usePressable } from "@/lib/press-feedback";
 
 const MONTH_LABELS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -38,45 +39,71 @@ function monthLabel(month: string): string {
   return MONTH_LABELS[Number(m) - 1] ?? month;
 }
 
+function greetingName(email: string | undefined): string {
+  const local = email?.split("@")[0] ?? "shopkeeper";
+  const pretty = local.replace(/[._-]+/g, " ").trim();
+  return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+}
+
+function StatColumn({
+  label,
+  children,
+  first,
+}: {
+  label: string;
+  children: React.ReactNode;
+  first?: boolean;
+}) {
+  return (
+    <View className={`flex-1 px-3 ${first ? "" : "border-l border-line"}`}>
+      <Text className="font-plex text-[11px] uppercase tracking-[1.2px] text-ink-muted">
+        {label}
+      </Text>
+      <View className="mt-1">{children}</View>
+    </View>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <View className="gap-4">
+      <View className="h-6 w-40 rounded bg-surface-raised" />
+      <View className="h-10 w-56 rounded bg-surface-raised" />
+      <View className="h-12 rounded-xl bg-surface-raised" />
+      <View className="h-10 rounded-xl bg-surface-raised" />
+      <View className="h-28 rounded-2xl bg-surface-raised" />
+      <View className="h-20 rounded-xl bg-surface-raised" />
+    </View>
+  );
+}
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
+  const press = usePressable();
   const { session, loading: authLoading } = useAuth();
-  const {
-    outstanding,
-    items,
-    syncing,
-    isOnline,
-    retry,
-    discard,
-  } = useOfflineQueue();
+  const { outstanding, items, syncing, isOnline, retry, discard, pendingEntries } =
+    useOfflineQueue();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [quickEntryType, setQuickEntryType] = useState<
-    "credit" | "debit" | null
-  >(null);
+  const [error, setError] = useState<string | null>(null);
+  const [quickEntryType, setQuickEntryType] = useState<"credit" | "debit" | null>(
+    null,
+  );
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [metricsData, transactionsData, analyticsData, customersData] =
-        await Promise.all([
-          dashboardApi.metrics(),
-          dashboardApi.recentTransactions(),
-          dashboardApi.analytics(),
-          customersApi.list() as Promise<Customer[]>,
-        ]);
+      setError(null);
+      const [metricsData, analyticsData] = await Promise.all([
+        dashboardApi.metrics(),
+        dashboardApi.analytics(),
+      ]);
       setMetrics(metricsData);
-      setRecentTransactions(transactionsData);
       setAnalytics(analyticsData);
-      setCustomerNames(
-        Object.fromEntries(customersData.map((c) => [c.id, c.name])),
-      );
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load your totals");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,19 +117,10 @@ export default function DashboardScreen() {
     }, [authLoading, fetchDashboardData]),
   );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchDashboardData();
-  };
-
-  const handleQuickEntry = (type: "credit" | "debit") => {
-    setQuickEntryType(type);
-  };
-
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-brand-dark">
-        <ActivityIndicator size="large" color="#ffffff" />
+      <View className="flex-1 items-center justify-center bg-bg">
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -111,36 +129,69 @@ export default function DashboardScreen() {
     return null;
   }
 
-  const totalReceivables = analytics?.totalReceivables ?? 0;
+  // Entries recorded offline are not on the server yet, so they are added to
+  // the outstanding figure here. Once they sync, the server value includes
+  // them and the queue drops them, so nothing is counted twice.
+  const pendingNet = pendingEntries.reduce(
+    (sum, entry) => sum + (entry.type === "credit" ? entry.amount : -entry.amount),
+    0,
+  );
+  const totalReceivables = (analytics?.totalReceivables ?? 0) + pendingNet;
+  const aging = analytics?.aging ?? { "0-30": 0, "31-60": 0, "60+": 0 };
   const maxTrend = Math.max(
     1,
     ...(analytics?.trend ?? []).map((t) => Math.max(t.credit, t.debit)),
   );
+  const oldestAge = (analytics?.topDebtors ?? []).reduce<number | null>(
+    (oldest, debtor) =>
+      debtor.ageDays === null
+        ? oldest
+        : oldest === null
+          ? debtor.ageDays
+          : Math.max(oldest, debtor.ageDays),
+    null,
+  );
+  const hasTrend = (analytics?.trend ?? []).some((t) => t.credit || t.debit);
+  const firstName = greetingName(session.user.email);
+  const hasCustomers = (metrics?.totalCustomers ?? 0) > 0;
 
   return (
-    <View className="flex-1 bg-brand-dark">
-      <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
-        <Text className="text-3xl font-extrabold text-white">Dashboard</Text>
-        <Text className="text-base text-[#888888] mt-1">
-          Welcome back to Ledger-X
-        </Text>
-      </View>
-
+    <View className="flex-1 bg-bg">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingBottom: insets.bottom + 24,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 12,
+          paddingBottom: insets.bottom + 28,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#fff"
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchDashboardData();
+            }}
+            tintColor={colors.inkMuted}
+            colors={[colors.brand]}
+            progressBackgroundColor={colors.surface}
           />
         }
       >
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="font-mukta-black text-[24px] leading-[30px] text-ink">
+              Ledger-<Text className="text-brand-primary">X</Text>
+            </Text>
+            <Text className="mt-0.5 font-mukta text-[15px] text-ink-muted">
+              Namaste, {firstName}
+            </Text>
+          </View>
+          <Text className="mt-1 font-plex text-[11px] uppercase tracking-[1.5px] text-ink-muted">
+            {format(new Date(), "d MMM").toUpperCase()}
+          </Text>
+        </View>
+
         <OfflinePendingBar
           outstanding={outstanding}
           syncing={syncing}
@@ -150,286 +201,289 @@ export default function DashboardScreen() {
           onDiscard={discard}
         />
 
-        <View className="gap-3">
-          <MetricCard
-            title="Total Balance"
-            value={formatCurrency(metrics?.totalBalance || 0)}
-            icon="wallet"
-            iconColor="#3B82F6"
-          />
-          <MetricCard
-            title="Total Customers"
-            value={(metrics?.totalCustomers || 0).toString()}
-            icon="people"
-            iconColor="#10B981"
-          />
-          <MetricCard
-            title="This Month"
-            value={formatCurrency(metrics?.monthlyNet || 0)}
-            icon="trending-up"
-            iconColor={
-              metrics?.monthlyNet && metrics.monthlyNet >= 0
-                ? "#10B981"
-                : "#EF4444"
-            }
-            trend={{
-              value: "vs last month",
-              isPositive:
-                metrics?.monthlyNet !== undefined && metrics.monthlyNet >= 0,
-            }}
-          />
-          <MetricCard
-            title="To Collect"
-            value={formatCurrency(totalReceivables)}
-            icon="time"
-            iconColor="#F59E0B"
-          />
-        </View>
-
-        <View className="mt-8">
-          <Text className="text-lg font-semibold text-white mb-4">
-            Quick Actions
-          </Text>
-          <View className="flex-row gap-3">
-            <Pressable
-              className="flex-1 flex-row items-center justify-center bg-brand-card rounded-xl py-4 gap-2 border border-brand-border"
-              onPress={() => handleQuickEntry("credit")}
-            >
-              <Ionicons name="add-circle" size={24} color="#10B981" />
-              <Text className="text-white text-base font-semibold">
-                + Credit
-              </Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 flex-row items-center justify-center bg-brand-card rounded-xl py-4 gap-2 border border-brand-border"
-              onPress={() => handleQuickEntry("debit")}
-            >
-              <Ionicons name="remove-circle" size={24} color="#EF4444" />
-              <Text className="text-white text-base font-semibold">
-                + Payment
-              </Text>
-            </Pressable>
+        {loading ? (
+          <View className="mt-6">
+            <HomeSkeleton />
           </View>
-        </View>
-
-        {/* 12-month trend */}
-        <View className="mt-8">
-          <Text className="text-lg font-semibold text-white mb-3">
-            12-Month Trend
-          </Text>
-          <View className="bg-brand-card rounded-xl border border-brand-border p-4">
-            {analytics && analytics.trend.some((t) => t.credit || t.debit) ? (
-              <>
-                <View className="flex-row items-end gap-1 h-28">
-                  {analytics.trend.map((point) => (
-                    <View
-                      key={point.month}
-                      className="flex-1 flex-row items-end justify-center gap-0.5"
-                    >
-                      <View
-                        style={{
-                          height: Math.max(2, (point.credit / maxTrend) * 100),
-                          backgroundColor: "#10B981",
-                          width: 6,
-                          borderRadius: 2,
-                        }}
-                      />
-                      <View
-                        style={{
-                          height: Math.max(2, (point.debit / maxTrend) * 100),
-                          backgroundColor: "#EF4444",
-                          width: 6,
-                          borderRadius: 2,
-                        }}
-                      />
-                    </View>
-                  ))}
-                </View>
-                <View className="flex-row mt-2">
-                  {analytics.trend.map((point, index) => (
-                    <Text
-                      key={point.month}
-                      className="flex-1 text-[8px] text-[#666666] text-center"
-                    >
-                      {index % 2 === 0 ? monthLabel(point.month) : ""}
-                    </Text>
-                  ))}
-                </View>
-                <View className="flex-row gap-4 mt-3">
-                  <Text className="text-[10px] text-[#10B981]">● Credit</Text>
-                  <Text className="text-[10px] text-[#EF4444]">● Paid</Text>
-                </View>
-              </>
-            ) : (
-              <View className="items-center py-6">
-                <Ionicons name="bar-chart-outline" size={36} color="#444" />
-                <Text className="text-[#888888] text-sm mt-2">
-                  No activity in the last 12 months
-                </Text>
-                <Text className="text-[#666666] text-xs mt-1">
-                  Record a credit to start the trend.
+        ) : error ? (
+          <View className="mt-8 rounded-2xl border border-line bg-surface p-5">
+            <Text className="font-mukta-semibold text-[15px] text-ink">
+              Couldn&apos;t load your totals
+            </Text>
+            <Text className="mt-1 font-mukta text-[13px] text-ink-muted">
+              {error}
+            </Text>
+            <Button
+              title="Try again"
+              className="mt-4"
+              onPress={() => {
+                setLoading(true);
+                fetchDashboardData();
+              }}
+            />
+          </View>
+        ) : (
+          <>
+            {/* ─── Hero: total outstanding ─── */}
+            <View className="mt-7">
+              <SectionHeader label="Total outstanding" />
+              <MoneyText
+                value={totalReceivables}
+                size="hero"
+                className="mt-3"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              />
+              <AgingStrip
+                mode="proportional"
+                buckets={aging}
+                className="mt-4"
+              />
+              <View className="mt-3 flex-row items-center justify-between gap-3">
+                <AgingLegend />
+                <Text className="font-mukta-medium text-[11px] text-ink-muted">
+                  {oldestAge === null
+                    ? "Nothing outstanding"
+                    : `Oldest unpaid ${oldestAge}d`}
                 </Text>
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Top debtors */}
-        <View className="mt-8">
-          <Text className="text-lg font-semibold text-white mb-3">
-            Top Debtors
-          </Text>
-          {analytics && analytics.topDebtors.length > 0 ? (
-            <View className="gap-2">
-              {analytics.topDebtors.slice(0, 5).map((debtor) => (
-                <Link
-                  key={debtor.customerId}
-                  href={`/customers/details?id=${debtor.customerId}`}
-                  asChild
-                >
-                  <Pressable className="flex-row items-center bg-brand-card rounded-xl px-4 py-3">
-                    <View className="flex-1">
-                      <Text className="text-white font-medium text-sm">
-                        {debtor.name}
-                      </Text>
-                      <Text className="text-[#666666] text-xs mt-0.5">
-                        {debtor.ageDays === null
-                          ? "No unpaid credit"
-                          : `Unpaid ${debtor.ageDays}d`}
-                      </Text>
-                    </View>
-                    <Text className="text-white font-semibold text-sm">
-                      {formatCurrency(debtor.outstanding)}
-                    </Text>
-                  </Pressable>
-                </Link>
-              ))}
             </View>
-          ) : (
-            <View className="bg-brand-card rounded-xl border border-brand-border items-center py-6">
-              <Ionicons name="checkmark-circle-outline" size={32} color="#444" />
-              <Text className="text-[#888888] text-sm mt-2">
-                No outstanding balances
-              </Text>
-            </View>
-          )}
-        </View>
 
-        {/* Aging buckets */}
-        <View className="mt-8">
-          <Text className="text-lg font-semibold text-white mb-3">
-            Receivables Aging
-          </Text>
-          <View className="flex-row gap-2">
-            {(
-              [
-                { key: "0-30", label: "0-30d", color: "#10B981" },
-                { key: "31-60", label: "31-60d", color: "#F59E0B" },
-                { key: "60+", label: "60+d", color: "#EF4444" },
-              ] as const
-            ).map((bucket) => (
-              <View
-                key={bucket.key}
-                className="flex-1 bg-brand-card rounded-xl border border-brand-border p-3"
+            {/* ─── Supporting stats ─── */}
+            <View className="mt-6 flex-row border-y border-line py-3">
+              <StatColumn label="Customers" first>
+                <Text className="font-mukta-bold text-[15px] text-ink">
+                  {metrics?.totalCustomers ?? 0}
+                </Text>
+              </StatColumn>
+              <StatColumn label="This month">
+                <MoneyText
+                  value={metrics?.monthlyNet ?? 0}
+                  sign={(metrics?.monthlyNet ?? 0) >= 0 ? "+" : "-"}
+                  numberOfLines={1}
+                />
+              </StatColumn>
+              <StatColumn label="Net balance">
+                <MoneyText value={metrics?.totalBalance ?? 0} numberOfLines={1} />
+              </StatColumn>
+            </View>
+
+            {/* ─── Actions ─── */}
+            <View className="mt-5 flex-row gap-3">
+              <Pressable
+                onPress={() => setQuickEntryType("credit")}
+                onPressIn={press.onPressIn}
+                onPressOut={press.onPressOut}
+                style={press.animatedStyle}
+                className="min-h-[52px] flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-brand-primary-fill px-4 active:opacity-80"
+                accessibilityRole="button"
+                accessibilityLabel="Add credit"
               >
-                <Text className="text-[10px] text-[#888888] font-semibold">
-                  {bucket.label}
+                <Ionicons name="add" size={18} color={colors.white} />
+                <Text className="font-mukta-semibold text-[15px] text-white">
+                  Add credit
                 </Text>
-                <Text
-                  className="text-sm font-bold mt-1"
-                  style={{ color: bucket.color }}
-                >
-                  {formatCurrency(analytics?.aging[bucket.key] ?? 0)}
+              </Pressable>
+              <Pressable
+                onPress={() => setQuickEntryType("debit")}
+                onPressIn={press.onPressIn}
+                onPressOut={press.onPressOut}
+                style={press.animatedStyle}
+                className="min-h-[52px] flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 active:opacity-80"
+                accessibilityRole="button"
+                accessibilityLabel="Record payment"
+              >
+                <Text className="font-mukta-semibold text-[15px] text-ink">
+                  Record payment
                 </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View className="mt-8">
-          <Text className="text-lg font-semibold text-white mb-4">
-            Recent Activity
-          </Text>
-          {recentTransactions.length === 0 ? (
-            <View className="items-center py-12">
-              <Ionicons name="receipt-outline" size={48} color="#444" />
-              <Text className="text-[#888888] text-base font-medium mt-4">
-                No transactions yet
-              </Text>
-              <Text className="text-[#666666] text-sm mt-1">
-                Add your first transaction to see it here
-              </Text>
+              </Pressable>
             </View>
-          ) : (
-            <View className="gap-3">
-              {recentTransactions.map((transaction) => {
-                const isCredit = transaction.type === "credit";
-                const method = paymentMethodLabel(transaction.paymentMethod);
-                const isPayment = isPaymentEntry(transaction);
-                return (
-                  <View
-                    key={transaction.id}
-                    className="flex-row items-center justify-between bg-brand-card rounded-xl p-4"
-                  >
-                    <View className="flex-row items-center flex-1 mr-3">
-                      <View
-                        className="w-9 h-9 rounded-lg items-center justify-center mr-3"
-                        style={{
-                          backgroundColor: isPayment
-                            ? "rgba(245, 158, 11, 0.1)"
-                            : isCredit
-                              ? "rgba(16, 185, 129, 0.1)"
-                              : "rgba(239, 68, 68, 0.1)",
-                        }}
-                      >
-                        <Ionicons
-                          name={
-                            isPayment
-                              ? "wallet"
-                              : isCredit
-                                ? "arrow-down"
-                                : "arrow-up"
-                          }
-                          size={16}
-                          color={isPayment ? "#F59E0B" : isCredit ? "#10B981" : "#EF4444"}
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-white font-medium text-base">
-                          {customerNames[transaction.customerId] ??
-                            "Unknown Customer"}
-                        </Text>
-                        <Text className="text-[#888888] text-sm mt-0.5" numberOfLines={1}>
-                          {transaction.note || (isCredit ? "Credit" : "Payment")}
-                          {method ? ` · ${method}` : ""} ·{" "}
-                          {formatRelativeTime(transaction.createdAt)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View className="items-end">
-                      <Text
-                        className="text-base font-semibold"
-                        style={{
-                          color: isPayment
-                            ? "#F59E0B"
-                            : isCredit
-                              ? "#10B981"
-                              : "#EF4444",
-                        }}
-                      >
-                        {isCredit ? "+" : "-"}
-                        {formatCurrency(transaction.amount)}
+
+            {/* ─── 12-month trend ─── */}
+            <View className="mt-8">
+              <SectionHeader
+                label="12-month trend"
+                action={
+                  <View className="flex-row items-center gap-3">
+                    <View className="flex-row items-center gap-1">
+                      <View className="h-1.5 w-1.5 rounded-full bg-ink-muted" />
+                      <Text className="font-mukta-medium text-[11px] text-ink-muted">
+                        Credit given
                       </Text>
-                      <Text className="text-[#666666] text-xs mt-0.5">
-                        {formatRelativeTime(transaction.createdAt)}
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                      <View className="h-1.5 w-1.5 rounded-full bg-positive" />
+                      <Text className="font-mukta-medium text-[11px] text-ink-muted">
+                        Paid
                       </Text>
                     </View>
                   </View>
-                );
-              })}
+                }
+              />
+              <View className="mt-3 rounded-2xl border border-line bg-surface p-4">
+                {hasTrend ? (
+                  <>
+                    <View className="h-28 flex-row items-end gap-1">
+                      {analytics!.trend.map((point) => (
+                        <View
+                          key={point.month}
+                          className="flex-1 flex-row items-end justify-center gap-[2px]"
+                        >
+                          {point.credit > 0 && (
+                            <View
+                              style={{
+                                height: Math.max(
+                                  3,
+                                  (point.credit / maxTrend) * 100,
+                                ),
+                                width: 3,
+                                borderRadius: 2,
+                                backgroundColor: colors.inkMuted,
+                              }}
+                            />
+                          )}
+                          {point.debit > 0 && (
+                            <View
+                              style={{
+                                height: Math.max(
+                                  3,
+                                  (point.debit / maxTrend) * 100,
+                                ),
+                                width: 3,
+                                borderRadius: 2,
+                                backgroundColor: colors.positive,
+                              }}
+                            />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                    <View className="mt-3 h-px bg-line" />
+                    <View className="mt-2 flex-row">
+                      {analytics!.trend.map((point, index) => (
+                        <Text
+                          key={point.month}
+                          className="flex-1 text-center font-plex text-[11px] text-ink-muted"
+                        >
+                          {index % 2 === 0 ? monthLabel(point.month) : ""}
+                        </Text>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <View className="items-center py-6">
+                    <Ionicons
+                      name="bar-chart-outline"
+                      size={32}
+                      color={colors.inkMuted}
+                    />
+                    <Text className="mt-2 font-mukta text-[13px] text-ink-muted">
+                      No activity in the last 12 months
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-          )}
-        </View>
+
+            {/* ─── Top debtors ─── */}
+            <View className="mt-8">
+              <SectionHeader
+                label="Top debtors"
+                action={
+                  <Link href="/(tabs)/customers" asChild>
+                    <Pressable
+                      className="min-h-[44px] justify-center px-1 active:opacity-70"
+                      accessibilityRole="button"
+                      accessibilityLabel="View all customers"
+                    >
+                      <Text className="font-mukta-semibold text-[13px] text-ink">
+                        View all →
+                      </Text>
+                    </Pressable>
+                  </Link>
+                }
+              />
+              {analytics && analytics.topDebtors.length > 0 ? (
+                <View className="mt-3 gap-2">
+                  {analytics.topDebtors.slice(0, 5).map((debtor) => {
+                    const ageLabel =
+                      debtor.ageDays === null
+                        ? "No unpaid credit"
+                        : `Unpaid ${debtor.ageDays}d`;
+                    const ageColor =
+                      debtor.ageDays !== null && debtor.ageDays > 60
+                        ? "text-danger-text"
+                        : "text-ink-muted";
+                    return (
+                      <Link
+                        key={debtor.customerId}
+                        href={`/customers/details?id=${debtor.customerId}`}
+                        asChild
+                      >
+                        <Pressable
+            accessibilityRole="button" className="flex-row items-center gap-3 rounded-xl border border-line bg-surface px-3 py-3 active:opacity-80">
+                          <CustomerAvatar name={debtor.name} size={36} />
+                          <View className="flex-1">
+                            <Text
+                              className="font-mukta-semibold text-[15px] text-ink"
+                              numberOfLines={1}
+                            >
+                              {debtor.name}
+                            </Text>
+                            <Text
+                              className={`mt-0.5 font-mukta text-[13px] ${ageColor}`}
+                            >
+                              {ageLabel}
+                            </Text>
+                          </View>
+                          <View className="w-[84px] items-end">
+                            <MoneyText
+                              value={debtor.outstanding}
+                              numberOfLines={1}
+                            />
+                            <AgingStrip
+                              mode="bucket"
+                              ageDays={debtor.ageDays}
+                              className="mt-2 w-[64px]"
+                            />
+                          </View>
+                        </Pressable>
+                      </Link>
+                    );
+                  })}
+                </View>
+              ) : hasCustomers ? (
+                <View className="mt-3 items-center rounded-xl border border-line bg-surface py-6">
+                  <Text className="font-mukta text-[13px] text-ink-muted">
+                    No outstanding balances
+                  </Text>
+                </View>
+              ) : (
+                <View className="mt-3 items-center rounded-xl border border-line bg-surface py-6 px-4">
+                  <Text className="font-mukta-semibold text-[15px] text-ink">
+                    Add your first customer
+                  </Text>
+                  <Text className="mt-1 text-center font-mukta text-[13px] text-ink-muted">
+                    Record a credit and it will show up here with the amount the
+                    customer owes you.
+                  </Text>
+                  <Link href="/(tabs)/customers" asChild>
+                    <Pressable
+                      className="mt-4 min-h-[44px] justify-center rounded-xl bg-brand-primary-fill px-5 active:opacity-80"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add your first customer"
+                    >
+                      <Text className="font-mukta-semibold text-[15px] text-white">
+                        Add customer
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </View>
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <QuickEntryModal

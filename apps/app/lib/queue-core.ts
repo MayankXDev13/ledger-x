@@ -97,3 +97,76 @@ export function applyOutcome(
 export function nextPending(items: QueueItem[]): QueueItem | null {
   return pendingInOrder(items)[0] ?? null;
 }
+
+
+/**
+ * Guards the queue against two concurrent replays.
+ *
+ * The queue is owned by one provider for the whole app, but several screens
+ * can still ask for a sync at the same moment (a reconnect plus a foreground
+ * plus a manual retry). This guard makes the second caller wait for the first
+ * instead of racing it over the same FIFO rows.
+ */
+export function createReplayGuard() {
+  let running = false;
+
+  return {
+    isRunning: () => running,
+    /** Runs `task` unless a replay is already in flight. */
+    async run<T>(task: () => Promise<T>): Promise<T | null> {
+      if (running) return null;
+      running = true;
+      try {
+        return await task();
+      } finally {
+        running = false;
+      }
+    },
+  };
+}
+
+/** A queued transaction the server has not accepted yet. */
+export interface PendingEntry {
+  id: string;
+  customerId: string;
+  amount: number;
+  type: "credit" | "debit";
+  paymentMethod: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+/** A queued customer the server has not accepted yet. */
+export interface PendingCustomer {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+/** Projects the queue into the entries that are still waiting to sync. */
+export function pendingEntriesFrom(items: QueueItem[]): PendingEntry[] {
+  return items
+    .filter(
+      (item) => item.kind === "transaction.create" && item.status !== "synced",
+    )
+    .map((item) => ({
+      id: item.id,
+      customerId: String(item.payload.customerId ?? ""),
+      amount: Number(item.payload.amount ?? 0),
+      type: item.payload.type === "debit" ? "debit" : "credit",
+      paymentMethod: (item.payload.paymentMethod as string | null) ?? null,
+      note: (item.payload.note as string | null) ?? null,
+      createdAt: item.createdAt,
+    }));
+}
+
+/** Projects the queue into the customers that are still waiting to sync. */
+export function pendingCustomersFrom(items: QueueItem[]): PendingCustomer[] {
+  return items
+    .filter((item) => item.kind === "customer.create" && item.status !== "synced")
+    .map((item) => ({
+      id: item.id,
+      name: String(item.payload.name ?? ""),
+      phone: String(item.payload.phone ?? ""),
+    }));
+}

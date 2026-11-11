@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/lib/theme";
 
 interface DeleteConfirmationDialogProps {
   visible: boolean;
@@ -31,25 +32,27 @@ export function DeleteConfirmationDialog({
       onRequestClose={onCancel}
     >
       <View className="flex-1 bg-black/70 justify-center items-center">
-        <View className="bg-[#2D2D2D] rounded-xl p-6 w-[85%] max-w-[360] items-center">
+        <View className="bg-surface rounded-xl p-6 w-[85%] max-w-[360] items-center">
           <View className="mb-4">
             <Ionicons
               name={isDestructive ? "warning-outline" : "information-outline"}
               size={40}
-              color={isDestructive ? "#EF4444" : "#F59E0B"}
+              color={isDestructive ? colors.danger : colors.brand}
             />
           </View>
 
           <Text className="text-xl font-semibold text-white text-center mb-2">
             {title}
           </Text>
-          <Text className="text-sm text-[#A0A0A0] text-center mb-6 leading-5">
+          <Text className="text-sm text-ink-muted text-center mb-6 leading-5">
             {message}
           </Text>
 
           <View className="flex-row gap-3 w-full">
             <Pressable
-              className="flex-1 py-3 rounded-lg items-center bg-[#3D3D3D]"
+            accessibilityRole="button"
+              accessibilityLabel={cancelText}
+              className="flex-1 py-3 rounded-lg items-center bg-surface-raised"
               onPress={onCancel}
             >
               <Text className="text-white text-base font-medium">
@@ -58,7 +61,9 @@ export function DeleteConfirmationDialog({
             </Pressable>
 
             <Pressable
-              className={`flex-1 py-3 rounded-lg items-center ${isDestructive ? "bg-red-500" : "bg-blue-500"}`}
+            accessibilityRole="button"
+              accessibilityLabel={confirmText}
+              className={`flex-1 py-3 rounded-lg items-center ${isDestructive ? "bg-red-500" : "bg-brand-primary-fill"}`}
               onPress={onConfirm}
             >
               <Text className="text-white text-base font-semibold">

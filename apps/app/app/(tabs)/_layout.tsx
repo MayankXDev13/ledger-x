@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors } from "@/lib/theme";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -9,18 +10,20 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          // adjust tab bar to respect bottom safe area (gesture bar / home indicator)
+          // The tab bar is sized by React Navigation so it accounts for the
+          // bottom safe area. Setting an explicit height here left only
+          // ~40px for a 24px icon and an 11px label, which clipped the label
+          // on notched devices.
           tabBarStyle: {
-            backgroundColor: "#0A0A0A", // brand-dark
-            borderTopColor: "#262626", // brand-border
+            backgroundColor: colors.bg,
+            borderTopColor: colors.line,
             borderTopWidth: 1,
-            height: 56 + insets.bottom,
-            paddingBottom: 8 + insets.bottom,
-            paddingTop: 8,
+            paddingTop: 6,
           },
-          tabBarActiveTintColor: "#10B981", // brand-accent
-          tabBarInactiveTintColor: "#A3A3A3", // brand-muted
+          tabBarActiveTintColor: colors.brand,
+          tabBarInactiveTintColor: colors.inkMuted,
           tabBarLabelStyle: {
+            fontFamily: "Mukta_600SemiBold",
             fontSize: 11,
             fontWeight: "600",
           },
@@ -34,20 +37,7 @@ export default function TabsLayout() {
             <Ionicons
               name={focused ? "home" : "home-outline"}
               size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="customers"
-        options={{
-          title: "Customers",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "people" : "people-outline"}
-              size={24}
-              color={color}
+              color={typeof color === "string" ? color : undefined}
             />
           ),
         }}
@@ -60,7 +50,7 @@ export default function TabsLayout() {
             <Ionicons
               name={focused ? "journal" : "journal-outline"}
               size={24}
-              color={color}
+              color={typeof color === "string" ? color : undefined}
             />
           ),
         }}
@@ -68,12 +58,25 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="collection"
         options={{
-          title: "Collect",
+          title: "Collection",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "hand-left" : "hand-left-outline"}
+              name={focused ? "qr-code" : "qr-code-outline"}
               size={24}
-              color={color}
+              color={typeof color === "string" ? color : undefined}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="customers"
+        options={{
+          title: "Customers",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={24}
+              color={typeof color === "string" ? color : undefined}
             />
           ),
         }}
@@ -86,7 +89,7 @@ export default function TabsLayout() {
             <Ionicons
               name={focused ? "person" : "person-outline"}
               size={24}
-              color={color}
+              color={typeof color === "string" ? color : undefined}
             />
           ),
         }}

@@ -4,24 +4,30 @@ export type UpiConfig = {
 };
 
 export type UpiRequest = UpiConfig & {
-  /** Amount in whole currency units (rupees), matching ledger entries. */
-  amount: number;
+  /**
+   * Amount in whole currency units (rupees), matching ledger entries.
+   * Omit it for a shop-wide QR: the payer enters the amount themselves.
+   */
+  amount?: number;
   note?: string;
 };
 
 /**
- * Builds a standard UPI intent URI. The amount is always two decimals in
- * rupees. The app never initiates or confirms the payment; the customer's
- * UPI app does that and the user records the payment manually.
+ * Builds a standard UPI intent URI. The amount, when present, is always two
+ * decimals in rupees. The app never initiates or confirms the payment; the
+ * customer's UPI app does that and the user records the payment manually.
  */
 export function buildUpiUri({ upiId, payeeName, amount, note }: UpiRequest): string {
-  const value = amount.toFixed(2);
   const parts = [
     `pa=${encodeURIComponent(upiId)}`,
     `pn=${encodeURIComponent(payeeName)}`,
-    `am=${value}`,
-    "cu=INR",
   ];
+
+  if (amount !== undefined && Number.isFinite(amount)) {
+    parts.push(`am=${amount.toFixed(2)}`);
+  }
+
+  parts.push("cu=INR");
 
   if (note) parts.push(`tn=${encodeURIComponent(note)}`);
 

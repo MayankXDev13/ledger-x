@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/cn";
 import type { PaymentMethod } from "@/lib/api";
+import { colors } from "@/lib/theme";
 
 const OPTIONS: {
   value: PaymentMethod | null;
@@ -28,9 +29,9 @@ export function PaymentMethodSelector({
 }: PaymentMethodSelectorProps) {
   return (
     <View>
-      <Text className="text-sm font-medium text-[#A0A0A0] mb-2">
+      <Text className="text-sm font-medium text-ink-muted mb-2">
         Payment method{" "}
-        <Text className="text-[#666666] font-normal">(optional)</Text>
+        <Text className="text-ink-muted font-normal">(optional)</Text>
       </Text>
       <View className="flex-row gap-2">
         {OPTIONS.map((option) => {
@@ -43,8 +44,8 @@ export function PaymentMethodSelector({
               className={cn(
                 "flex-1 items-center justify-center gap-1 rounded-xl border py-3",
                 selected
-                  ? "border-[#10B981] bg-[#10B981]/10"
-                  : "border-[#3D3D3D] bg-[#2D2D2D]",
+                  ? "border-brand-primary bg-brand-primary/10"
+                  : "border-line bg-surface-raised",
                 disabled && "opacity-40",
               )}
               accessibilityRole="button"
@@ -54,12 +55,12 @@ export function PaymentMethodSelector({
               <Ionicons
                 name={option.icon}
                 size={16}
-                color={selected ? "#10B981" : "#888888"}
+                color={selected ? colors.brand : colors.inkMuted}
               />
               <Text
                 className={cn(
                   "text-[11px] font-semibold",
-                  selected ? "text-[#10B981]" : "text-[#888888]",
+                  selected ? "text-brand-primary" : "text-ink-muted",
                 )}
               >
                 {option.label}

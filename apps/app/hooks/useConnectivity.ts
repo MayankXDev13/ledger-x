@@ -13,7 +13,7 @@ export interface ConnectivityState {
 export function useConnectivity(): ConnectivityState {
   const [state, setState] = useState<ConnectivityState>({
     isOnline: true,
-    appState: AppState.currentState,
+    appState: (AppState.currentState ?? "unknown") as AppStateStatus,
   });
 
   useEffect(() => {

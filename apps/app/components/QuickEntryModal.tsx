@@ -17,11 +17,14 @@ import { customersApi, type Customer } from "@/lib/api";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import type { PaymentMethod } from "@/lib/api";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 interface QuickEntryModalProps {
   visible: boolean;
   onClose: () => void;
   type: "credit" | "debit";
+  initialPaymentMethod?: PaymentMethod | null;
   onEntryAdded?: () => void;
 }
 
@@ -29,6 +32,7 @@ export function QuickEntryModal({
   visible,
   onClose,
   type,
+  initialPaymentMethod = null,
   onEntryAdded,
 }: QuickEntryModalProps) {
   const insets = useSafeAreaInsets();
@@ -60,6 +64,7 @@ export function QuickEntryModal({
   useEffect(() => {
     if (visible) {
       fetchCustomers();
+      setPaymentMethod(initialPaymentMethod ?? null);
     }
   }, [visible]);
 
@@ -79,10 +84,18 @@ export function QuickEntryModal({
   }, [searchQuery, customers]);
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || !amount) return;
+    if (!selectedCustomer) {
+      setError("Choose a customer first");
+      announce("Choose a customer first");
+      return;
+    }
 
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) return;
+    if (!amount || isNaN(numAmount) || numAmount <= 0) {
+      setError("Enter an amount greater than zero");
+      announce("Enter an amount greater than zero");
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -99,8 +112,15 @@ export function QuickEntryModal({
       });
       handleClose();
       onEntryAdded?.();
+      announce(
+        type === "credit"
+          ? "Credit added to the ledger"
+          : "Payment recorded",
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save entry");
+      const message = err instanceof Error ? err.message : "Could not save entry";
+      setError(message);
+      announce(message);
     } finally {
       setSubmitting(false);
     }
@@ -118,15 +138,18 @@ export function QuickEntryModal({
 
   const renderCustomerItem = ({ item }: { item: Customer }) => (
     <Pressable
-      className={`flex-row items-center justify-between py-3 border-b border-brand-border ${selectedCustomer?.id === item.id ? "bg-brand-card -mx-3 px-3" : ""}`}
+            accessibilityRole="button"
+      accessibilityLabel={`Select ${item.name}`}
+      accessibilityState={{ selected: selectedCustomer?.id === item.id }}
+      className={`flex-row items-center justify-between py-3 border-b border-line ${selectedCustomer?.id === item.id ? "bg-surface -mx-3 px-3" : ""}`}
       onPress={() => setSelectedCustomer(item)}
     >
       <View className="flex-1">
         <Text className="text-white font-medium text-base">{item.name}</Text>
-        <Text className="text-brand-muted text-sm mt-0.5">{item.phone}</Text>
+        <Text className="text-ink-muted text-sm mt-0.5">{item.phone}</Text>
       </View>
       {selectedCustomer?.id === item.id && (
-        <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+        <Ionicons name="checkmark-circle" size={24} color={colors.brand} />
       )}
     </Pressable>
   );
@@ -139,15 +162,18 @@ export function QuickEntryModal({
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
-        className="flex-1 bg-brand-dark"
+        className="flex-1 bg-bg"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View
-          className="flex-row items-center justify-between px-6 border-b border-brand-border"
+          className="flex-row items-center justify-between px-5 border-b border-line"
           style={{ paddingTop: insets.top + 12, paddingBottom: 12 }}
         >
-          <Pressable onPress={handleClose}>
-            <Text className="text-brand-muted text-base">Cancel</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            onPress={handleClose}>
+            <Text className="text-ink-muted text-base">Cancel</Text>
           </Pressable>
           <Text className="text-white text-xl font-semibold">
             {type === "credit" ? "Add Credit" : "Add Payment"}
@@ -158,20 +184,20 @@ export function QuickEntryModal({
         <View className="flex-1">
           {loading ? (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" color="#ffffff" />
+              <ActivityIndicator size="large" color={colors.ink} />
             </View>
           ) : (
             <>
-              <View className="px-6 py-4">
-                <Text className="text-brand-muted text-sm font-medium mb-3">
+              <View className="px-5 py-4">
+                <Text className="text-ink-muted text-sm font-medium mb-3">
                   Select Customer
                 </Text>
-                <View className="flex-row items-center bg-brand-card rounded-lg px-3 gap-2">
-                  <Ionicons name="search" size={18} color="#666" />
+                <View className="flex-row items-center bg-surface rounded-lg px-3 gap-2">
+                  <Ionicons name="search" size={18} color={colors.inkMuted} />
                   <TextInput
                     className="flex-1 py-3 text-white text-base"
                     placeholder="Search customers..."
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.inkFaint}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                   />
@@ -189,7 +215,7 @@ export function QuickEntryModal({
                 }}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
-                  <Text className="text-center text-[#666] mt-8">
+                  <Text className="text-center text-ink-muted mt-8">
                     No customers found
                   </Text>
                 }
@@ -199,18 +225,22 @@ export function QuickEntryModal({
         </View>
 
         <View
-          className="px-6 pt-4 border-t border-brand-border gap-3"
+          className="px-5 pt-4 border-t border-line gap-3"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
           <ScrollView bounces={false}>
-            {error && <Text className="text-red-500 text-sm">{error}</Text>}
+            {error ? (
+              <Text accessibilityLiveRegion="polite" className="text-danger-text text-sm">
+                {error}
+              </Text>
+            ) : null}
 
-            <View className="flex-row items-center bg-brand-card rounded-lg px-4">
+            <View className="flex-row items-center bg-surface rounded-lg px-4">
               <Text className="text-white text-xl font-semibold">₹</Text>
               <TextInput
                 className="flex-1 py-4 text-xl font-semibold text-white"
                 placeholder="0.00"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.inkFaint}
                 value={amount}
                 onChangeText={(text) => {
                   const filtered = text.replace(/[^0-9.]/g, "");
@@ -229,30 +259,32 @@ export function QuickEntryModal({
             </View>
 
             <TextInput
-              className="bg-brand-card rounded-lg px-4 py-3 text-white text-base min-h-12 mt-3"
+              className="bg-surface rounded-lg px-4 py-3 text-white text-base min-h-12 mt-3"
               placeholder="Add a note (optional)"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.inkFaint}
               value={note}
               onChangeText={setNote}
               multiline
             />
 
             {!isOnline && (
-              <Text className="text-[#F59E0B] text-xs mt-2">
+              <Text className="text-ink-muted text-xs mt-2">
                 Offline — this entry is saved on device and syncs when you
                 reconnect ({outstanding} pending).
               </Text>
             )}
 
             <Pressable
-              className={`py-4 rounded-lg items-center mt-4 ${!selectedCustomer || !amount || submitting ? "opacity-50" : ""}`}
+              className={`min-h-[52px] items-center justify-center rounded-xl bg-brand-primary-fill ${!selectedCustomer || !amount || submitting ? "opacity-50" : "active:opacity-80"}`}
               onPress={handleSubmit}
               disabled={!selectedCustomer || !amount || submitting}
+              accessibilityRole="button"
+              accessibilityLabel={type === "credit" ? "Add credit" : "Record payment"}
             >
               {submitting ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color={colors.ink} />
               ) : (
-                <Text className="text-black text-base font-semibold">
+                <Text className="font-mukta-semibold text-[16px] text-white">
                   {type === "credit" ? "Add Credit" : "Record Payment"}
                 </Text>
               )}

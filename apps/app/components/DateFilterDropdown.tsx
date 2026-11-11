@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Pressable, Modal, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DateFilter, DATE_FILTER_PRESETS } from "@/types/database";
+import { colors } from "@/lib/theme";
 
 interface DateFilterDropdownProps {
   selectedFilter: DateFilter;
@@ -33,12 +34,15 @@ export function DateFilterDropdown({
   return (
     <>
       <Pressable
-        className="flex-row items-center bg-[#2D2D2D] px-3 py-2 rounded-lg gap-1.5"
+            accessibilityRole="button"
+        accessibilityLabel={`Filter by date, currently ${currentLabel}`}
+        accessibilityState={{ expanded: visible }}
+        className="flex-row items-center bg-surface-raised px-3 py-2 rounded-lg gap-1.5"
         onPress={() => setVisible(true)}
       >
-        <Ionicons name="calendar-outline" size={18} color="#3B82F6" />
+        <Ionicons name="calendar-outline" size={18} color={colors.brand} />
         <Text className="text-white text-sm font-medium">{currentLabel}</Text>
-        <Ionicons name="chevron-down" size={16} color="#A0A0A0" />
+        <Ionicons name="chevron-down" size={16} color={colors.inkMuted} />
       </Pressable>
 
       <Modal
@@ -48,16 +52,21 @@ export function DateFilterDropdown({
         onRequestClose={() => setVisible(false)}
       >
         <Pressable
+            accessibilityRole="button"
           className="flex-1 bg-black/50 justify-start pt-25 px-4"
           onPress={() => setVisible(false)}
         >
-          <View className="bg-[#2D2D2D] rounded-xl overflow-hidden">
-            <View className="flex-row justify-between items-center p-4 border-b border-[#3D3D3D]">
+          <View className="bg-surface-raised rounded-xl overflow-hidden">
+            <View className="flex-row justify-between items-center p-4 border-b border-line">
               <Text className="text-white text-base font-semibold">
                 Filter by Date
               </Text>
-              <Pressable onPress={() => setVisible(false)}>
-                <Ionicons name="close" size={20} color="#A0A0A0" />
+              <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close date filter"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+            onPress={() => setVisible(false)}>
+                <Ionicons name="close" size={20} color={colors.inkMuted} />
               </Pressable>
             </View>
 
@@ -71,14 +80,17 @@ export function DateFilterDropdown({
 
                 return (
                   <Pressable
-                    className={`flex-row items-center py-3.5 px-4 gap-2.5 ${isSelected ? "bg-blue-500/10" : ""}`}
+            accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: isSelected }}
+                    className={`flex-row items-center py-3.5 px-4 gap-2.5 ${isSelected ? "bg-brand-primary-fill/10" : ""}`}
                     onPress={() => handleSelect(item)}
                   >
                     {isSelected && (
-                      <Ionicons name="checkmark" size={18} color="#3B82F6" />
+                      <Ionicons name="checkmark" size={18} color={colors.brand} />
                     )}
                     <Text
-                      className={`text-base ${isSelected ? "text-blue-500 font-medium" : "text-[#A0A0A0]"}`}
+                      className={`text-base ${isSelected ? "text-brand-primary font-medium" : "text-ink-muted"}`}
                     >
                       {item.label}
                     </Text>
@@ -86,7 +98,7 @@ export function DateFilterDropdown({
                 );
               }}
               ItemSeparatorComponent={() => (
-                <View className="h-px bg-[#3D3D3D] mx-4" />
+                <View className="h-px bg-line mx-4" />
               )}
             />
           </View>

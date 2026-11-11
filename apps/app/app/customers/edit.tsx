@@ -16,6 +16,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { customersApi } from "@/lib/api";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,6 +84,7 @@ export default function EditCustomerScreen() {
         name: name.trim(),
         phone: phone.trim(),
       });
+      announce("Customer updated");
       router.back();
     } catch (err) {
       setError(
@@ -106,7 +109,7 @@ export default function EditCustomerScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#ffffff" />
+        <ActivityIndicator size="large" color={colors.ink} />
       </View>
     );
   }
@@ -118,11 +121,17 @@ export default function EditCustomerScreen() {
     >
       <ScrollView
         style={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       >
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Pressable onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={12}
+            style={{ minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+            onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <Text style={styles.headerTitle}>Edit Customer</Text>
           <View style={{ width: 24 }} />
@@ -134,7 +143,9 @@ export default function EditCustomerScreen() {
             <TextInput
               style={styles.input}
               placeholder="Full Name"
-              placeholderTextColor="#666"
+              accessibilityLabel="Customer name"
+              autoCapitalize="words"
+              placeholderTextColor={colors.inkFaint}
               value={name}
               onChangeText={(text) => {
                 setName(text);
@@ -149,13 +160,16 @@ export default function EditCustomerScreen() {
             <TextInput
               style={styles.input}
               placeholder="+91 98765 43210"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.inkFaint}
               value={phone}
               onChangeText={(text) => {
                 setPhone(text);
                 setPhoneError(null);
               }}
               keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Phone number"
             />
             {phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
           </View>
@@ -164,6 +178,9 @@ export default function EditCustomerScreen() {
 
           <View style={styles.buttonContainer}>
             <Pressable
+            accessibilityRole="button"
+              accessibilityLabel="Save changes"
+              accessibilityState={{ disabled: saving, busy: saving }}
               style={[
                 styles.button,
                 styles.saveButton,
@@ -173,7 +190,7 @@ export default function EditCustomerScreen() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={colors.ink} />
               ) : (
                 <Text style={styles.buttonText}>Save Changes</Text>
               )}
@@ -182,10 +199,11 @@ export default function EditCustomerScreen() {
 
           <View style={styles.deleteSection}>
             <Pressable
+            accessibilityRole="button"
               style={styles.deleteButton}
               onPress={() => setShowDeleteConfirm(true)}
             >
-              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Ionicons name="trash-outline" size={20} color={colors.dangerText} />
               <Text style={styles.deleteButtonText}>Delete Customer</Text>
             </Pressable>
             <Text style={styles.deleteWarning}>
@@ -204,7 +222,7 @@ export default function EditCustomerScreen() {
         onCancel={() => setShowDeleteConfirm(false)}
       />
 
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </KeyboardAvoidingView>
   );
 }
@@ -212,7 +230,7 @@ export default function EditCustomerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bg,
   },
   scrollContent: {
     flex: 1,
@@ -228,10 +246,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#ffffff",
+    color: colors.ink,
   },
   form: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     gap: 20,
   },
   inputGroup: {
@@ -240,20 +258,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#A0A0A0",
+    color: colors.inkMuted,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#3D3D3D",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#ffffff",
-    backgroundColor: "#2D2D2D",
+    color: colors.ink,
+    backgroundColor: colors.surfaceRaised,
   },
   errorText: {
-    color: "#EF4444",
+    color: colors.dangerText,
     fontSize: 14,
   },
   buttonContainer: {
@@ -261,17 +279,17 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
   },
   saveButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: colors.brandFill,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.ink,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -279,7 +297,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: "#2D2D2D",
+    borderTopColor: colors.line,
     alignItems: "center",
   },
   deleteButton: {
@@ -289,12 +307,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   deleteButtonText: {
-    color: "#EF4444",
+    color: colors.dangerText,
     fontSize: 15,
     fontWeight: "500",
   },
   deleteWarning: {
-    color: "#666666",
+    color: colors.inkMuted,
     fontSize: 12,
     marginTop: 8,
     textAlign: "center",

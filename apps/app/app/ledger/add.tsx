@@ -12,11 +12,15 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import type { PaymentMethod } from "@/lib/api";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 export default function AddEntryScreen() {
+  const insets = useSafeAreaInsets();
   const { contactId, type } = useLocalSearchParams<{
     contactId: string;
     type: string;
@@ -63,6 +67,7 @@ export default function AddEntryScreen() {
         paymentMethod,
         note: note || undefined,
       });
+      announce(entryType === "credit" ? "Credit added to the ledger" : "Payment recorded");
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save entry");
@@ -76,7 +81,15 @@ export default function AddEntryScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView style={styles.content} bounces={false}>
+      <ScrollView
+        style={styles.content}
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 32,
+        }}
+      >
         <Text style={styles.title}>
           {entryType === "credit" ? "Add Credit" : "Record Payment"}
         </Text>
@@ -91,14 +104,15 @@ export default function AddEntryScreen() {
             <Text style={styles.label}>Amount (₹)</Text>
             <TextInput
               style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor="#999999"
+              placeholder="0"
+              accessibilityLabel="Amount in rupees"
+              keyboardType="decimal-pad"
+              placeholderTextColor={colors.inkFaint}
               value={amount}
               onChangeText={(text) => {
                 setAmount(text);
                 setAmountError(null);
               }}
-              keyboardType="decimal-pad"
             />
             {amountError && <Text style={styles.errorText}>{amountError}</Text>}
           </View>
@@ -115,7 +129,7 @@ export default function AddEntryScreen() {
             <TextInput
               style={[styles.input, styles.noteInput]}
               placeholder="Add a note..."
-              placeholderTextColor="#999999"
+              placeholderTextColor={colors.inkFaint}
               value={note}
               onChangeText={setNote}
               multiline
@@ -134,12 +148,14 @@ export default function AddEntryScreen() {
 
           <View style={styles.buttonContainer}>
             <Pressable
+            accessibilityRole="button"
               style={[styles.button, styles.cancelButton]}
               onPress={() => router.back()}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
             <Pressable
+            accessibilityRole="button"
               style={[
                 styles.button,
                 styles.saveButton,
@@ -149,7 +165,7 @@ export default function AddEntryScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={colors.ink} />
               ) : (
                 <Text style={styles.buttonText}>Save Entry</Text>
               )}
@@ -158,7 +174,7 @@ export default function AddEntryScreen() {
         </View>
       </ScrollView>
 
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </KeyboardAvoidingView>
   );
 }
@@ -166,22 +182,21 @@ export default function AddEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bg,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: colors.ink,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    color: "#888888",
+    color: colors.inkMuted,
     marginBottom: 32,
   },
   form: {
@@ -194,27 +209,27 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#cccccc",
+    color: colors.inkMuted,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#333333",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#ffffff",
-    backgroundColor: "#171717",
+    color: colors.ink,
+    backgroundColor: colors.surface,
   },
   noteInput: {
     minHeight: 80,
   },
   errorText: {
-    color: "#ff6b6b",
+    color: colors.dangerText,
     fontSize: 14,
   },
   offlineText: {
-    color: "#F59E0B",
+    color: colors.brand,
     fontSize: 13,
   },
   buttonContainer: {
@@ -225,25 +240,25 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
   },
   saveButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.brandFill,
   },
   cancelButton: {
-    backgroundColor: "#171717",
+    backgroundColor: colors.surface,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: "#000000",
+    color: colors.ink,
     fontSize: 16,
     fontWeight: "600",
   },
   cancelButtonText: {
-    color: "#ffffff",
+    color: colors.ink,
     fontSize: 16,
     fontWeight: "600",
   },

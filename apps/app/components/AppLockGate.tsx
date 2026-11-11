@@ -18,6 +18,8 @@ import {
   verifyPin,
 } from "@/lib/app-lock";
 import { isLocked, recordFailure } from "@/lib/app-lock-core";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 const AUTO_LOCK_MS = 60_000;
 
@@ -113,6 +115,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
     if (isLocked(state, now)) {
       setCooldownUntil(state.lockedUntil);
       setError("Too many attempts — wait for the cooldown");
+      announce("Too many attempts. Wait for the cooldown before trying again.");
       return;
     }
 
@@ -130,17 +133,17 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
     await saveAttemptState(next);
     setAttempts(next.consecutiveFailures);
     setCooldownUntil(next.lockedUntil);
-    setError(
-      next.lockedUntil
-        ? "Too many attempts — wait for the cooldown"
-        : "Incorrect PIN",
-    );
+    const failureMessage = next.lockedUntil
+      ? "Too many attempts — wait for the cooldown"
+      : "Incorrect PIN";
+    setError(failureMessage);
+    announce(failureMessage);
     setPin("");
   };
 
   if (checking) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0A0A0A", justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#fff" />
       </View>
     );
@@ -155,7 +158,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
     <View
       style={{
         flex: 1,
-        backgroundColor: "#0A0A0A",
+        backgroundColor: colors.bg,
         justifyContent: "center",
         paddingHorizontal: 32,
       }}
@@ -166,20 +169,20 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
             width: 64,
             height: 64,
             borderRadius: 20,
-            backgroundColor: "#10B9811A",
+            backgroundColor: "rgba(234, 88, 12, 0.10)",
             borderWidth: 1,
-            borderColor: "#10B98140",
+            borderColor: "rgba(234, 88, 12, 0.25)",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 16,
           }}
         >
-          <Ionicons name="lock-closed" size={28} color="#10B981" />
+          <Ionicons name="lock-closed" size={28} color={colors.brand} />
         </View>
-        <Text style={{ color: "#ffffff", fontSize: 20, fontWeight: "700" }}>
+        <Text style={{ color: colors.ink, fontSize: 20, fontWeight: "700" }}>
           Ledger-X is locked
         </Text>
-        <Text style={{ color: "#888888", fontSize: 13, marginTop: 6 }}>
+        <Text style={{ color: colors.inkMuted, fontSize: 13, marginTop: 6 }}>
           Enter your PIN to continue
         </Text>
       </View>
@@ -194,13 +197,13 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
         secureTextEntry
         maxLength={6}
         placeholder="••••"
-        placeholderTextColor="#555555"
+        placeholderTextColor={colors.inkFaint}
         style={{
           borderWidth: 1,
-          borderColor: "#333333",
+          borderColor: colors.line,
           borderRadius: 12,
-          backgroundColor: "#171717",
-          color: "#ffffff",
+          backgroundColor: colors.surface,
+          color: colors.ink,
           fontSize: 22,
           letterSpacing: 12,
           textAlign: "center",
@@ -211,24 +214,29 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
       />
 
       {error && (
-        <Text style={{ color: "#EF4444", fontSize: 12, textAlign: "center" }}>
+        <View accessibilityLiveRegion="assertive">
+        <Text style={{ color: colors.dangerText, fontSize: 13, textAlign: "center" }}>
           {error}
           {cooldownRemaining > 0
             ? ` (${Math.ceil(cooldownRemaining / 1000)}s)`
             : ""}
         </Text>
+        </View>
       )}
       {attempts > 0 && attempts < 5 && !error && (
-        <Text style={{ color: "#888888", fontSize: 11, textAlign: "center" }}>
+        <Text style={{ color: colors.inkMuted, fontSize: 11, textAlign: "center" }}>
           {attempts} failed attempt{attempts === 1 ? "" : "s"}
         </Text>
       )}
 
       <Pressable
+            accessibilityRole="button"
+        accessibilityLabel="Unlock Ledger-X"
+        accessibilityState={{ disabled: cooldownRemaining > 0 || pin.length < 4 }}
         onPress={submitPin}
         disabled={cooldownRemaining > 0 || pin.length < 4}
         style={{
-          backgroundColor: cooldownRemaining > 0 || pin.length < 4 ? "#333333" : "#10B981",
+          backgroundColor: cooldownRemaining > 0 || pin.length < 4 ? colors.surfaceRaised : colors.brandFill,
           borderRadius: 12,
           paddingVertical: 14,
           alignItems: "center",
@@ -237,7 +245,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
       >
         <Text
           style={{
-            color: cooldownRemaining > 0 || pin.length < 4 ? "#888888" : "#000000",
+            color: cooldownRemaining > 0 || pin.length < 4 ? colors.inkMuted : colors.white,
             fontWeight: "700",
             fontSize: 14,
           }}
@@ -248,6 +256,8 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
 
       {bioAvailable && (
         <Pressable
+            accessibilityRole="button"
+          accessibilityLabel="Unlock with biometrics"
           onPress={tryBiometrics}
           style={{
             flexDirection: "row",
@@ -257,8 +267,8 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
             marginTop: 18,
           }}
         >
-          <Ionicons name="finger-print" size={20} color="#10B981" />
-          <Text style={{ color: "#10B981", fontSize: 13, fontWeight: "600" }}>
+          <Ionicons name="finger-print" size={20} color={colors.brand} />
+          <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "600" }}>
             Use biometrics instead
           </Text>
         </Pressable>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -18,6 +18,7 @@ import {
   customersApi,
   transactionsApi,
   type Customer,
+  type PaymentMethod,
   type Transaction,
 } from "@/lib/api";
 import { format } from "date-fns";
@@ -25,6 +26,9 @@ import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
 import { formatCurrency } from "@/types/database";
+import { colors } from "@/lib/theme";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { ErrorState } from "@/components/ErrorState";
 
 interface BalanceData {
   totalCredit: number;
@@ -38,12 +42,14 @@ export default function CustomerDetailsScreen() {
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [entries, setEntries] = useState<Transaction[]>([]);
+  const { pendingEntries } = useOfflineQueue();
   const [balance, setBalance] = useState<BalanceData>({
     totalCredit: 0,
     totalDebit: 0,
     balance: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const [editingTransaction, setEditingTransaction] =
@@ -70,8 +76,8 @@ export default function CustomerDetailsScreen() {
         totalDebit: paged.totalDebit,
         balance: paged.totalCredit - paged.totalDebit,
       });
-    } catch (error) {
-      console.error("Error fetching customer details:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load this customer");
     } finally {
       setLoading(false);
     }
@@ -93,14 +99,17 @@ export default function CustomerDetailsScreen() {
     const formatted = new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
     return type === "credit" ? `+${formatted}` : `-${formatted}`;
   };
 
   const balanceText = () => {
-    if (balance.balance > 0) return `You owe ₹${balance.balance.toFixed(2)}`;
+    // A positive balance means the customer still owes the shopkeeper.
+    if (balance.balance > 0) return `They owe ₹${balance.balance.toFixed(2)}`;
     if (balance.balance < 0)
-      return `We owe you ₹${Math.abs(balance.balance).toFixed(2)}`;
+      return `You owe ₹${Math.abs(balance.balance).toFixed(2)}`;
     return "All settled up";
   };
 
@@ -127,13 +136,61 @@ export default function CustomerDetailsScreen() {
 
   /* -------------------- RENDER -------------------- */
 
-  if (loading || !customer) {
+  /**
+   * Entries recorded offline are queued locally, so they are merged into the
+   * list here instead of waiting for the server. Once they sync, the server
+   * list contains them and the queue drops them, so nothing appears twice.
+   */
+  const visibleEntries = useMemo<Transaction[]>(() => {
+    const queued: Transaction[] = pendingEntries
+      .filter((entry) => entry.customerId === id)
+      .map((entry) => ({
+        id: entry.id,
+        userId: "",
+        customerId: entry.customerId,
+        amount: entry.amount,
+        type: entry.type,
+        paymentMethod: (entry.paymentMethod as PaymentMethod | null) ?? null,
+        note: entry.note ?? undefined,
+        createdAt: entry.createdAt,
+      }));
+    return [...queued, ...entries].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [entries, pendingEntries, id]);
+
+  if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={colors.ink} />
       </View>
     );
   }
+
+  if (error) {
+    return (
+      <View style={styles.loader}>
+        <ErrorState
+          title="Could not load this customer"
+          message={error}
+          onRetry={fetchData}
+        />
+      </View>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <View style={styles.loader}>
+        <ErrorState
+          title="Customer not found"
+          message="This customer may have been deleted."
+        />
+      </View>
+    );
+  }
+
 
   const renderEntry = ({ item }: { item: Transaction }) => {
     const isCredit = item.type === "credit";
@@ -144,9 +201,11 @@ export default function CustomerDetailsScreen() {
       <Pressable
         style={[
           styles.entryCard,
-          isPayment && { backgroundColor: "rgba(245, 158, 11, 0.04)" },
+          isPayment && { backgroundColor: "rgba(52, 211, 153, 0.05)" },
         ]}
         onPress={() => setEditingTransaction(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`${isPayment ? "Payment received" : isCredit ? "Credit given" : "Debit"} of ${formatCurrency(Number(item.amount))}${item.note ? `, ${item.note}` : ""}`}
       >
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -187,7 +246,7 @@ export default function CustomerDetailsScreen() {
           )}
           {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#666" />
+        <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
       </Pressable>
     );
   };
@@ -213,8 +272,10 @@ export default function CustomerDetailsScreen() {
           <Pressable
             style={styles.editBtn}
             onPress={() => router.push(`/customers/edit?id=${id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${customer.name}`}
           >
-            <Ionicons name="pencil" size={16} color="#3B82F6" />
+            <Ionicons name="pencil" size={16} color={colors.brand} />
             <Text style={styles.editText}>Edit</Text>
           </Pressable>
         </View>
@@ -247,16 +308,20 @@ export default function CustomerDetailsScreen() {
         <Pressable
           style={styles.actionBtn}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
+          accessibilityRole="button"
+          accessibilityLabel="Record a credit"
         >
-          <Ionicons name="add-circle" size={18} color="#10B981" />
+          <Ionicons name="add-circle" size={18} color={colors.brand} />
           <Text style={styles.credit}>Credit</Text>
         </Pressable>
 
         <Pressable
           style={styles.actionBtn}
           onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
+          accessibilityRole="button"
+          accessibilityLabel="Record a payment received"
         >
-          <Ionicons name="remove-circle" size={18} color="#EF4444" />
+          <Ionicons name="remove-circle" size={18} color={colors.positive} />
           <Text style={styles.debit}>Payment</Text>
         </Pressable>
 
@@ -265,19 +330,32 @@ export default function CustomerDetailsScreen() {
           style={styles.actionBtn}
           asChild
         >
-          <Pressable>
-            <Ionicons name="document-text" size={18} color="#3B82F6" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View ${customer.name}'s statement`}
+          >
+            <Ionicons name="document-text" size={18} color={colors.brand} />
             <Text style={styles.smsText}>Statement</Text>
           </Pressable>
         </Link>
 
-        <Pressable style={styles.whatsappBtn} onPress={sendWhatsApp}>
-          <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+        <Pressable
+          style={styles.whatsappBtn}
+          onPress={sendWhatsApp}
+          accessibilityRole="button"
+          accessibilityLabel={`Send ${customer.name} a WhatsApp balance update`}
+        >
+          <Ionicons name="logo-whatsapp" size={18} color={colors.brand} />
           <Text style={styles.whatsappText}>WhatsApp</Text>
         </Pressable>
 
-        <Pressable style={styles.smsBtn} onPress={sendSMS}>
-          <Ionicons name="chatbubble" size={18} color="#3B82F6" />
+        <Pressable
+          style={styles.smsBtn}
+          onPress={sendSMS}
+          accessibilityRole="button"
+          accessibilityLabel={`Send ${customer.name} an SMS balance update`}
+        >
+          <Ionicons name="chatbubble" size={18} color={colors.brand} />
           <Text style={styles.smsText}>SMS</Text>
         </Pressable>
       </View>
@@ -288,7 +366,7 @@ export default function CustomerDetailsScreen() {
       </View>
 
       <FlatList
-        data={entries}
+        data={visibleEntries}
         renderItem={renderEntry}
         keyExtractor={(i) => i.id}
         contentContainerStyle={[
@@ -300,7 +378,7 @@ export default function CustomerDetailsScreen() {
         }
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 48 }}>
-            <Ionicons name="receipt-outline" size={40} color="#444" />
+            <Ionicons name="receipt-outline" size={40} color={colors.inkFaint} />
             <Text style={styles.emptyText}>No transactions yet</Text>
             <Text style={styles.emptyHint}>
               Use Credit or Payment above to record the first entry.
@@ -348,7 +426,7 @@ export default function CustomerDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#121212" },
+  container: { flex: 1, backgroundColor: colors.bg },
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   header: {
@@ -363,7 +441,7 @@ const styles = StyleSheet.create({
   },
 
   name: { fontSize: 26, fontWeight: "700", color: "#fff", flexShrink: 1 },
-  phone: { color: "#888", marginTop: 4 },
+  phone: { color: colors.inkMuted, marginTop: 4 },
 
   sampleBadge: {
     backgroundColor: "rgba(245, 158, 11, 0.15)",
@@ -371,34 +449,35 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
-  sampleText: { color: "#F59E0B", fontSize: 9, fontWeight: "700" },
+  sampleText: { color: colors.inkMuted, fontSize: 11, fontWeight: "700" },
 
   editBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1F1F1F",
+    backgroundColor: colors.surface,
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 12,
+    minHeight: 44,
+    justifyContent: "center",
   },
 
-  editText: { color: "#3B82F6" },
+  editText: { color: colors.brand, fontWeight: "600" },
 
   balanceCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 14,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 16,
     padding: 18,
     marginTop: 16,
     alignItems: "center",
-    elevation: 4,
   },
 
-  balanceLabel: { color: "#777" },
-  balanceAmount: { fontSize: 32, fontWeight: "700" },
+  balanceLabel: { color: colors.inkMuted },
+  balanceAmount: { fontSize: 32, fontWeight: "700", fontVariant: ["tabular-nums"] },
 
-  owe: { color: "#EF4444" },
-  owed: { color: "#10B981" },
-  settled: { color: "#888" },
+  owe: { color: colors.ink },
+  owed: { color: colors.ink },
+  settled: { color: colors.inkMuted },
 
   balanceMeta: {
     flexDirection: "row",
@@ -406,7 +485,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  meta: { color: "#666", fontSize: 12 },
+  meta: { color: colors.inkMuted, fontSize: 13, fontVariant: ["tabular-nums"] },
 
   actions: {
     flexDirection: "row",
@@ -418,8 +497,8 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 46,
-    backgroundColor: "#1F1F1F",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
@@ -428,40 +507,40 @@ const styles = StyleSheet.create({
   whatsappBtn: {
     flex: 1,
     height: 46,
-    backgroundColor: "#1A2F23",
-    borderRadius: 10,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
     borderWidth: 1,
-    borderColor: "#25D366",
+    borderColor: colors.line,
   },
 
-  whatsappText: { color: "#25D366", fontWeight: "600" },
+  whatsappText: { color: colors.brand, fontWeight: "600" },
 
   smsBtn: {
     flex: 1,
     height: 46,
-    backgroundColor: "#1F1F1F",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
 
-  smsText: { color: "#3B82F6", fontWeight: "600" },
+  smsText: { color: colors.brand, fontWeight: "600" },
 
-  credit: { color: "#10B981", fontWeight: "600" },
-  debit: { color: "#EF4444", fontWeight: "600" },
-  payment: { color: "#F59E0B", fontWeight: "600" },
+  credit: { color: colors.ink, fontWeight: "600" },
+  debit: { color: colors.inkMuted, fontWeight: "600" },
+  payment: { color: colors.positive, fontWeight: "600" },
 
   methodBadge: {
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    backgroundColor: "rgba(52, 211, 153, 0.12)",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  methodText: { color: "#F59E0B", fontSize: 10, fontWeight: "600" },
+  methodText: { color: colors.positive, fontSize: 11, fontWeight: "600" },
 
   txHeader: {
     flexDirection: "row",
@@ -484,16 +563,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  entryAmount: { fontSize: 18, fontWeight: "600" },
-  entryDate: { color: "#777", marginTop: 2 },
-  entryBalance: { color: "#888", marginTop: 4, fontSize: 13 },
-  entryNote: { color: "#666", fontStyle: "italic", marginTop: 4 },
+  entryAmount: { fontSize: 18, fontWeight: "600", fontVariant: ["tabular-nums"] },
+  entryDate: { color: colors.inkMuted, marginTop: 2 },
+  entryBalance: { color: colors.inkMuted, marginTop: 4, fontSize: 13, fontVariant: ["tabular-nums"] },
+  entryNote: { color: colors.inkMuted, fontStyle: "italic", marginTop: 4 },
 
   emptyText: {
-    color: "#888",
+    color: colors.inkMuted,
     textAlign: "center",
     marginTop: 12,
     fontSize: 15,
   },
-  emptyHint: { color: "#666", textAlign: "center", marginTop: 4, fontSize: 12 },
+  emptyHint: { color: colors.inkMuted, textAlign: "center", marginTop: 4, fontSize: 13 },
 });

@@ -1,8 +1,10 @@
 import { Pressable, Text, View } from "react-native";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/cn";
 import type { QueueItem } from "@/lib/queue-core";
+import { colors } from "@/lib/theme";
+import { announce } from "@/lib/announce";
 
 interface OfflinePendingBarProps {
   outstanding: number;
@@ -27,25 +29,53 @@ export function OfflinePendingBar({
   onDiscard,
 }: OfflinePendingBarProps) {
   const [expanded, setExpanded] = useState(false);
-
-  if (outstanding === 0) return null;
+  const announced = useRef<string | null>(null);
 
   const failed = items.filter((item) => item.status === "failed");
   const pending = items.filter((item) => item.status === "pending");
 
+  const status = syncing
+    ? "Syncing your entries"
+    : !isOnline
+      ? `Offline. ${outstanding} ${outstanding === 1 ? "entry" : "entries"} will sync when you are back online`
+      : failed.length > 0
+        ? `${failed.length} ${failed.length === 1 ? "entry" : "entries"} could not be saved`
+        : `${outstanding} ${outstanding === 1 ? "entry" : "entries"} saved`;
+
+  useEffect(() => {
+    if (announced.current === status) return;
+    announced.current = status;
+    announce(status);
+  }, [status]);
+
+  if (outstanding === 0) return null;
+
   return (
-    <View className="mx-6 mb-3 rounded-xl border border-[#3D3D3D] bg-[#1F1F1F] overflow-hidden">
+    <View
+      className="mb-3 rounded-xl border border-line bg-surface overflow-hidden"
+      accessibilityLiveRegion="polite"
+    >
       <Pressable
         onPress={() => setExpanded((value) => !value)}
         className="flex-row items-center px-4 py-3 gap-2"
         accessibilityRole="button"
+        accessibilityLabel={status}
+        accessibilityState={{ expanded }}
       >
         <Ionicons
-          name={syncing ? "sync" : isOnline ? "cloud-offline" : "cloud-offline-outline"}
+          name={
+            syncing
+              ? "sync"
+              : isOnline
+                ? failed.length > 0
+                  ? "alert-circle"
+                  : "cloud-done"
+                : "cloud-offline"
+          }
           size={16}
-          color={failed.length > 0 ? "#F59E0B" : "#10B981"}
+          color={failed.length > 0 ? colors.danger : isOnline ? colors.brand : colors.inkMuted}
         />
-        <Text className="flex-1 text-xs text-[#CCCCCC]">
+        <Text className="flex-1 text-xs text-ink-muted">
           {syncing
             ? "Syncing…"
             : !isOnline
@@ -57,16 +87,16 @@ export function OfflinePendingBar({
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={14}
-          color="#888888"
+          color={colors.inkMuted}
         />
       </Pressable>
 
       {expanded && (
-        <View className="border-t border-[#3D3D3D]">
+        <View className="border-t border-line">
           {[...failed, ...pending].map((item) => (
             <View
               key={item.id}
-              className="flex-row items-center px-4 py-2.5 border-b border-[#2D2D2D] gap-2"
+              className="flex-row items-center px-4 py-2.5 border-b border-line gap-2"
             >
               <View className="flex-1">
                 <Text className="text-xs text-white" numberOfLines={1}>
@@ -75,7 +105,7 @@ export function OfflinePendingBar({
                     : `${item.payload.type === "credit" ? "Credit" : "Payment"} ₹${String(item.payload.amount ?? "")}`}
                 </Text>
                 {item.lastError && (
-                  <Text className="text-[10px] text-[#F59E0B]" numberOfLines={1}>
+                  <Text className="text-xs text-ink-muted" numberOfLines={1}>
                     {item.lastError}
                   </Text>
                 )}
@@ -84,27 +114,27 @@ export function OfflinePendingBar({
                 <>
                   <Pressable
                     onPress={() => onRetry(item.id)}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#10B981]/15"
+                    className="min-h-[44px] min-w-[72px] px-3 rounded-lg bg-brand-primary/15 items-center justify-center"
                     accessibilityRole="button"
                     accessibilityLabel="Retry failed sync"
                   >
-                    <Text className="text-[10px] font-semibold text-[#10B981]">
+                    <Text className="text-xs font-semibold text-brand-primary">
                       Retry
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={() => onDiscard(item.id)}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#EF4444]/15"
+                    className="min-h-[44px] min-w-[72px] px-3 rounded-lg bg-danger/15 items-center justify-center"
                     accessibilityRole="button"
                     accessibilityLabel="Discard failed sync item"
                   >
-                    <Text className="text-[10px] font-semibold text-[#EF4444]">
+                    <Text className="text-xs font-semibold text-danger-text">
                       Discard
                     </Text>
                   </Pressable>
                 </>
               ) : (
-                <Text className={cn("text-[10px] text-[#666666]")}>
+                <Text className={cn("text-xs text-ink-muted")}>
                   {syncing ? "Syncing" : "Waiting"}
                 </Text>
               )}
