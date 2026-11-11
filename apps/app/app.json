@@ -3,7 +3,7 @@
     "name": "LedgerX",
     "slug": "ledger-x",
     "scheme": "ledgerx",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "updates": {
       "enabled": false
     },
@@ -18,7 +18,11 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-router",
+      "expo-sharing",
+      "expo-sqlite",
+      "expo-status-bar"
     ]
   }
 }
