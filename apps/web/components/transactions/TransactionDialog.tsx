@@ -28,6 +28,7 @@ import {
   IndianRupee,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatApiError } from "@/lib/api-error";
 
 import {
   useCreateTransaction,
@@ -88,9 +89,16 @@ export function TransactionDialog({
       const paymentMethod = data.paymentMethod ?? null;
 
       if (isEditing) {
+        // The API's update contract names the field `type`; the form calls it
+        // `transactionType`, so the payload is mapped field by field.
         await updateTransaction.mutateAsync({
           id: transaction!.id,
-          data: { ...data, paymentMethod },
+          data: {
+            amount: data.amount,
+            type: data.transactionType,
+            paymentMethod,
+            note: data.note,
+          },
         });
       } else {
         await createTransaction.mutateAsync({
@@ -104,11 +112,7 @@ export function TransactionDialog({
 
       onClose();
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Could not save the transaction. Please try again.",
-      );
+      setSubmitError(formatApiError(error));
     }
   };
 
@@ -166,7 +170,9 @@ export function TransactionDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-1">
+          {/* The schema owns the messaging, so the browser must not block the
+              submit with its own step/min tooltips. */}
+          <form noValidate onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-1">
           {/* Type selector — radiogroup */}
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -220,13 +226,23 @@ export function TransactionDialog({
               <Input
                 id="amount"
                 type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="0.01"
+                inputMode="numeric"
+                min="1"
+                step="1"
                 placeholder="0"
                 aria-invalid={amountError ? true : undefined}
                 aria-describedby={amountError ? "amount-error" : undefined}
-                {...form.register("amount", { valueAsNumber: true })}
+                {...form.register("amount", {
+                  // react-hook-form also runs this on reset, where the value
+                  // is the number from the form defaults — so it has to
+                  // accept anything, not just a string.
+                  setValueAs: (value: unknown) => {
+                    if (typeof value === "string" && value.trim() === "") {
+                      return undefined;
+                    }
+                    return Number(value);
+                  },
+                })}
                 className={cn(
                   "pl-10 h-11 text-base font-semibold bg-muted/20 border-border/50 focus:border-primary/50 focus:bg-background transition-all tabular-nums",
                   !isCredit && form.getValues("amount") > 0

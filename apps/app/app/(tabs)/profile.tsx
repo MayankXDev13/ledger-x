@@ -22,6 +22,7 @@ import {
 } from "@/lib/api";
 import { isValidUpiId } from "@/lib/upi";
 import { useSettings } from "@/hooks/useSettings";
+import { useFeatureFlags } from "@/lib/feature-flags-provider";
 import { Button } from "@/components/Button";
 import { SectionHeader } from "@/components/SectionHeader";
 import {
@@ -37,6 +38,9 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { session, signOut } = useAuth();
   const { settings, update } = useSettings();
+  const { isEnabled } = useFeatureFlags();
+  // The UPI configuration is behind the administrator's UPI flag.
+  const upiEnabled = isEnabled("upi_collection");
   const scrollRef = useRef<any>(null);
   const upiSectionY = useRef(0);
 
@@ -257,6 +261,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {upiEnabled && (
         <View
           onLayout={(e) => {
             upiSectionY.current = e.nativeEvent.layout.y;
@@ -315,6 +320,7 @@ export default function ProfileScreen() {
             />
           </View>
         </View>
+        )}
 
         <View className="mt-6">
           <SectionHeader label="Data & export" className="mb-3" />

@@ -50,6 +50,13 @@
       "when": 1794029811240,
       "tag": "0006_parallel_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794381833888,
+      "tag": "0007_tidy_falcon",
+      "breakpoints": true
     }
   ]
 }

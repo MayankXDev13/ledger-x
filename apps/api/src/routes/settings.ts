@@ -2,16 +2,24 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { userSettings } from "../db/schema";
 import { ensureUserSettings } from "../lib/settings";
+import { isEnabled, readFeatureFlags } from "../lib/feature-flags";
 import { parseBody, settingsUpdateSchema } from "../validators";
 import { ApiError, validationResponse } from "../lib/errors";
 import type { AppEnv } from "../types/hono";
 
 const settingsApp = new Hono<AppEnv>();
 
-function serialize(settings: Awaited<ReturnType<typeof ensureUserSettings>>) {
+/**
+ * The UPI configuration is gated by its own flag, so a disabled flag withholds
+ * the values instead of handing them out.
+ */
+function serialize(
+  settings: Awaited<ReturnType<typeof ensureUserSettings>>,
+  includeUpi: boolean,
+) {
   return {
-    upiId: settings.upiId,
-    payeeName: settings.payeeName,
+    upiId: includeUpi ? settings.upiId : null,
+    payeeName: includeUpi ? settings.payeeName : null,
     onboardingCompletedAt: settings.onboardingCompletedAt,
     onboardingDismissedAt: settings.onboardingDismissedAt,
   };
@@ -22,11 +30,13 @@ settingsApp.get("/", async (ctx) => {
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
 
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+
   const settings = await withDb(ctx, (db) =>
     ensureUserSettings(db, user.id),
   );
 
-  return ctx.json(serialize(settings));
+  return ctx.json(serialize(settings, isEnabled(flags, "upi_collection")));
 });
 
 // PUT /settings - Partial update; null clears a field.
@@ -40,6 +50,15 @@ settingsApp.put("/", async (ctx) => {
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
   const now = new Date();
+
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+  const upiEnabled = isEnabled(flags, "upi_collection");
+  if (
+    !upiEnabled &&
+    (body.upiId !== undefined || body.payeeName !== undefined)
+  ) {
+    throw new ApiError(403, "UPI collections are not available");
+  }
 
   const updated = await withDb(ctx, async (db) => {
     await ensureUserSettings(db, user.id);
@@ -66,7 +85,7 @@ settingsApp.put("/", async (ctx) => {
 
   if (!updated) throw new ApiError(500, "Settings update failed");
 
-  return ctx.json(serialize(updated));
+  return ctx.json(serialize(updated, upiEnabled));
 });
 
 export default settingsApp;

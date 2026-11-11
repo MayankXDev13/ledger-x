@@ -22,6 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import {
   useDeleteAccount,
   useDownloadArchive,
@@ -77,6 +79,10 @@ export default function SettingsPage() {
   const { signOut } = useAuth();
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
+  const { flags } = useFeatureFlags();
+  // The UPI configuration is behind its own administrator flag.
+  const upiEnabled = isFeatureEnabled(flags, "upi_collection");
+  const collectionEnabled = isFeatureEnabled(flags, "collection");
 
   const exportCustomers = useExportCustomers();
   const exportTransactions = useExportTransactions();
@@ -153,6 +159,7 @@ export default function SettingsPage() {
       </div>
 
       {/* UPI */}
+      {upiEnabled && (
       <Section
         icon={Wallet}
         title="UPI collections"
@@ -229,7 +236,7 @@ export default function SettingsPage() {
                 )}
                 Save UPI settings
               </Button>
-              <Link href="/collection">
+              <Link href="/collection" className={collectionEnabled ? "" : "hidden"}>
                 <Button variant="outline" size="sm" className="h-9 text-xs">
                   Open collection view
                 </Button>
@@ -238,6 +245,7 @@ export default function SettingsPage() {
           </form>
         )}
       </Section>
+      )}
 
       {/* Exports */}
       <Section

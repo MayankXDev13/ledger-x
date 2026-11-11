@@ -382,6 +382,17 @@ export const OPERATIONS: Record<string, OperationDefinition> = {
     },
   },
 
+  "GET /feature-flags": {
+    summary: "Read the feature-flag registry",
+    description:
+      "The administrator-owned registry of feature flags. The values are read-only: no user can change them.",
+    tags: ["feature-flags"],
+    auth: false,
+    responses: {
+      200: jsonResponse("Feature flags", ref("FeatureFlagsResponse")),
+    },
+  },
+
   "POST /sample-data": {
     summary: "Seed sample customers and transactions",
     tags: ["sample-data"],

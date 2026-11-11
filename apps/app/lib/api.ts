@@ -2,6 +2,10 @@
 // session token from `@/lib/auth-session`; the mobile app no longer talks to
 // Supabase for ledger data.
 import { getAuthHeaders } from "./auth-session";
+import {
+  formatApiErrorMessage,
+  type ApiErrorDetails,
+} from "./api-error";
 
 function baseUrl(): string {
   const url = process.env.EXPO_PUBLIC_API_URL;
@@ -11,11 +15,17 @@ function baseUrl(): string {
 
 export class ApiError extends Error {
   status: number;
+  details?: ApiErrorDetails;
 
-  constructor(status: number, message: string) {
+  constructor(
+    status: number,
+    message: string,
+    details?: ApiErrorDetails,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.details = details;
   }
 }
 
@@ -40,13 +50,21 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
+    let details: ApiErrorDetails | undefined;
     try {
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        details?: ApiErrorDetails;
+      };
       if (payload?.error) message = payload.error;
+      details = payload?.details;
+      // The envelope error alone rarely says what to fix, so the field
+      // details ride along with it.
+      message = formatApiErrorMessage(message, details);
     } catch {
       // Non-JSON error bodies fall back to the status message.
     }
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, details);
   }
 
   if (response.status === 204) return undefined as T;
@@ -126,6 +144,8 @@ export interface CollectionRow {
   outstanding: number;
   oldestUnpaidCreditAt: string | null;
   ageDays: number | null;
+  /** True while a queued write still has to reach the server. */
+  pending?: boolean;
 }
 
 export interface CollectionResponse {
@@ -236,6 +256,13 @@ export const transactionsApi = {
 
   remove: (id: string) =>
     request<{ success: boolean }>(`/transactions/${id}`, { method: "DELETE" }),
+};
+
+export const featureFlagsApi = {
+  get: () =>
+    request<{ flags: Record<string, boolean> }>("/feature-flags").then(
+      (r) => r.flags,
+    ),
 };
 
 export const dashboardApi = {

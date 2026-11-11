@@ -17,6 +17,7 @@ import { customersApi, type Customer } from "@/lib/api";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import type { PaymentMethod } from "@/lib/api";
+import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
 
@@ -90,10 +91,10 @@ export function QuickEntryModal({
       return;
     }
 
-    const numAmount = parseFloat(amount);
-    if (!amount || isNaN(numAmount) || numAmount <= 0) {
-      setError("Enter an amount greater than zero");
-      announce("Enter an amount greater than zero");
+    const parsed = parseWholeRupeAmount(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
+      announce(parsed.error);
       return;
     }
 
@@ -105,7 +106,7 @@ export function QuickEntryModal({
       // offline they are stored with a device UUID and replayed later.
       await queueTransaction({
         customerId: selectedCustomer.id,
-        amount: numAmount,
+        amount: parsed.amount,
         type,
         paymentMethod,
         note: note || undefined,

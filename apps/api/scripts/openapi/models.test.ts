@@ -171,6 +171,9 @@ const FIXTURES: Record<string, unknown> = {
     customers: [customer],
     transactions: [transaction],
   },
+  FeatureFlagsResponse: {
+    flags: { collection: true, upi_collection: false },
+  },
   Settings: {
     upiId: "shop@upi",
     payeeName: "Ramesh Kirana",

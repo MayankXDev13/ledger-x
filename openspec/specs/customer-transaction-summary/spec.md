@@ -47,3 +47,12 @@ Each transaction row's "Balance after" value SHALL equal the customer's true cum
 
 - **WHEN** the user views page 2 (older transactions) of a customer with more transactions than one page holds
 - **THEN** each row's "Balance after" reflects all transactions up to and including that row, not a balance recomputed from the visible page alone
+
+### Requirement: Customer collection and aging summaries in list surfaces
+
+Customer listing views across both web and mobile clients SHALL surface current receivable totals and aging information alongside contact identity, so the ledger remains immediately informative without requiring per-customer drilldown.
+
+#### Scenario: Customer list shows balance and age
+
+- **WHEN** the customer list renders for a customer who has an outstanding credit balance
+- **THEN** the total unpaid amount and days unpaid are visible on their list entry

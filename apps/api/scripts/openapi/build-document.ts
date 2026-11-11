@@ -152,6 +152,7 @@ export function buildDocument(
       { name: "statements", description: "Customer statements" },
       { name: "settings", description: "UPI and onboarding settings" },
       { name: "collection", description: "Outstanding receivables" },
+      { name: "feature-flags", description: "Administrator-owned feature flags" },
       { name: "sample-data", description: "Demo data management" },
       { name: "audit-logs", description: "Audit trail" },
     ],

@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import {
   ChartColumnBig,
   ChevronLeft,
@@ -57,6 +58,7 @@ const navItems = [
     icon: HandCoins,
     label: "Collection",
     exact: false,
+    flag: "collection" as const,
   },
   {
     href: "/settings",
@@ -71,6 +73,7 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const { data: customers } = useCustomers();
+  const { isEnabled } = useFeatureFlags();
   const [collapsed, setCollapsed] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
 
@@ -163,10 +166,12 @@ export function AppSidebar() {
           </p>
         )}
 
-        {navItems.map(({ href, icon: Icon, label, exact }) => {
-          const active = isActive(href, exact);
-          const isCustomers = href === "/customers";
-          return (
+        {navItems
+          .filter((item) => !item.flag || isEnabled(item.flag))
+          .map(({ href, icon: Icon, label, exact }) => {
+            const active = isActive(href, exact);
+            const isCustomers = href === "/customers";
+            return (
             <Tooltip key={href} delayDuration={0}>
               <TooltipTrigger asChild>
                 <Link
@@ -226,7 +231,7 @@ export function AppSidebar() {
               </TooltipContent>
             </Tooltip>
           );
-        })}
+          })}
       </nav>
 
       {/* Profile section at bottom */}

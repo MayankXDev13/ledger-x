@@ -98,7 +98,7 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "relative rounded-xl border bg-card overflow-hidden group card-hover",
+        "relative rounded-xl border bg-card overflow-hidden",
         accent.ring
       )}
     >
@@ -290,11 +290,10 @@ export default function DashboardPage() {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            {getGreeting()},{" "}
-            <span className="text-primary capitalize">{firstName}</span> 👋
+            {getGreeting()}, <span className="capitalize">{firstName}</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Here&apos;s your financial overview for today.
+            Daily ledger summary and collection overview.
           </p>
         </div>
 

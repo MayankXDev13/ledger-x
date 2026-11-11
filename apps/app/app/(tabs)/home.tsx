@@ -81,7 +81,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const press = usePressable();
   const { session, loading: authLoading } = useAuth();
-  const { outstanding, items, syncing, isOnline, retry, discard, pendingEntries } =
+  const { outstanding, items, syncing, isOnline, retry, discard, queuedEntries } =
     useOfflineQueue();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -130,12 +130,15 @@ export default function DashboardScreen() {
   }
 
   // Entries recorded offline are not on the server yet, so they are added to
-  // the outstanding figure here. Once they sync, the server value includes
-  // them and the queue drops them, so nothing is counted twice.
-  const pendingNet = pendingEntries.reduce(
-    (sum, entry) => sum + (entry.type === "credit" ? entry.amount : -entry.amount),
-    0,
-  );
+  // the outstanding figure here. Once the server accepts them its value
+  // includes them, and only the entries the server has not taken yet are
+  // counted here, so nothing is counted twice.
+  const pendingNet = queuedEntries
+    .filter((entry) => entry.pending)
+    .reduce(
+      (sum, entry) => sum + (entry.type === "credit" ? entry.amount : -entry.amount),
+      0,
+    );
   const totalReceivables = (analytics?.totalReceivables ?? 0) + pendingNet;
   const aging = analytics?.aging ?? { "0-30": 0, "31-60": 0, "60+": 0 };
   const maxTrend = Math.max(

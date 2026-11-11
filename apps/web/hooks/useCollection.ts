@@ -9,9 +9,13 @@ export const collectionKeys = {
     [...collectionKeys.all, "list", sort] as const,
 };
 
-export function useCollection(sort: "amount" | "age" = "amount") {
+export function useCollection(
+  sort: "amount" | "age" = "amount",
+  enabled = true,
+) {
   return useQuery({
     queryKey: collectionKeys.list(sort),
     queryFn: () => collectionApi.list(sort),
+    enabled,
   });
 }

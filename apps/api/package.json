@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:feature-flag": "bun scripts/set-feature-flag.ts",
     "db:migrate:neon": "bun scripts/db-migrate.ts",
     "backup:supabase": "bash scripts/backup-supabase-to-r2.sh",
     "backup:verify": "bash scripts/verify-backup.sh",

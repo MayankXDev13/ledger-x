@@ -7,6 +7,7 @@ import "../global.css";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { SessionProvider } from "@/lib/session-provider";
 import { SettingsProvider } from "@/lib/settings-provider";
+import { FeatureFlagsProvider } from "@/lib/feature-flags-provider";
 import { OfflineQueueProvider } from "@/hooks/useOfflineQueue";
 import { StyleSheet } from "react-native";
 import {
@@ -43,16 +44,19 @@ export default function RootLayout() {
           wrapper only handles left/right. (Top edge here used to paint a
           black strip above every screen.) */}
       <SafeAreaView style={styles.container} edges={["left", "right"]}>
-        {/* One session, one settings copy and one offline queue for the app. */}
+        {/* One session, one settings copy, one flag registry and one offline
+            queue for the app. */}
         <SessionProvider>
           <SettingsProvider>
-            <OfflineQueueProvider>
-              <AuthGuard>
-                <AppLockGate>
-                  <Stack screenOptions={{ headerShown: false }} />
-                </AppLockGate>
-              </AuthGuard>
-            </OfflineQueueProvider>
+            <FeatureFlagsProvider>
+              <OfflineQueueProvider>
+                <AuthGuard>
+                  <AppLockGate>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </AppLockGate>
+                </AuthGuard>
+              </OfflineQueueProvider>
+            </FeatureFlagsProvider>
           </SettingsProvider>
         </SessionProvider>
       </SafeAreaView>

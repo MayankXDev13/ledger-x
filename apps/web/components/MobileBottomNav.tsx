@@ -6,6 +6,7 @@ import { useState } from "react";
 import { LayoutDashboard, Users, HandCoins, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { avatarInitials, deriveFirstName } from "@/lib/name";
 import {
   Avatar,
@@ -25,13 +26,20 @@ import { toast } from "sonner";
 const items = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { href: "/customers", icon: Users, label: "Customers", exact: false },
-  { href: "/collection", icon: HandCoins, label: "Collect", exact: false },
+  {
+    href: "/collection",
+    icon: HandCoins,
+    label: "Collect",
+    exact: false,
+    flag: "collection" as const,
+  },
 ];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { isEnabled } = useFeatureFlags();
   const [accountOpen, setAccountOpen] = useState(false);
 
   const firstName = deriveFirstName(user?.name, user?.email);
@@ -58,7 +66,9 @@ export function MobileBottomNav() {
         aria-label="Mobile navigation"
       >
         <div className="flex items-center justify-around px-2 py-1.5">
-          {items.map(({ href, icon: Icon, label, exact }) => {
+          {items
+            .filter((item) => !item.flag || isEnabled(item.flag))
+            .map(({ href, icon: Icon, label, exact }) => {
             const active = isActive(href, exact);
             return (
               <Link
@@ -91,7 +101,7 @@ export function MobileBottomNav() {
                 </span>
               </Link>
             );
-          })}
+            })}
 
           {/* Account entry (replaces the removed /profile link) */}
           <button

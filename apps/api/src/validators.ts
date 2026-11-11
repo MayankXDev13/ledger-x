@@ -16,14 +16,21 @@ export const updateCustomerSchema = z.object({
 export const createTransactionSchema = z.object({
   id: z.string().uuid("id must be a valid UUID").optional(),
   customerId: z.string().uuid("customerId must be a valid UUID"),
-  amount: z.number().int().positive("amount must be a positive integer"),
+  amount: z
+    .number()
+    .int("amount must be a whole number of rupees")
+    .positive("amount must be a positive number of rupees"),
   type: z.enum(["credit", "debit"]),
   paymentMethod: paymentMethodSchema.nullish(),
   note: z.string().optional(),
 });
 
 export const updateTransactionSchema = z.object({
-  amount: z.number().int().positive().optional(),
+  amount: z
+    .number()
+    .int("amount must be a whole number of rupees")
+    .positive("amount must be a positive number of rupees")
+    .optional(),
   type: z.enum(["credit", "debit"]).optional(),
   paymentMethod: paymentMethodSchema.nullish(),
   note: z.string().optional(),
