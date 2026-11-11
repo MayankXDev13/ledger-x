@@ -179,7 +179,7 @@ export function EditTransactionModal({
                       type === "credit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
-                    Credit
+                    You Gave (Udhar)
                   </Text>
                 </Pressable>
 
@@ -204,7 +204,7 @@ export function EditTransactionModal({
                       type === "debit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
-                    {type === "debit" ? "Payment" : "Debit"}
+                    You Got (Payment)
                   </Text>
                 </Pressable>
               </View>

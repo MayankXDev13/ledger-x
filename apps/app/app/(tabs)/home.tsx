@@ -286,11 +286,11 @@ export default function DashboardScreen() {
                 style={press.animatedStyle}
                 className="min-h-[52px] flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-brand-primary-fill px-4 active:opacity-80"
                 accessibilityRole="button"
-                accessibilityLabel="Add credit"
+                accessibilityLabel="You Gave (Udhar)"
               >
                 <Ionicons name="add" size={18} color={colors.white} />
                 <Text className="font-mukta-semibold text-[15px] text-white">
-                  Add credit
+                  You Gave (Udhar)
                 </Text>
               </Pressable>
               <Pressable
@@ -300,10 +300,10 @@ export default function DashboardScreen() {
                 style={press.animatedStyle}
                 className="min-h-[52px] flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 active:opacity-80"
                 accessibilityRole="button"
-                accessibilityLabel="Record payment"
+                accessibilityLabel="You Got (Payment)"
               >
                 <Text className="font-mukta-semibold text-[15px] text-ink">
-                  Record payment
+                  You Got (Payment)
                 </Text>
               </Pressable>
             </View>

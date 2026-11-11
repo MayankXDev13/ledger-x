@@ -342,20 +342,20 @@ export default function CustomerDetailsScreen() {
             style={[styles.primaryActionBtn, styles.creditBtn]}
             onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
             accessibilityRole="button"
-            accessibilityLabel="Record a credit"
+            accessibilityLabel="Record money you gave (Udhar)"
           >
             <Ionicons name="add-circle" size={20} color={colors.brand} />
-            <Text style={styles.creditText}>+ Credit</Text>
+            <Text style={styles.creditText}>You Gave (Udhar)</Text>
           </Pressable>
 
           <Pressable
             style={[styles.primaryActionBtn, styles.paymentBtn]}
             onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
             accessibilityRole="button"
-            accessibilityLabel="Record a payment received"
+            accessibilityLabel="Record payment received (Jama)"
           >
             <Ionicons name="remove-circle" size={20} color={colors.positive} />
-            <Text style={styles.paymentText}>Payment</Text>
+            <Text style={styles.paymentText}>You Got (Payment)</Text>
           </Pressable>
         </View>
 

@@ -193,7 +193,7 @@ export function TransactionDialog({
                 )}
               >
                 <ArrowUp className="w-4 h-4" />
-                Credit
+                You Gave (Udhar)
               </button>
               <button
                 type="button"
@@ -209,7 +209,7 @@ export function TransactionDialog({
                 )}
               >
                 <ArrowDown className="w-4 h-4" />
-                Payment
+                You Got (Payment)
               </button>
             </div>
           </fieldset>

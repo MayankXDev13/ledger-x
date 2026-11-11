@@ -78,12 +78,12 @@ export default function AddEntryScreen() {
         }}
       >
         <Text style={styles.title}>
-          {entryType === "credit" ? "Add Credit" : "Record Payment"}
+          {entryType === "credit" ? "You Gave (Udhar)" : "You Got (Payment)"}
         </Text>
         <Text style={styles.subtitle}>
           {entryType === "credit"
-            ? "Money you gave"
-            : "Money the customer paid you"}
+            ? "Money or goods you gave on credit"
+            : "Money the customer paid or returned to you"}
         </Text>
 
         <View style={styles.form}>
