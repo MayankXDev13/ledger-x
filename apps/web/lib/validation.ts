@@ -10,8 +10,12 @@ export const customerSchema = z.object({
 
 export const transactionSchema = z.object({
   amount: z
-    .number({ invalid_type_error: "Enter an amount" })
-    .min(0.01, "Amount must be at least 0.01"),
+    .number({
+      required_error: "Enter an amount",
+      invalid_type_error: "Enter an amount",
+    })
+    .int("Amount must be a whole number of rupees")
+    .min(1, "Amount must be at least 1 rupee"),
   transactionType: z.enum(["credit", "debit"]),
   paymentMethod: z
     .enum(["cash", "upi", "other"])

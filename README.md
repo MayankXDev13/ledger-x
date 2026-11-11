@@ -28,6 +28,9 @@ at any time. Web and mobile ship in lockstep on the same Workers API.
 - **Onboarding & sample data** — first-run flow plus clearly-labelled sample
   rows that never appear in exports
   (`docs/onboarding-and-sample-data.md`).
+- **Feature flags** — administrator-owned switches that withdraw a shipped
+  feature for a whole deployment, with no redeploy and no client release
+  (`docs/feature-flags.md`).
 
 ## Workspaces
 
@@ -83,6 +86,7 @@ bun run test   # API + web + mobile unit/contract tests (no live database requir
 | `docs/statements.md` | Statement endpoint, periods, PDF naming and sharing |
 | `docs/offline-queue.md` | Mobile offline writes, queue states, replay triggers |
 | `docs/upi-collection.md` | UPI configuration, intent URI, collection view |
+| `docs/feature-flags.md` | Administrator-owned feature flags and how to flip one |
 | `docs/dashboard-analytics.md` | `GET /dashboard/analytics` blocks and UTC months |
 | `docs/app-lock.md` | Mobile PIN/biometric lock, auto-lock, recovery |
 | `docs/onboarding-and-sample-data.md` | First-run flow and sample-data lifecycle |

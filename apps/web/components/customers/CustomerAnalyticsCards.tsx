@@ -11,7 +11,7 @@ interface AnalyticsCardProps {
   icon: React.ElementType;
   iconClass: string;
   valueClass: string;
-  bgClass: string;
+  bgClass?: string;
   loading?: boolean;
 }
 
@@ -22,39 +22,19 @@ function AnalyticsCard({
   icon: Icon,
   iconClass,
   valueClass,
-  bgClass,
   loading,
 }: AnalyticsCardProps) {
   return (
-    <div
-      className={cn(
-        "relative rounded-xl border border-border bg-card p-4 overflow-hidden group card-hover"
-      )}
-    >
-      {/* Ambient bg */}
-      <div
-        className={cn(
-          "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
-          bgClass
-        )}
-      />
-      {/* Top border accent */}
-      <div
-        className={cn(
-          "absolute top-0 left-4 right-4 h-px opacity-50",
-          bgClass
-        )}
-      />
-
-      <div className="relative flex items-start justify-between gap-3">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">
             {label}
           </p>
           {loading ? (
             <Skeleton className="h-7 w-24 mb-1" />
           ) : (
-            <p className={cn("text-2xl font-bold tabular-nums tracking-tight", valueClass)}>
+            <p className={cn("text-xl sm:text-2xl font-bold tabular-nums tracking-tight", valueClass)}>
               {value}
             </p>
           )}
@@ -65,7 +45,7 @@ function AnalyticsCard({
 
         <div
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
             iconClass
           )}
         >

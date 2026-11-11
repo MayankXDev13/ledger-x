@@ -95,3 +95,53 @@ describe("transaction query validation", () => {
     });
   });
 });
+
+describe("transaction amount validation", () => {
+  const customerId = "11111111-1111-4111-8111-111111111111";
+
+  function postAmount(amount: number) {
+    return requestApp(makeTestApp(), "/transactions", {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId, amount, type: "credit" }),
+    });
+  }
+
+  it("rejects a fractional rupee amount and names the unit", async () => {
+    const response = await postAmount(1250.5);
+    const body = (await response.json()) as {
+      error?: string;
+      details?: Record<string, string[] | undefined>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Validation failed");
+    expect(body.details?.amount?.[0]).toBe(
+      "amount must be a whole number of rupees",
+    );
+  });
+
+  it("rejects a zero amount", async () => {
+    const response = await postAmount(0);
+    const body = (await response.json()) as {
+      details?: Record<string, string[] | undefined>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.details?.amount?.[0]).toBe(
+      "amount must be a positive number of rupees",
+    );
+  });
+
+  it("rejects a negative amount", async () => {
+    const response = await postAmount(-500);
+    const body = (await response.json()) as {
+      details?: Record<string, string[] | undefined>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.details?.amount?.[0]).toBe(
+      "amount must be a positive number of rupees",
+    );
+  });
+});

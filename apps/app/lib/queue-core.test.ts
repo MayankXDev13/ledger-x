@@ -2,9 +2,13 @@ import { describe, expect, it } from "bun:test";
 import {
   applyOutcome,
   classifyFailure,
+  entriesNotIn,
   isDuplicate,
   nextPending,
   pendingInOrder,
+  queuePayload,
+  queuedEntriesFrom,
+  submissionRejection,
   type QueueItem,
 } from "./queue-core";
 
@@ -142,5 +146,117 @@ describe("nextPending", () => {
 
   it("returns null when nothing is pending", () => {
     expect(nextPending([item({ status: "synced" })])).toBeNull();
+  });
+});
+
+describe("queuePayload", () => {
+  it("carries the device id so the server can deduplicate a replay", () => {
+    const payload = queuePayload("00000000-0000-4000-8000-000000000001", {
+      customerId: "customer-1",
+      amount: 500,
+      type: "credit",
+    });
+
+    expect(payload.id).toBe("00000000-0000-4000-8000-000000000001");
+    expect(payload.amount).toBe(500);
+  });
+
+  it("replays under the same id, so the server holds one record", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    const body = { customerId: "customer-1", amount: 500, type: "credit" };
+
+    const first = queuePayload(id, body);
+    const replay = queuePayload(id, body);
+
+    expect(replay.id).toBe(first.id);
+  });
+
+  it("does not let a payload override the device id", () => {
+    const payload = queuePayload("00000000-0000-4000-8000-000000000001", {
+      id: "someone-elses-id",
+    });
+
+    expect(payload.id).toBe("00000000-0000-4000-8000-000000000001");
+  });
+});
+
+describe("entriesNotIn", () => {
+  const queued = queuedEntriesFrom([
+    item({ id: "pending", kind: "transaction.create" }),
+    item({
+      id: "synced",
+      kind: "transaction.create",
+      status: "synced",
+      syncedAt: "x",
+      payload: {
+        id: "synced",
+        customerId: "customer-1",
+        amount: 500,
+        type: "credit",
+      },
+    }),
+    item({
+      id: "published",
+      kind: "transaction.create",
+      status: "synced",
+      syncedAt: "x",
+      payload: {
+        id: "published",
+        customerId: "customer-1",
+        amount: 500,
+        type: "credit",
+      },
+    }),
+  ]);
+
+  it("keeps a write the server has not accepted", () => {
+    const missing = entriesNotIn(queued, []);
+    expect(missing.map((entry) => entry.id)).toContain("pending");
+  });
+
+  it("keeps a synced write the server list does not hold yet", () => {
+    const missing = entriesNotIn(queued, ["published"]);
+    expect(missing.map((entry) => entry.id)).toEqual(["pending", "synced"]);
+  });
+
+  it("drops a write the server list already holds", () => {
+    const missing = entriesNotIn(queued, ["published", "synced"]);
+    expect(missing.map((entry) => entry.id)).toEqual(["pending"]);
+  });
+});
+
+describe("submissionRejection", () => {
+  it("reports the server's message for a permanently rejected write", () => {
+    const items = applyOutcome([item()], {
+      id: "00000000-0000-4000-8000-000000000001",
+      result: "failed",
+      error: "Validation failed · amount must be a whole number of rupees",
+    });
+
+    expect(
+      submissionRejection(items, "00000000-0000-4000-8000-000000000001"),
+    ).toBe("Validation failed · amount must be a whole number of rupees");
+  });
+
+  it("reports nothing for a write that is still pending", () => {
+    expect(
+      submissionRejection([item()], "00000000-0000-4000-8000-000000000001"),
+    ).toBeNull();
+  });
+
+  it("reports nothing for a write the server accepted", () => {
+    const items = applyOutcome([item()], {
+      id: "00000000-0000-4000-8000-000000000001",
+      result: "synced",
+      syncedAt: "2026-01-02T00:00:00.000Z",
+    });
+
+    expect(
+      submissionRejection(items, "00000000-0000-4000-8000-000000000001"),
+    ).toBeNull();
+  });
+
+  it("reports nothing for an unknown id", () => {
+    expect(submissionRejection([item()], "other")).toBeNull();
   });
 });

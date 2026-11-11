@@ -156,6 +156,20 @@ export const userSettings = pgTable("user_settings", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+/**
+ * Feature flags owned by the deployment administrator.
+ *
+ * One row per flag. The value is changed by the operator (see
+ * `scripts/set-feature-flag.ts`); a signed-in user never owns or edits it.
+ */
+export const featureFlags = pgTable("feature_flags", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(true),
+  label: text("label").notNull(),
+  description: text("description").notNull().default(""),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
@@ -228,7 +242,8 @@ export const transactions = pgTable(
       .references(() => customers.id, {
         onDelete: "cascade",
       }),
-    // Store amount in paise/cents
+    // Amounts are whole rupees. The column is an integer because the ledger
+    // never stores paise; clients must send whole rupees (see validators.ts).
     amount: integer("amount").notNull(),
     type: transactionTypeEnum("type").notNull(),
     paymentMethod: paymentMethodEnum("payment_method"),

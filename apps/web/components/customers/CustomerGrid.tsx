@@ -4,6 +4,7 @@ import type { Customer } from "@/lib/api";
 
 interface CustomerGridProps {
   customers: Customer[];
+  balances?: Map<string, { outstanding: number; ageDays: number | null }>;
   isLoading: boolean;
   onEdit: (customer: Customer) => void;
   onDelete: (id: string) => void;
@@ -11,6 +12,7 @@ interface CustomerGridProps {
 
 export function CustomerGrid({
   customers,
+  balances,
   isLoading,
   onEdit,
   onDelete,
@@ -40,6 +42,7 @@ export function CustomerGrid({
         <CustomerCard
           key={customer.id}
           customer={customer}
+          balance={balances?.get(customer.id)}
           onEdit={onEdit}
           onDelete={onDelete}
         />

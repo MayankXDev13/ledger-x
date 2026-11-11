@@ -249,6 +249,17 @@ export const MODELS: Record<string, JsonSchema> = {
       "onboardingDismissedAt",
     ],
   ),
+  FeatureFlagsResponse: object(
+    {
+      flags: {
+        type: "object",
+        additionalProperties: { type: "boolean" },
+        description:
+          "Every registered flag keyed by its stable key, with its enabled state.",
+      },
+    },
+    ["flags"],
+  ),
   Statement: object(
     {
       customer: object(

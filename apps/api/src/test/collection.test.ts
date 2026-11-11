@@ -4,6 +4,7 @@ import {
   authHeaders,
   fakeWithDb,
   makeTestApp,
+  queueFlags,
   requestApp,
 } from "./helpers";
 
@@ -27,6 +28,7 @@ function queueCollection(
     createdAt: Date;
   }[],
 ) {
+  queueFlags(db);
   db.queueSelect(...customers);
   db.queueSelect(...entries);
 }
@@ -96,6 +98,19 @@ describe("collection view", () => {
     );
 
     expect(response.status).toBe(400);
+  });
+
+  it("is unavailable while the collection flag is disabled", async () => {
+    const db = new FakeDb();
+    queueFlags(db, { collection: false });
+
+    const response = await requestApp(appWith(db), "/collection", {
+      headers: authHeaders(),
+    });
+    const body = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("Collection is not available");
   });
 
   it("requires authentication", async () => {

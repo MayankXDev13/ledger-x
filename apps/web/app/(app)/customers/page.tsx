@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
+import { useCollection } from "@/hooks/useCollection";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { CustomersHeader } from "@/components/customers/CustomersHeader";
@@ -15,7 +16,21 @@ import { Button } from "@/components/ui/button";
 
 export default function CustomersPage() {
   const { data: customers, isLoading, isError, refetch } = useCustomers();
+  const { data: collectionData } = useCollection("amount");
   const deleteCustomer = useDeleteCustomer();
+
+  const balances = useMemo(() => {
+    const map = new Map<string, { outstanding: number; ageDays: number | null }>();
+    if (collectionData?.data) {
+      for (const row of collectionData.data) {
+        map.set(row.customerId, {
+          outstanding: row.outstanding,
+          ageDays: row.ageDays,
+        });
+      }
+    }
+    return map;
+  }, [collectionData]);
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -68,6 +83,7 @@ export default function CustomersPage() {
       ) : filtered.length > 0 || isLoading ? (
         <CustomerGrid
           customers={filtered}
+          balances={balances}
           isLoading={isLoading}
           onEdit={handleEdit}
           onDelete={setDeletingId}

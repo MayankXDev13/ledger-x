@@ -36,9 +36,10 @@ import { useConnectivity } from "@/hooks/useConnectivity";
 import {
   createReplayGuard,
   pendingCustomersFrom,
-  pendingEntriesFrom,
+  queuedEntriesFrom,
+  submissionRejection,
   type PendingCustomer,
-  type PendingEntry,
+  type QueuedEntry,
   type QueueItem,
 } from "@/lib/queue-core";
 
@@ -69,12 +70,16 @@ export interface OfflineWriteInput {
   note?: string;
 }
 
-export type { PendingCustomer, PendingEntry };
+export type { PendingCustomer, QueuedEntry };
 
 export interface OfflineQueueValue {
   items: QueueItem[];
-  /** Entries recorded offline that the server has not accepted yet. */
-  pendingEntries: PendingEntry[];
+  /**
+   * Every transaction the queue knows about. An entry the server has not
+   * accepted yet is marked `pending`; one the server just accepted stays in
+   * the list until the server list holds it under the same id.
+   */
+  queuedEntries: QueuedEntry[];
   /** Customers created offline that the server has not accepted yet. */
   pendingCustomers: PendingCustomer[];
   outstanding: number;
@@ -90,6 +95,19 @@ export interface OfflineQueueValue {
 }
 
 const OfflineQueueContext = createContext<OfflineQueueValue | null>(null);
+
+/**
+ * Raises the rejection of a queued write the server permanently refused.
+ *
+ * The queue keeps the write as a failed item so the user can review, retry or
+ * discard it later, but the screen that submitted it has to hear about the
+ * rejection as well — otherwise the user is told the entry was recorded when
+ * the server never accepted it.
+ */
+async function assertAccepted(itemId: string): Promise<void> {
+  const rejection = submissionRejection(await listAll(), itemId);
+  if (rejection) throw new Error(rejection);
+}
 
 export function OfflineQueueProvider({ children }: { children: ReactNode }) {
   const { isOnline, appState } = useConnectivity();
@@ -143,12 +161,19 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
    * sat in the local queue until the app was backgrounded and refocused, and
    * every screen that reads from the server showed stale data for tens of
    * seconds.
+   *
+   * When that immediate replay is permanently rejected, the rejection is
+   * raised to the caller: the screen that submitted the write must not tell
+   * the user it was recorded when the server refused it.
    */
   const queueCustomer = useCallback(
     async (data: { name: string; phone: string }): Promise<string> => {
       const item = await enqueue("customer.create", data);
       await reload();
-      if (isOnline) await sync();
+      if (isOnline) {
+        await sync();
+        await assertAccepted(item.id);
+      }
       return item.id;
     },
     [reload, sync, isOnline],
@@ -157,7 +182,8 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
   /**
    * Queue a ledger entry against a (possibly device-created) customer id.
    *
-   * Replays immediately when online, for the same reason as `queueCustomer`.
+   * Replays immediately when online, for the same reason as `queueCustomer`,
+   * and reports a permanent rejection to the caller the same way.
    */
   const queueTransaction = useCallback(
     async (data: OfflineWriteInput): Promise<string> => {
@@ -169,7 +195,10 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
         note: data.note,
       });
       await reload();
-      if (isOnline) await sync();
+      if (isOnline) {
+        await sync();
+        await assertAccepted(item.id);
+      }
       return item.id;
     },
     [reload, sync, isOnline],
@@ -193,13 +222,13 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
   );
 
   /** Queued writes the server has not accepted yet. */
-  const pendingEntries = useMemo(() => pendingEntriesFrom(items), [items]);
+  const queuedEntries = useMemo(() => queuedEntriesFrom(items), [items]);
   const pendingCustomers = useMemo(() => pendingCustomersFrom(items), [items]);
 
   const value = useMemo<OfflineQueueValue>(
     () => ({
       items,
-      pendingEntries,
+      queuedEntries,
       pendingCustomers,
       outstanding,
       syncing,
@@ -214,7 +243,7 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
     }),
     [
       items,
-      pendingEntries,
+      queuedEntries,
       pendingCustomers,
       outstanding,
       syncing,

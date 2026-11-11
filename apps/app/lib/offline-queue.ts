@@ -10,6 +10,7 @@ import {
   classifyFailure,
   isDuplicate,
   pendingInOrder,
+  queuePayload,
   type ProcessOutcome,
   type QueueItem,
   type QueueKind,
@@ -103,7 +104,14 @@ export async function enqueue(
        (id, kind, status, seq, payload, created_at)
      VALUES (?, ?, 'pending',
        COALESCE((SELECT MAX(seq) FROM offline_queue), 0) + 1, ?, ?)`,
-    [itemId, kind, JSON.stringify(payload), new Date().toISOString()],
+    [
+      itemId,
+      kind,
+      // The device id travels with the payload so the server can deduplicate
+      // a replay instead of creating the record a second time.
+      JSON.stringify(queuePayload(itemId, payload)),
+      new Date().toISOString(),
+    ],
   );
 
   const row = await db.getFirstAsync<

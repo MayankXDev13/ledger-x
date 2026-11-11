@@ -63,7 +63,7 @@ export function TransactionItem({
           <Badge
             variant="outline"
             className={cn(
-              "px-1.5 py-0 h-4 font-semibold uppercase tracking-wider text-xs",
+              "px-2 py-0.5 min-h-[20px] font-semibold tracking-wide text-xs inline-flex items-center",
               isPayment
                 ? "bg-positive/10 text-positive border-positive/25"
                 : money.tone === "overdue"

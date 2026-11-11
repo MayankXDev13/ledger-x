@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import type { PaymentMethod, Transaction } from "@/lib/api";
+import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
 
@@ -54,10 +55,10 @@ export function EditTransactionModal({
 
   const handleSave = async () => {
     if (!transaction) return;
-    const amountNum = parseFloat(amount);
-    if (!amount || isNaN(amountNum) || amountNum <= 0) {
-      setError("Enter an amount greater than zero");
-      announce("Enter an amount greater than zero");
+    const parsed = parseWholeRupeAmount(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
+      announce(parsed.error);
       return;
     }
 
@@ -66,7 +67,7 @@ export function EditTransactionModal({
     try {
       await onSave(
         transaction.id,
-        amountNum,
+        parsed.amount,
         type,
         note.trim(),
         paymentMethod,

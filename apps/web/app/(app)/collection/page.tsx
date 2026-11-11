@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Copy,
   HandCoins,
@@ -31,6 +32,8 @@ import { useCollection } from "@/hooks/useCollection";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { buildUpiQrPayload } from "@/lib/upi";
 import type { CollectionRow } from "@/lib/api";
 import { toast } from "sonner";
@@ -68,9 +71,23 @@ function ageTone(ageDays: number | null) {
 
 export default function CollectionPage() {
   const [sort, setSort] = useState<"amount" | "age">("amount");
-  const { data, isLoading, isError, refetch } = useCollection(sort);
+  const { flags } = useFeatureFlags();
+  const collectionEnabled = isFeatureEnabled(flags, "collection");
+  // The collection route is unavailable while the flag is off, so the query
+  // is not fired at all.
+  const { data, isLoading, isError, refetch } = useCollection(
+    sort,
+    collectionEnabled,
+  );
   const { data: settings } = useSettings();
   const { user } = useAuth();
+  const router = useRouter();
+
+  // A disabled feature is not reachable: the view is not rendered and the
+  // user is sent back to the dashboard.
+  useEffect(() => {
+    if (!collectionEnabled) router.replace("/dashboard");
+  }, [collectionEnabled, router]);
 
   const [qrRow, setQrRow] = useState<CollectionRow | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -106,6 +123,8 @@ export default function CollectionPage() {
   const total = data?.totalReceivables ?? 0;
 
   const totalCount = useMemo(() => rows.length, [rows]);
+
+  if (!collectionEnabled) return null;
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full pb-24 lg:pb-8 fade-up">

@@ -25,6 +25,7 @@ import { colors } from "@/lib/theme";
 import { usePressable } from "@/lib/press-feedback";
 import { ErrorState } from "@/components/ErrorState";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { entriesNotIn } from "@/lib/queue-core";
 
 type Filter = "all" | "credit" | "debit";
 
@@ -52,7 +53,7 @@ function dayLabel(date: Date): string {
 export default function LedgerScreen() {
   const insets = useSafeAreaInsets();
   const press = usePressable();
-  const { pendingEntries } = useOfflineQueue();
+  const { queuedEntries } = useOfflineQueue();
   const [entries, setEntries] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,25 +101,29 @@ export default function LedgerScreen() {
 
   /**
    * Entries recorded offline are queued locally, so they are merged into the
-   * list here instead of waiting for the server. Once they sync, the server
-   * list contains them and the queue drops them, so nothing appears twice.
+   * list here instead of waiting for the server. A queued entry stays in the
+   * list until the server list holds it under the same id, so an entry that
+   * was just synced does not blink out before the list is refetched.
    */
   const visibleEntries = useMemo(() => {
-    const queued: Transaction[] = pendingEntries.map((entry) => ({
-      id: entry.id,
-      userId: "",
-      customerId: entry.customerId,
-      amount: entry.amount,
-      type: entry.type,
-      paymentMethod: (entry.paymentMethod as PaymentMethod | null) ?? null,
-      note: entry.note ?? undefined,
-      createdAt: entry.createdAt,
-    }));
+    const serverIds = entries.map((entry) => entry.id);
+    const queued: Transaction[] = entriesNotIn(queuedEntries, serverIds).map(
+      (entry) => ({
+        id: entry.id,
+        userId: "",
+        customerId: entry.customerId,
+        amount: entry.amount,
+        type: entry.type,
+        paymentMethod: (entry.paymentMethod as PaymentMethod | null) ?? null,
+        note: entry.note ?? undefined,
+        createdAt: entry.createdAt,
+      }),
+    );
     return [...queued, ...entries].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [entries, pendingEntries]);
+  }, [entries, queuedEntries]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

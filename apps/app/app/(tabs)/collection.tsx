@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { ErrorState } from "@/components/ErrorState";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import {
@@ -12,13 +12,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, router, Redirect } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system/legacy";
 import { useCollection } from "@/hooks/useInsights";
+import { useFeatureFlags } from "@/lib/feature-flags-provider";
 import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { buildUpiUri } from "@/lib/upi";
@@ -28,7 +29,8 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/Button";
 import { AgingStrip } from "@/components/AgingStrip";
 import { formatCurrency } from "@/types/database";
-import type { CollectionRow } from "@/lib/api";
+import type { CollectionRow, Customer } from "@/lib/api";
+import { customersApi } from "@/lib/api";
 import { colors } from "@/lib/theme";
 import { usePressable } from "@/lib/press-feedback";
 import { announce } from "@/lib/announce";
@@ -54,13 +56,41 @@ export default function CollectionScreen() {
   const press = usePressable();
   const insets = useSafeAreaInsets();
   const [sort, setSort] = useState<"amount" | "age">("amount");
-  const { data, loading, error, refresh } = useCollection(sort);
-  const { pendingCustomers, pendingEntries } = useOfflineQueue();
+  const { isEnabled } = useFeatureFlags();
+  // The whole screen is behind the administrator's collection flag.
+  const collectionEnabled = isEnabled("collection");
+  // The UPI surfaces are behind their own flag.
+  const upiEnabled = isEnabled("upi_collection");
+  const { data, loading, error, refresh } = useCollection(
+    sort,
+    collectionEnabled,
+  );
+  const { pendingCustomers, queuedEntries } = useOfflineQueue();
   const { settings } = useSettings();
   const { session } = useAuth();
   const [qrRow, setQrRow] = useState<CollectionRow | null>(null);
   const [busy, setBusy] = useState<BusyAction>(null);
+  const [directory, setDirectory] = useState<Map<string, Customer>>(new Map());
   const qrRef = useRef<any>(null);
+
+  // A queued credit can turn a customer the server does not list into a
+  // debtor. Their name and phone come from the customer list, which is only
+  // fetched while a queued entry needs it.
+  const needsDirectory = queuedEntries.some((entry) => entry.pending);
+  useEffect(() => {
+    if (!needsDirectory) return;
+    let cancelled = false;
+    customersApi
+      .list()
+      .then((rows) => {
+        if (cancelled) return;
+        setDirectory(new Map(rows.map((row) => [row.id, row])));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [needsDirectory]);
 
   const payeeName =
     settings?.payeeName?.trim() || session?.user.email.split("@")[0] || "Ledger-X";
@@ -79,6 +109,9 @@ export default function CollectionScreen() {
     });
 
   const requireUpi = (): boolean => {
+    // The UPI surfaces are behind their own flag: while it is off the app
+    // neither produces a payment request nor asks for a UPI ID.
+    if (!upiEnabled) return false;
     if (upiId) return true;
     Alert.alert(
       "Add your UPI ID",
@@ -189,28 +222,62 @@ export default function CollectionScreen() {
    * Customers created offline are queued locally, so they are merged into the
    * collection list with the balance recorded against them. Once they sync,
    * the server list contains them and the queue drops them.
+   *
+   * A queued credit for a customer the server already knows changes what they
+   * owe, so its effect is added to the server's outstanding balance and the
+   * row is marked as pending.
    */
   const rows = useMemo<CollectionRow[]>(() => {
     const serverRows = data?.data ?? [];
-    const pendingRows: CollectionRow[] = pendingCustomers.map((customer) => {
-      const outstanding = pendingEntries
-        .filter((entry) => entry.customerId === customer.id)
-        .reduce(
-          (sum, entry) =>
-            sum + (entry.type === "credit" ? entry.amount : -entry.amount),
-          0,
-        );
-      return {
-        customerId: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        outstanding,
+
+    // What each customer owes from the writes the server has not taken yet.
+    const queuedByCustomer = new Map<string, number>();
+    for (const entry of queuedEntries) {
+      if (!entry.pending) continue;
+      queuedByCustomer.set(
+        entry.customerId,
+        (queuedByCustomer.get(entry.customerId) ?? 0) +
+          (entry.type === "credit" ? entry.amount : -entry.amount),
+      );
+    }
+
+    const pendingRows: CollectionRow[] = pendingCustomers.map((customer) => ({
+      customerId: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      outstanding: queuedByCustomer.get(customer.id) ?? 0,
+      oldestUnpaidCreditAt: null,
+      ageDays: null,
+      pending: true,
+    }));
+
+    const serverIds = new Set(serverRows.map((row) => row.customerId));
+    const mergedRows: CollectionRow[] = serverRows.map((row) => {
+      const delta = queuedByCustomer.get(row.customerId);
+      if (!delta) return row;
+      return { ...row, outstanding: row.outstanding + delta, pending: true };
+    });
+
+    // A queued credit can turn a customer the server does not list into a
+    // debtor, so their row is added from the customer directory.
+    const queuedOnlyRows: CollectionRow[] = [];
+    for (const [customerId, delta] of queuedByCustomer.entries()) {
+      if (serverIds.has(customerId)) continue;
+      if (pendingCustomers.some((customer) => customer.id === customerId)) continue;
+      const customer = directory.get(customerId);
+      queuedOnlyRows.push({
+        customerId,
+        name: customer?.name ?? "Pending customer",
+        phone: customer?.phone ?? "",
+        outstanding: delta,
         oldestUnpaidCreditAt: null,
         ageDays: null,
-      };
-    });
-    return [...pendingRows, ...serverRows];
-  }, [data, pendingCustomers, pendingEntries]);
+        pending: true,
+      });
+    }
+
+    return [...pendingRows, ...queuedOnlyRows, ...mergedRows];
+  }, [data, pendingCustomers, queuedEntries, directory]);
 
   const renderItem = ({ item }: { item: CollectionRow }) => {
     const ageTone =
@@ -239,7 +306,7 @@ export default function CollectionScreen() {
             </Pressable>
           </Link>
           <Text className={`font-mukta text-[12px] ${ageTone}`}>
-            Oldest unpaid: {ageLabel(item.ageDays)}
+            {item.pending ? "Pending · " : ""}Oldest unpaid: {ageLabel(item.ageDays)}
           </Text>
         </View>
         <View className="w-[88px] items-end">
@@ -250,6 +317,7 @@ export default function CollectionScreen() {
             className="mt-2 w-[64px]"
           />
         </View>
+        {upiEnabled ? (
         <Pressable
           onPress={() => {
             if (!requireUpi()) return;
@@ -275,9 +343,14 @@ export default function CollectionScreen() {
             color={upiId ? colors.brandText : colors.inkMuted}
           />
         </Pressable>
+        ) : null}
       </View>
     );
   };
+
+  // A disabled feature is not reachable: the screen is not rendered and the
+  // user is sent back to the home tab.
+  if (!collectionEnabled) return <Redirect href="/" />;
 
   return (
     <View className="flex-1 bg-bg">
@@ -300,6 +373,7 @@ export default function CollectionScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
         ListHeaderComponent={
           <View className="gap-5 px-5 pb-2">
+            {upiEnabled ? (
             <View className="rounded-2xl border border-brand-primary/30 bg-surface p-5">
               <View className="mb-4 h-[2px] w-10 rounded-full bg-brand-primary" />
               <Text className="font-mukta-bold text-[20px] text-ink">
@@ -354,7 +428,9 @@ export default function CollectionScreen() {
                 icon={<Ionicons name="share-outline" size={17} color={colors.ink} />}
               />
             </View>
+            ) : null}
 
+            {upiEnabled ? (
             <View>
               <SectionHeader label="Quick actions" />
               <View className="mt-3 gap-2">
@@ -399,6 +475,7 @@ export default function CollectionScreen() {
                 ))}
               </View>
             </View>
+            ) : null}
 
             <View>
               <SectionHeader

@@ -12,6 +12,7 @@ import accountApp from "./routes/account";
 import statementsApp from "./routes/statements";
 import settingsApp from "./routes/settings";
 import collectionApp from "./routes/collection";
+import featureFlagsApp from "./routes/feature-flags";
 import sampleDataApp from "./routes/sample-data";
 import { getAuth } from "./lib/better-auth";
 import { withDb as defaultWithDb } from "./db";
@@ -157,6 +158,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.route("/statements", statementsApp);
   app.route("/settings", settingsApp);
   app.route("/collection", collectionApp);
+  app.route("/feature-flags", featureFlagsApp);
   app.route("/sample-data", sampleDataApp);
 
   app.notFound((ctx) => ctx.json({ error: "Not found" }, 404));

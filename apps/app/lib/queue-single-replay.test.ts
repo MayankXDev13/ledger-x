@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
+  applyOutcome,
   createReplayGuard,
   pendingCustomersFrom,
-  pendingEntriesFrom,
+  queuedEntriesFrom,
+  submissionRejection,
   type QueueItem,
 } from "./queue-core";
 
@@ -71,9 +73,9 @@ describe("createReplayGuard", () => {
   });
 });
 
-describe("pendingEntriesFrom", () => {
-  it("returns entries that are still waiting to sync", () => {
-    const entries = pendingEntriesFrom([
+describe("queuedEntriesFrom", () => {
+  it("returns the entries the server has not accepted yet", () => {
+    const entries = queuedEntriesFrom([
       item({ id: "pending" }),
       item({ id: "failed", status: "failed" }),
     ]);
@@ -81,11 +83,32 @@ describe("pendingEntriesFrom", () => {
     expect(entries.map((entry) => entry.id)).toEqual(["pending", "failed"]);
     expect(entries[0].amount).toBe(500);
     expect(entries[0].type).toBe("credit");
+    expect(entries[0].pending).toBe(true);
+    expect(entries[1].pending).toBe(true);
   });
 
-  it("drops entries the server already accepted", () => {
-    const entries = pendingEntriesFrom([
-      item({ id: "synced", status: "synced", syncedAt: "x" }),
+  it("keeps a synced entry until the server list holds it", () => {
+    const entries = queuedEntriesFrom([
+      item({
+        id: "synced",
+        status: "synced",
+        syncedAt: "x",
+        payload: {
+          id: "synced",
+          customerId: "customer-1",
+          amount: 500,
+          type: "credit",
+        },
+      }),
+    ]);
+
+    expect(entries.map((entry) => entry.id)).toEqual(["synced"]);
+    expect(entries[0].pending).toBe(false);
+  });
+
+  it("leaves out an entry the server published under another id", () => {
+    const entries = queuedEntriesFrom([
+      item({ id: "legacy", status: "synced", syncedAt: "x" }),
     ]);
 
     expect(entries).toHaveLength(0);
@@ -119,5 +142,36 @@ describe("pendingCustomersFrom", () => {
     ]);
 
     expect(customers).toHaveLength(0);
+  });
+});
+
+describe("one submission, one outcome", () => {
+  it("surfaces the rejection when the server refuses the queued write", () => {
+    const queued = item({ id: "tx-1" });
+    const replayed = applyOutcome([queued], {
+      id: "tx-1",
+      result: "failed",
+      error: "Validation failed · amount must be a whole number of rupees",
+    });
+
+    expect(submissionRejection(replayed, "tx-1")).toBe(
+      "Validation failed · amount must be a whole number of rupees",
+    );
+  });
+
+  it("surfaces nothing while the device is offline", () => {
+    const queued = item({ id: "tx-1" });
+
+    expect(submissionRejection([queued], "tx-1")).toBeNull();
+  });
+
+  it("surfaces nothing once the server accepted the write", () => {
+    const replayed = applyOutcome([item({ id: "tx-1" })], {
+      id: "tx-1",
+      result: "synced",
+      syncedAt: "2026-01-02T00:00:00.000Z",
+    });
+
+    expect(submissionRejection(replayed, "tx-1")).toBeNull();
   });
 });

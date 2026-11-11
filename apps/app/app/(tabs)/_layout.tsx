@@ -2,9 +2,16 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/lib/theme";
+import { useFeatureFlags } from "@/lib/feature-flags-provider";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { isEnabled, loading } = useFeatureFlags();
+
+  // The Collection tab is behind the administrator's collection flag. It is
+  // held back until the registry is known, so a disabled feature never
+  // flashes on screen.
+  const collectionEnabled = !loading && isEnabled("collection");
 
   return (
       <Tabs
@@ -59,6 +66,8 @@ export default function TabsLayout() {
         name="collection"
         options={{
           title: "Collection",
+          // `href: null` removes the tab from the bar and blocks the route.
+          href: collectionEnabled ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "qr-code" : "qr-code-outline"}

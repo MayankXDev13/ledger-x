@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { and, eq, isNull } from "drizzle-orm";
 import { customers, transactions } from "../db/schema";
 import { computeReceivables } from "../lib/receivables";
+import { isEnabled, readFeatureFlags } from "../lib/feature-flags";
 import { parseQuery, collectionQuerySchema } from "../validators";
-import { validationResponse } from "../lib/errors";
+import { ApiError, validationResponse } from "../lib/errors";
 import type { AppEnv } from "../types/hono";
 
 const collectionApp = new Hono<AppEnv>();
@@ -18,6 +19,13 @@ collectionApp.get("/", async (ctx) => {
 
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
+
+  // A disabled feature is unavailable, not merely hidden: the route answers
+  // 404 so a client that ignores the flag cannot read the data either.
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+  if (!isEnabled(flags, "collection")) {
+    throw new ApiError(404, "Collection is not available");
+  }
 
   const [customerRows, entryRows] = await withDb(ctx, async (db) => {
     const customerRows = await db

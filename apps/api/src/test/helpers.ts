@@ -251,3 +251,19 @@ export function requestApp(
 export function authHeaders(token = "valid-token") {
   return { Authorization: `Bearer ${token}` };
 }
+
+/**
+ * Queues the feature-flag registry read that every gated route performs
+ * before it serves its own data.
+ */
+export function queueFlags(
+  db: FakeDb,
+  enabled: boolean | Record<string, boolean> = true,
+) {
+  const value = (key: string) =>
+    typeof enabled === "boolean" ? enabled : (enabled[key] ?? true);
+  db.queueSelect(
+    { key: "collection", enabled: value("collection") },
+    { key: "upi_collection", enabled: value("upi_collection") },
+  );
+}

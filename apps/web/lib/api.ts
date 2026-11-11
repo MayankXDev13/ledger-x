@@ -76,6 +76,13 @@ export const collectionApi = {
       .then((r) => r.data),
 };
 
+export const featureFlagsApi = {
+  get: () =>
+    apiClient
+      .get<{ flags: Record<string, boolean> }>("/feature-flags")
+      .then((r) => r.data.flags),
+};
+
 export const statementsApi = {
   get: (customerId: string, params?: { start?: string; end?: string }) =>
     apiClient

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api";
+import { formatApiError } from "@/lib/api-error";
 import { dashboardKeys } from "./useDashboard";
 import { collectionKeys } from "./useCollection";
 import { statementKeys } from "./useStatement";
@@ -40,14 +41,20 @@ export function useCreateTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.create,
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: collectionKeys.all });
-      qc.invalidateQueries({ queryKey: statementKeys.all });
+    onSuccess: async (data) => {
+      // A transaction changes the balance the customer domain shows, so that
+      // domain is invalidated too. Awaiting the invalidation means the
+      // mutation settles only once the affected views hold fresh data.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) }),
+        qc.invalidateQueries({ queryKey: customerKeys.all }),
+        qc.invalidateQueries({ queryKey: dashboardKeys.all }),
+        qc.invalidateQueries({ queryKey: collectionKeys.all }),
+        qc.invalidateQueries({ queryKey: statementKeys.all }),
+      ]);
       toast.success("Transaction created");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 }
 
@@ -67,15 +74,18 @@ export function useUpdateTransaction() {
         note?: string;
       };
     }) => transactionsApi.update(id, data),
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) });
-      qc.invalidateQueries({ queryKey: transactionKeys.detail(data.id) });
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: collectionKeys.all });
-      qc.invalidateQueries({ queryKey: statementKeys.all });
+    onSuccess: async (data) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) }),
+        qc.invalidateQueries({ queryKey: transactionKeys.detail(data.id) }),
+        qc.invalidateQueries({ queryKey: customerKeys.all }),
+        qc.invalidateQueries({ queryKey: dashboardKeys.all }),
+        qc.invalidateQueries({ queryKey: collectionKeys.all }),
+        qc.invalidateQueries({ queryKey: statementKeys.all }),
+      ]);
       toast.success("Transaction updated");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 }
 
@@ -83,14 +93,16 @@ export function useDeleteTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.delete,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: transactionKeys.all });
-      qc.invalidateQueries({ queryKey: customerKeys.all });
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: collectionKeys.all });
-      qc.invalidateQueries({ queryKey: statementKeys.all });
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: transactionKeys.all }),
+        qc.invalidateQueries({ queryKey: customerKeys.all }),
+        qc.invalidateQueries({ queryKey: dashboardKeys.all }),
+        qc.invalidateQueries({ queryKey: collectionKeys.all }),
+        qc.invalidateQueries({ queryKey: statementKeys.all }),
+      ]);
       toast.success("Transaction deleted");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 }

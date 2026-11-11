@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, router, Link } from "expo-router";
+import { useLocalSearchParams, router, Link, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   customersApi,
@@ -28,6 +28,7 @@ import { isPaymentEntry, paymentMethodLabel } from "@/lib/payments";
 import { formatCurrency } from "@/types/database";
 import { colors } from "@/lib/theme";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { entriesNotIn } from "@/lib/queue-core";
 import { ErrorState } from "@/components/ErrorState";
 
 interface BalanceData {
@@ -42,7 +43,7 @@ export default function CustomerDetailsScreen() {
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [entries, setEntries] = useState<Transaction[]>([]);
-  const { pendingEntries } = useOfflineQueue();
+  const { queuedEntries } = useOfflineQueue();
   const [balance, setBalance] = useState<BalanceData>({
     totalCredit: 0,
     totalDebit: 0,
@@ -59,10 +60,9 @@ export default function CustomerDetailsScreen() {
 
   /* -------------------- DATA -------------------- */
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!id) return;
 
-    setLoading(true);
     try {
       const [customerData, paged] = await Promise.all([
         customersApi.get(id),
@@ -76,16 +76,22 @@ export default function CustomerDetailsScreen() {
         totalDebit: paged.totalDebit,
         balance: paged.totalCredit - paged.totalDebit,
       });
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load this customer");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, [id]);
+
+  // The screen reloads when it regains focus, so an entry recorded a moment
+  // earlier is listed without the user pulling to refresh. The first load
+  // still shows the spinner because `loading` starts true.
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData]),
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -138,27 +144,30 @@ export default function CustomerDetailsScreen() {
 
   /**
    * Entries recorded offline are queued locally, so they are merged into the
-   * list here instead of waiting for the server. Once they sync, the server
-   * list contains them and the queue drops them, so nothing appears twice.
+   * list here instead of waiting for the server. A queued entry stays in the
+   * list until the server list holds it under the same id, so an entry that
+   * was just synced does not blink out before the list is refetched.
    */
   const visibleEntries = useMemo<Transaction[]>(() => {
-    const queued: Transaction[] = pendingEntries
-      .filter((entry) => entry.customerId === id)
-      .map((entry) => ({
-        id: entry.id,
-        userId: "",
-        customerId: entry.customerId,
-        amount: entry.amount,
-        type: entry.type,
-        paymentMethod: (entry.paymentMethod as PaymentMethod | null) ?? null,
-        note: entry.note ?? undefined,
-        createdAt: entry.createdAt,
-      }));
+    const serverIds = entries.map((entry) => entry.id);
+    const queued: Transaction[] = entriesNotIn(
+      queuedEntries.filter((entry) => entry.customerId === id),
+      serverIds,
+    ).map((entry) => ({
+      id: entry.id,
+      userId: "",
+      customerId: entry.customerId,
+      amount: entry.amount,
+      type: entry.type,
+      paymentMethod: (entry.paymentMethod as PaymentMethod | null) ?? null,
+      note: entry.note ?? undefined,
+      createdAt: entry.createdAt,
+    }));
     return [...queued, ...entries].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [entries, pendingEntries, id]);
+  }, [entries, queuedEntries, id]);
 
   if (loading) {
     return (

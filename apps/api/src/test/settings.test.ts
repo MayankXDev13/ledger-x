@@ -4,6 +4,7 @@ import {
   authHeaders,
   fakeWithDb,
   makeTestApp,
+  queueFlags,
   requestApp,
 } from "./helpers";
 
@@ -24,6 +25,7 @@ function appWith(db: FakeDb) {
 describe("user settings", () => {
   it("creates and returns an empty settings row on first read", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueSelect();
     db.queueInsert(emptySettings);
 
@@ -41,6 +43,7 @@ describe("user settings", () => {
 
   it("saves a valid UPI ID", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueInsert(emptySettings);
     db.queueUpdate({
       ...emptySettings,
@@ -81,6 +84,7 @@ describe("user settings", () => {
 
   it("clears the UPI ID when null is sent", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueInsert({ ...emptySettings, upiId: "ramesh@okhdfcbank" });
     db.queueUpdate({ ...emptySettings, upiId: null });
 
@@ -96,6 +100,7 @@ describe("user settings", () => {
 
   it("records onboarding completion and dismissal", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueInsert(emptySettings);
     db.queueUpdate({
       ...emptySettings,
@@ -122,5 +127,65 @@ describe("user settings", () => {
   it("requires authentication", async () => {
     const response = await requestApp(makeTestApp(), "/settings");
     expect(response.status).toBe(401);
+  });
+});
+
+describe("the UPI configuration behind its flag", () => {
+  it("withholds the UPI ID and payee name while the flag is disabled", async () => {
+    const db = new FakeDb();
+    queueFlags(db, { upi_collection: false });
+    db.queueInsert({
+      ...emptySettings,
+      upiId: "ramesh@okhdfcbank",
+      payeeName: "Ramesh Kirana",
+    });
+
+    const response = await requestApp(appWith(db), "/settings", {
+      headers: authHeaders(),
+    });
+    const body = (await response.json()) as {
+      upiId: string | null;
+      payeeName: string | null;
+      onboardingCompletedAt: Date | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.upiId).toBeNull();
+    expect(body.payeeName).toBeNull();
+    expect(body.onboardingCompletedAt).toBeNull();
+  });
+
+  it("refuses a write to the UPI configuration while the flag is disabled", async () => {
+    const db = new FakeDb();
+    queueFlags(db, { upi_collection: false });
+
+    const response = await requestApp(appWith(db), "/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ upiId: "ramesh@okhdfcbank" }),
+    });
+    const body = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("UPI collections are not available");
+    expect(db.updateCalls).toBe(0);
+  });
+
+  it("still accepts the onboarding state while the flag is disabled", async () => {
+    const db = new FakeDb();
+    queueFlags(db, { upi_collection: false });
+    db.queueInsert(emptySettings);
+    db.queueUpdate({
+      ...emptySettings,
+      onboardingCompletedAt: new Date(),
+    });
+
+    const response = await requestApp(appWith(db), "/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ onboardingCompleted: true }),
+    });
+
+    expect(response.status).toBe(200);
   });
 });

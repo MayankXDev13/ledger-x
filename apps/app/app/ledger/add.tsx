@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import type { PaymentMethod } from "@/lib/api";
+import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
 
@@ -35,26 +36,12 @@ export default function AddEntryScreen() {
 
   const entryType = type === "debit" ? "debit" : "credit";
 
-  const validateForm = () => {
-    let valid = true;
-    setAmountError(null);
-
-    if (!amount) {
-      setAmountError("Amount is required");
-      valid = false;
-    } else {
-      const numAmount = parseFloat(amount);
-      if (isNaN(numAmount) || numAmount <= 0) {
-        setAmountError("Please enter a valid amount");
-        valid = false;
-      }
-    }
-
-    return valid;
-  };
-
   const onSubmit = async () => {
-    if (!contactId || !validateForm()) return;
+    // The ledger stores whole rupees, so a fractional amount is refused here
+    // rather than being queued for a server that would reject it.
+    const parsed = parseWholeRupeAmount(amount);
+    setAmountError(parsed.ok ? null : parsed.error);
+    if (!contactId || !parsed.ok) return;
 
     setLoading(true);
     setError(null);
@@ -62,7 +49,7 @@ export default function AddEntryScreen() {
     try {
       await queueTransaction({
         customerId: contactId,
-        amount: parseFloat(amount),
+        amount: parsed.amount,
         type: entryType,
         paymentMethod,
         note: note || undefined,
