@@ -7,7 +7,12 @@ import { featureFlags } from "../db/schema";
  * A key the registry does not carry resolves to disabled, so a flag only
  * opens a feature once the administrator has registered it.
  */
-export const FEATURE_FLAG_KEYS = ["collection", "upi_collection"] as const;
+export const FEATURE_FLAG_KEYS = [
+  "collection",
+  "upi_collection",
+  "sample_data",
+  "account_deletion",
+] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
 

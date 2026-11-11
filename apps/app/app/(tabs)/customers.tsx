@@ -45,17 +45,13 @@ export default function CustomersScreen() {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const [list, coll] = await Promise.all([
+      const [list, balMap] = await Promise.all([
         customersApi.list(),
-        collectionApi.list("amount").catch(() => null),
+        customersApi.balances().catch(() => null),
       ]);
       setCustomers(list);
-      if (coll) {
-        const map: Record<string, Balance> = {};
-        for (const r of coll.data) {
-          map[r.customerId] = { outstanding: r.outstanding, ageDays: r.ageDays };
-        }
-        setBalances(map);
+      if (balMap) {
+        setBalances(balMap);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load your customers");

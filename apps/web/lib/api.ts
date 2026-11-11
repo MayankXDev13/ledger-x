@@ -148,16 +148,26 @@ export const exportsApi = {
       "text/csv",
     ),
 
-  transactionsCsv: () =>
-    downloadBlob(
-      "/exports/transactions.csv",
-      "ledger-x-transactions.csv",
-      "text/csv",
-    ),
+  transactionsCsv: (customerId?: string) => {
+    const url = customerId
+      ? `/exports/transactions.csv?customerId=${encodeURIComponent(customerId)}`
+      : "/exports/transactions.csv";
+    const fallbackName = customerId
+      ? "customer-transactions.csv"
+      : "ledger-x-transactions.csv";
+    return downloadBlob(url, fallbackName, "text/csv");
+  },
 };
 
 export const customersApi = {
   list: () => apiClient.get<Customer[]>("/customers").then((r) => r.data),
+
+  balances: () =>
+    apiClient
+      .get<Record<string, { outstanding: number; ageDays: number | null }>>(
+        "/customers/balances",
+      )
+      .then((r) => r.data),
 
   get: (id: string) =>
     apiClient.get<Customer>(`/customers/${id}`).then((r) => r.data),

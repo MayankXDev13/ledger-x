@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { customersApi, type Customer } from "@/lib/api";
+import { customersApi } from "@/lib/api";
 import { toast } from "sonner";
 import { dashboardKeys } from "./useDashboard";
 import { collectionKeys } from "./useCollection";
@@ -16,6 +16,13 @@ export function useCustomers() {
   return useQuery({
     queryKey: customerKeys.lists(),
     queryFn: customersApi.list,
+  });
+}
+
+export function useCustomerBalances() {
+  return useQuery({
+    queryKey: [...customerKeys.all, "balances"] as const,
+    queryFn: customersApi.balances,
   });
 }
 

@@ -15,6 +15,7 @@ import type { PaymentMethod, Transaction } from "@/lib/api";
 import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface EditTransactionModalProps {
   visible: boolean;
@@ -37,6 +38,7 @@ export function EditTransactionModal({
   onSave,
   onDelete,
 }: EditTransactionModalProps) {
+  const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<"credit" | "debit">("credit");
   const [note, setNote] = useState("");
@@ -97,7 +99,14 @@ export function EditTransactionModal({
         className="flex-1 bg-bg"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View className="flex-row justify-between items-center px-4 py-4 border-b border-line">
+        <View
+          style={{
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: 14,
+            paddingHorizontal: 16,
+          }}
+          className="flex-row justify-between items-center border-b border-line bg-bg"
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close"
@@ -120,7 +129,12 @@ export function EditTransactionModal({
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingBottom: Math.max(insets.bottom, 24) + 20,
+          }}
+        >
           <View className="p-4">
             <View className="mb-6">
               <Text className="text-ink-muted text-sm font-medium mb-2">
@@ -165,7 +179,7 @@ export function EditTransactionModal({
                       type === "credit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
-                    Credit
+                    You Gave (Udhar)
                   </Text>
                 </Pressable>
 
@@ -190,7 +204,7 @@ export function EditTransactionModal({
                       type === "debit" ? "text-white" : "text-ink-muted"
                     }`}
                   >
-                    {type === "debit" ? "Payment" : "Debit"}
+                    You Got (Payment)
                   </Text>
                 </Pressable>
               </View>
@@ -228,12 +242,13 @@ export function EditTransactionModal({
 
             <View className="mt-8 pt-6 border-t border-line">
               <Pressable
-            accessibilityRole="button"
+                accessibilityRole="button"
                 accessibilityLabel="Delete transaction"
+                className="flex-row items-center justify-center gap-2 py-3.5 px-4 rounded-xl border border-red-500/30 bg-red-500/10 active:opacity-80"
                 onPress={handleDelete}
               >
-                <Ionicons name="trash-outline" size={20} color={colors.dangerText} />
-                <Text className="text-red-500 text-sm font-medium">
+                <Ionicons name="trash-outline" size={18} color={colors.dangerText} />
+                <Text className="text-red-500 font-semibold text-sm">
                   Delete Transaction
                 </Text>
               </Pressable>

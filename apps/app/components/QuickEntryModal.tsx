@@ -177,7 +177,7 @@ export function QuickEntryModal({
             <Text className="text-ink-muted text-base">Cancel</Text>
           </Pressable>
           <Text className="text-white text-xl font-semibold">
-            {type === "credit" ? "Add Credit" : "Add Payment"}
+            {type === "credit" ? "You Gave (Udhar)" : "You Got (Payment)"}
           </Text>
           <View className="w-[60px]" />
         </View>

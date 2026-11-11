@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { and, eq, isNull } from "drizzle-orm";
-import { customers } from "../db/schema";
+import { customers, transactions } from "../db/schema";
+import { computeReceivables } from "../lib/receivables";
 import type { AppEnv } from "../types/hono";
 import { writeAudit } from "../lib/audit";
 import { ensureDefaultBook } from "../lib/books";
@@ -26,6 +27,45 @@ customersApp.get("/", async (ctx) => {
         and(eq(customers.userId, user.id), isNull(customers.deletedAt)),
       ),
   );
+
+  return ctx.json(data);
+});
+
+// GET /customers/balances - Balance map for all non-deleted customers
+customersApp.get("/balances", async (ctx) => {
+  const user = ctx.get("user");
+  const { withDb } = ctx.get("deps");
+
+  const [customerRows, entryRows] = await withDb(ctx, async (db) => {
+    const customerRows = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(eq(customers.userId, user.id), isNull(customers.deletedAt)));
+
+    const entryRows = await db
+      .select({
+        customerId: transactions.customerId,
+        amount: transactions.amount,
+        type: transactions.type,
+        createdAt: transactions.createdAt,
+      })
+      .from(transactions)
+      .where(
+        and(eq(transactions.userId, user.id), isNull(transactions.deletedAt)),
+      );
+
+    return [customerRows, entryRows] as const;
+  });
+
+  const receivables = computeReceivables(entryRows);
+  const data: Record<string, { outstanding: number; ageDays: number | null }> = {};
+  for (const c of customerRows) {
+    const r = receivables.get(c.id);
+    data[c.id] = {
+      outstanding: r?.balance ?? 0,
+      ageDays: r?.ageDays ?? null,
+    };
+  }
 
   return ctx.json(data);
 });

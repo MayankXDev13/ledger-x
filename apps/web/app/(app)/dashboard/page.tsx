@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import {
   useDashboardAnalytics,
   useDashboardMetrics,
@@ -11,6 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   TrendingUp,
   TrendingDown,
   Users,
@@ -18,13 +28,13 @@ import {
   Activity,
   ArrowUpRight,
   ArrowDownRight,
-  RefreshCw,
   Plus,
   ChevronRight,
   LayoutDashboard,
   HandCoins,
   Clock,
   CheckCircle2,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -40,7 +50,12 @@ import {
   Bar,
   Cell,
 } from "recharts";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { useAuth } from "@/hooks/useAuth";
 import { deriveFirstName } from "@/lib/name";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
@@ -55,11 +70,13 @@ const flowChartConfig = {
 } satisfies ChartConfig;
 
 const typeChartConfig = {
+  activities: { label: "Transactions" },
   credit: { label: "Credit given", color: "var(--chart-2)" },
   paid: { label: "Payment received", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 const trendChartConfig = {
+  activities: { label: "12-Month Activity" },
   credit: { label: "Credit given", color: "var(--chart-2)" },
   debit: { label: "Payment received", color: "var(--chart-1)" },
 } satisfies ChartConfig;
@@ -73,7 +90,13 @@ function getGreeting() {
 }
 
 function monthLabel(month: string) {
-  return format(new Date(`${month}-01T00:00:00Z`), "MMM yy");
+  try {
+    const d = new Date(`${month}-01T00:00:00Z`);
+    if (isNaN(d.getTime())) return month;
+    return format(d, "MMM yy");
+  } catch {
+    return month;
+  }
 }
 
 /* ── Metric Card ── */
@@ -298,19 +321,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchMetrics();
-              refetchTxns();
-              refetchAnalytics();
-            }}
-            className="gap-1.5 border-border/50 hover:border-primary/40 text-xs h-8"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </Button>
           <Link href="/customers">
             <Button
               size="sm"
@@ -388,8 +398,8 @@ export default function DashboardPage() {
       {/* ─── Charts Row ─── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Area Chart */}
-        <Card className="xl:col-span-2 border-border/60 bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
+        <Card className="xl:col-span-2 border-border/60 bg-card flex flex-col h-full">
+          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5 shrink-0">
             <div>
               <CardTitle className="text-sm font-semibold text-foreground">
                 Transaction Flow
@@ -405,7 +415,7 @@ export default function DashboardPage() {
               Last 5 entries
             </Badge>
           </CardHeader>
-          <CardContent className="pt-4 px-2 pb-4">
+          <CardContent className="pt-4 px-2 pb-4 flex-1 flex flex-col justify-between">
             {txnsLoading ? (
               <Skeleton className="h-52 w-full" />
             ) : txnsError ? (
@@ -502,8 +512,8 @@ export default function DashboardPage() {
         </Card>
 
         {/* Bar chart by type */}
-        <Card className="border-border/60 bg-card">
-          <CardHeader className="pb-0 pt-4 px-5">
+        <Card className="border-border/60 bg-card flex flex-col h-full">
+          <CardHeader className="pb-0 pt-4 px-5 shrink-0">
             <CardTitle className="text-sm font-semibold text-foreground">
               By Type
             </CardTitle>
@@ -511,7 +521,7 @@ export default function DashboardPage() {
               Credit vs Debit breakdown
             </p>
           </CardHeader>
-          <CardContent className="pt-4 px-2 pb-4">
+          <CardContent className="pt-4 px-2 pb-4 flex-1 flex flex-col justify-between">
             {txnsLoading ? (
               <Skeleton className="h-52 w-full" />
             ) : txnsError ? (
@@ -569,9 +579,24 @@ export default function DashboardPage() {
                       width={46}
                       tickFormatter={(v) => formatCompactCurrency(v)}
                     />
-                    <RechartsTooltip
-                      content={<FlowTooltip />}
-                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          labelKey="activities"
+                          indicator="line"
+                          formatter={(value, name, item) => (
+                            <div className="flex w-full items-center justify-between gap-4">
+                              <span className="text-muted-foreground">
+                                {item?.payload?.toneLabel ?? name}
+                              </span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {formatCurrency(Number(value))}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                      cursor={false}
                     />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                       {chartData.map((entry, index) => (
@@ -608,6 +633,11 @@ export default function DashboardPage() {
                     Payment received
                   </span>
                 </div>
+                <p className="px-3 pt-1 text-xs text-muted-foreground">
+                  Across the last {chartData.length} entries you gave{" "}
+                  {formatCurrency(flowTotals.credit)} in credit and received{" "}
+                  {formatCurrency(flowTotals.paid)} in payments.
+                </p>
               </>
             ) : (
               <div className="h-52 flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -620,10 +650,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Analytics: trend, debtors, aging ─── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch">
         {/* 12-month trend */}
-        <Card className="xl:col-span-2 border-border/60 bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
+        <Card className="xl:col-span-2 border-border/60 bg-card flex flex-col h-full">
+          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5 shrink-0">
             <div>
               <CardTitle className="text-sm font-semibold text-foreground">
                 12-Month Trend
@@ -653,7 +683,7 @@ export default function DashboardPage() {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="pt-4 px-2 pb-4">
+          <CardContent className="pt-4 px-2 pb-4 flex-1 flex flex-col justify-between min-h-0">
             {analyticsLoading ? (
               <Skeleton className="h-56 w-full" />
             ) : analyticsError ? (
@@ -665,7 +695,7 @@ export default function DashboardPage() {
               <>
                 <ChartContainer
                   config={trendChartConfig}
-                  className="h-[220px] w-full aspect-auto"
+                  className="w-full flex-1 min-h-[220px] aspect-auto"
                   role="img"
                   aria-label="Twelve month trend of credit given versus payments received"
                 >
@@ -712,9 +742,25 @@ export default function DashboardPage() {
                       width={52}
                       tickFormatter={(v) => formatCompactCurrency(v)}
                     />
-                    <RechartsTooltip
-                      content={<TrendTooltip />}
-                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          labelKey="activities"
+                          indicator="line"
+                          labelFormatter={(value) =>
+                            typeof value === "string" ? monthLabel(value) : value
+                          }
+                          formatter={(value, name) => (
+                            <div className="flex w-full items-center justify-between gap-4">
+                              <span className="text-muted-foreground">{name}</span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {formatCurrency(Number(value))}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                      cursor={false}
                     />
                     <Bar
                       dataKey="credit"
@@ -732,51 +778,153 @@ export default function DashboardPage() {
                     />
                   </BarChart>
                 </ChartContainer>
-                <p className="px-3 pt-2 text-xs text-muted-foreground">
-                  Over the last 12 months you gave {formatCurrency(trendTotals.credit)} in
-                  credit and received {formatCurrency(trendTotals.paid)} in payments.
-                </p>
-                <details className="px-3 pt-2">
-                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                    Show the monthly figures
-                  </summary>
-                  <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th scope="col" className="px-3 py-2 text-left font-semibold">
-                            Month
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-right font-semibold"
+                <div className="pt-3 px-3 border-t border-border/40 mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+                  <p className="text-xs text-muted-foreground flex-1">
+                    Over the last 12 months you gave{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(trendTotals.credit)}
+                    </span>{" "}
+                    in credit and received{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(trendTotals.paid)}
+                    </span>{" "}
+                    in payments.
+                  </p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground border-border/60 hover:bg-muted/50 gap-1.5 shrink-0"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-primary" />
+                        Monthly figures
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl sm:max-w-3xl w-[94vw] bg-card border-border/60 p-6 shadow-2xl">
+                      <DialogHeader className="space-y-1.5 pb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <Calendar className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <DialogTitle className="text-lg font-bold text-foreground">
+                              12-Month Figures Breakdown
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground">
+                              Comprehensive month-by-month financial ledger flow over the last 12 months.
+                            </DialogDescription>
+                          </div>
+                        </div>
+                      </DialogHeader>
+
+                      {/* 3 Overview Stat Badges */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-2">
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Total Credit Given</p>
+                          <p className="text-base font-bold text-chart-2 mt-0.5 tabular-nums">
+                            {formatCurrency(trendTotals.credit)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Total Payments Received</p>
+                          <p className="text-base font-bold text-chart-1 mt-0.5 tabular-nums">
+                            {formatCurrency(trendTotals.paid)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Net Ledger Flow</p>
+                          <p
+                            className={cn(
+                              "text-base font-bold mt-0.5 tabular-nums",
+                              trendTotals.paid >= trendTotals.credit ? "text-chart-1" : "text-destructive"
+                            )}
                           >
-                            Credit given
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-right font-semibold"
-                          >
-                            Payment received
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.trend.map((row) => (
-                          <tr key={row.month} className="border-b border-border/40 last:border-0">
-                            <td className="px-3 py-1.5">{monthLabel(row.month)}</td>
-                            <td className="px-3 py-1.5 text-right tabular-nums">
-                              {formatCurrency(row.credit ?? 0)}
-                            </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums">
-                              {formatCurrency(row.debit ?? 0)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
+                            {trendTotals.paid >= trendTotals.credit ? "+" : "-"}
+                            {formatCurrency(Math.abs(trendTotals.paid - trendTotals.credit))}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Spacious Table with sticky header and total footer */}
+                      <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-border/60 mt-1">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/60 sticky top-0 backdrop-blur z-10">
+                              <th scope="col" className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                                Month
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-chart-2">
+                                Credit given
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-chart-1">
+                                Payment received
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-muted-foreground">
+                                Net Flow
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {analytics.trend.map((row) => {
+                              const credit = row.credit ?? 0;
+                              const debit = row.debit ?? 0;
+                              const net = debit - credit;
+                              return (
+                                <tr
+                                  key={row.month}
+                                  className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors"
+                                >
+                                  <td className="px-4 py-2.5 font-medium text-foreground">
+                                    {monthLabel(row.month)}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                                    {formatCurrency(credit)}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                                    {formatCurrency(debit)}
+                                  </td>
+                                  <td
+                                    className={cn(
+                                      "px-4 py-2.5 text-right tabular-nums font-semibold",
+                                      net > 0
+                                        ? "text-chart-1"
+                                        : net < 0
+                                          ? "text-destructive"
+                                          : "text-muted-foreground"
+                                    )}
+                                  >
+                                    {net > 0 ? `+${formatCurrency(net)}` : net < 0 ? `-${formatCurrency(Math.abs(net))}` : "₹0"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-border bg-muted/40 font-bold sticky bottom-0 backdrop-blur">
+                              <td className="px-4 py-3 text-foreground">Total</td>
+                              <td className="px-4 py-3 text-right tabular-nums text-chart-2">
+                                {formatCurrency(trendTotals.credit)}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums text-chart-1">
+                                {formatCurrency(trendTotals.paid)}
+                              </td>
+                              <td
+                                className={cn(
+                                  "px-4 py-3 text-right tabular-nums",
+                                  trendTotals.paid >= trendTotals.credit ? "text-chart-1" : "text-destructive"
+                                )}
+                              >
+                                {trendTotals.paid >= trendTotals.credit ? "+" : "-"}
+                                {formatCurrency(Math.abs(trendTotals.paid - trendTotals.credit))}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </>
             ) : (
               <div className="h-56 flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -789,15 +937,15 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top debtors + aging */}
-        <div className="flex flex-col gap-4">
-          <Card className="border-border/60 bg-card">
-            <CardHeader className="pb-2 pt-4 px-5">
+        <div className="flex flex-col gap-4 h-full">
+          <Card className="border-border/60 bg-card flex-1 flex flex-col">
+            <CardHeader className="pb-2 pt-4 px-5 shrink-0">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <HandCoins className="w-4 h-4 text-primary" />
                 Top Debtors
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-0 pb-2">
+            <CardContent className="px-0 pb-2 flex-1 flex flex-col">
               {analyticsLoading ? (
                 <div className="space-y-2 px-5">
                   {[...Array(3)].map((_, i) => (
@@ -849,7 +997,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60 bg-card">
+          <Card className="border-border/60 bg-card shrink-0">
             <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />

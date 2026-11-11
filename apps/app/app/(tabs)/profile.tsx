@@ -8,6 +8,7 @@ import {
   Alert,
   Switch,
   Share,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -41,9 +42,12 @@ export default function ProfileScreen() {
   const { isEnabled } = useFeatureFlags();
   // The UPI configuration is behind the administrator's UPI flag.
   const upiEnabled = isEnabled("upi_collection");
+  const sampleDataEnabled = isEnabled("sample_data");
+  const accountDeletionEnabled = isEnabled("account_deletion");
   const scrollRef = useRef<any>(null);
   const upiSectionY = useRef(0);
 
+  const [activeTab, setActiveTab] = useState<"data" | "security">("data");
   const [upiId, setUpiId] = useState("");
   const [payeeName, setPayeeName] = useState("");
   const [savingUpi, setSavingUpi] = useState(false);
@@ -232,13 +236,25 @@ export default function ProfileScreen() {
     }
   };
 
-  const scrollToUpi = () => {
-    scrollRef.current?.scrollTo({ y: upiSectionY.current, animated: true });
-  };
-
   if (!session) {
     return null;
   }
+
+  const user = session.user;
+  const displayName =
+    user.name ||
+    user.email.split("@")[0].replace(/\d+$/, "") ||
+    "Shopkeeper";
+  const initials = (
+    user.name
+      ? user.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+      : user.email[0]
+  )
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <View className="flex-1 bg-bg">
@@ -252,255 +268,356 @@ export default function ProfileScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="mb-6">
-          <Text className="font-mukta-bold text-[24px] leading-[30px] text-ink">
-            Profile
-          </Text>
-          <Text className="mt-1 font-mukta text-[15px] text-ink-muted">
-            {session.user.email}
-          </Text>
+        {/* User Card */}
+        <View className="mb-6 flex-row items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
+          {user.image ? (
+            <Image
+              source={{ uri: user.image }}
+              className="h-16 w-16 rounded-full border-2 border-brand/40"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-brand/15 border border-brand/30">
+              <Text className="font-mukta-bold text-[22px] text-brand">
+                {initials}
+              </Text>
+            </View>
+          )}
+          <View className="flex-1">
+            <Text className="font-mukta-bold text-[20px] leading-[26px] text-ink">
+              {displayName}
+            </Text>
+            <Text className="font-mukta text-[14px] text-ink-muted">
+              {user.email}
+            </Text>
+            <View className="mt-1 flex-row items-center gap-1.5">
+              <View className="h-2 w-2 rounded-full bg-success" />
+              <Text className="font-mukta-medium text-[12px] text-success">
+                Google Account Connected
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {upiEnabled && (
-        <View
-          onLayout={(e) => {
-            upiSectionY.current = e.nativeEvent.layout.y;
-          }}
-        >
-          <SectionHeader label="Payment settings" className="mb-3" />
-          <View className="rounded-2xl border border-line bg-surface p-4">
-            <Text className="mb-2 font-mukta-semibold text-[15px] text-ink">
-              UPI collections
-            </Text>
-            <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-              Customers scan your QR or open a UPI intent pre-filled with this
-              ID. Payments are still recorded manually.
-            </Text>
-            <Text className="mb-1 font-mukta-medium text-[13px] text-ink-muted">
-              UPI ID (VPA)
-            </Text>
-            <TextInput
-              accessibilityLabel="UPI ID"
-              className="mb-3 rounded-xl border border-line bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
-              placeholder="yourname@okhdfcbank"
-              placeholderTextColor={colors.inkFaint}
-              value={upiId}
-              onChangeText={setUpiId}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="username"
+        {/* Segmented Controls */}
+        <View className="mb-5 flex-row rounded-xl bg-surface-raised p-1 border border-line">
+          <Pressable
+            onPress={() => setActiveTab("data")}
+            className={`flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg ${
+              activeTab === "data" ? "bg-surface shadow-sm border border-line" : ""
+            }`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === "data" }}
+          >
+            <Ionicons
+              name="folder-open-outline"
+              size={16}
+              color={activeTab === "data" ? colors.brand : colors.inkMuted}
             />
-            <Text className="mb-1 font-mukta-medium text-[13px] text-ink-muted">
-              Payee name
+            <Text
+              className={`font-mukta-semibold text-[14px] ${
+                activeTab === "data" ? "text-ink" : "text-ink-muted"
+              }`}
+            >
+              Data & Export
             </Text>
-            <TextInput
-              accessibilityLabel="Payee name"
-              className="mb-1 rounded-xl border border-line bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
-              placeholder="Payee name (e.g. Ramesh Kirana)"
-              placeholderTextColor={colors.inkFaint}
-              value={payeeName}
-              onChangeText={setPayeeName}
-              autoCapitalize="words"
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab("security")}
+            className={`flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg ${
+              activeTab === "security" ? "bg-surface shadow-sm border border-line" : ""
+            }`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === "security" }}
+          >
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={16}
+              color={activeTab === "security" ? colors.brand : colors.inkMuted}
             />
-            {upiError ? (
-              <Text
-                accessibilityLiveRegion="polite"
-                className="mb-2 font-mukta text-[13px] text-danger-text"
+            <Text
+              className={`font-mukta-semibold text-[14px] ${
+                activeTab === "security" ? "text-ink" : "text-ink-muted"
+              }`}
+            >
+              Security & Lock
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Tab 1: Data & Export */}
+        {activeTab === "data" && (
+          <View>
+            {upiEnabled && (
+              <View
+                className="mb-6"
+                onLayout={(e) => {
+                  upiSectionY.current = e.nativeEvent.layout.y;
+                }}
               >
-                {upiError}
-              </Text>
-            ) : null}
-            <Button
-              title="Save UPI settings"
-              onPress={saveUpi}
-              disabled={savingUpi || !!upiError}
-              loading={savingUpi}
-              className="mt-2"
-            />
-          </View>
-        </View>
-        )}
-
-        <View className="mt-6">
-          <SectionHeader label="Data & export" className="mb-3" />
-          <View className="rounded-2xl border border-line bg-surface p-4">
-            <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-              Downloads include every active record and exclude sample data.
-              Amounts are in rupees with two decimals.
-            </Text>
-            <View className="gap-2">
-              {[
-                { key: "customers" as const, label: "Customers CSV" },
-                { key: "transactions" as const, label: "Transactions CSV" },
-                { key: "archive" as const, label: "Full account archive (JSON)" },
-              ].map((action) => (
-                <Pressable
-                  key={action.key}
-                  onPress={() =>
-                    action.key === "archive"
-                      ? shareArchive()
-                      : shareCsv(action.key)
-                  }
-                  disabled={busy === action.key}
-                  className="min-h-[52px] items-center justify-center rounded-xl border border-line active:bg-surface-raised"
-                  accessibilityRole="button"
-                >
-                  <Text className="font-mukta-semibold text-[14px] text-ink">
-                    {busy === action.key ? "Preparing…" : action.label}
+                <SectionHeader label="Payment settings" className="mb-3" />
+                <View className="rounded-2xl border border-line bg-surface p-4">
+                  <Text className="mb-2 font-mukta-semibold text-[15px] text-ink">
+                    UPI collections
                   </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View className="mt-6">
-          <SectionHeader label="App lock" className="mb-3" />
-          <View className="rounded-2xl border border-line bg-surface p-4">
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text className="font-mukta-semibold text-[15px] text-ink">
-                Require PIN to open
-              </Text>
-              <Switch
-                value={lockEnabled}
-                onValueChange={toggleLock}
-                trackColor={{ true: colors.brand, false: colors.line }}
-                thumbColor={colors.ink}
-              />
-            </View>
-            <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-              Stored as a salted hash on this device only. After{" "}
-              {COOLDOWN_THRESHOLD} wrong attempts a cooldown applies. Auto-lock
-              after 60 seconds in background.
-            </Text>
-
-            {pinMode !== "idle" && (
-              <View>
-                <TextInput
-                  className="mb-2 rounded-xl border border-line bg-surface-raised px-4 py-3 font-plex text-[15px] tracking-[8px] text-ink"
-                  placeholder="Enter 4-6 digit PIN"
-                  placeholderTextColor={colors.inkFaint}
-                  value={pinInput}
-                  onChangeText={(text) =>
-                    setPinInput(text.replace(/\D/g, "").slice(0, 6))
-                  }
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={6}
-                />
-                {pinError && (
-                  <Text className="mb-2 font-mukta text-[12px] text-danger-text">
-                    {pinError}
+                  <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                    Customers scan your QR or open a UPI intent pre-filled with this
+                    ID. Payments are still recorded manually.
                   </Text>
-                )}
-                <View className="flex-row gap-2">
-                  <Button
-                    title="Cancel"
-                    variant="secondary"
-                    onPress={() => {
-                      setPinMode("idle");
-                      setPinInput("");
-                      setPinError(null);
-                    }}
-                    className="flex-1"
+                  <Text className="mb-1 font-mukta-medium text-[13px] text-ink-muted">
+                    UPI ID (VPA)
+                  </Text>
+                  <TextInput
+                    accessibilityLabel="UPI ID"
+                    className="mb-3 rounded-xl border border-line bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
+                    placeholder="yourname@okhdfcbank"
+                    placeholderTextColor={colors.inkFaint}
+                    value={upiId}
+                    onChangeText={setUpiId}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    textContentType="username"
                   />
+                  <Text className="mb-1 font-mukta-medium text-[13px] text-ink-muted">
+                    Payee name
+                  </Text>
+                  <TextInput
+                    accessibilityLabel="Payee name"
+                    className="mb-1 rounded-xl border border-line bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
+                    placeholder="Payee name (e.g. Ramesh Kirana)"
+                    placeholderTextColor={colors.inkFaint}
+                    value={payeeName}
+                    onChangeText={setPayeeName}
+                    autoCapitalize="words"
+                  />
+                  {upiError ? (
+                    <Text
+                      accessibilityLiveRegion="polite"
+                      className="mb-2 font-mukta text-[13px] text-danger-text"
+                    >
+                      {upiError}
+                    </Text>
+                  ) : null}
                   <Button
-                    title={pinMode === "setup" ? "Set PIN" : "Confirm"}
-                    onPress={confirmPin}
-                    disabled={pinInput.length < 4}
-                    className="flex-1"
+                    title="Save UPI settings"
+                    onPress={saveUpi}
+                    disabled={savingUpi || !!upiError}
+                    loading={savingUpi}
+                    className="mt-2"
                   />
                 </View>
               </View>
             )}
-            {pinMode === "idle" && pinExists && (
-              <Text className="font-mukta text-[12px] text-ink-muted">
-                PIN is set. Turn the switch off and confirm your PIN to disable.
-              </Text>
+
+            <View className="mb-6">
+              <SectionHeader label="Export records" className="mb-3" />
+              <View className="rounded-2xl border border-line bg-surface p-4">
+                <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                  Downloads include active records. Amounts are in rupees with two decimals.
+                </Text>
+                <View className="gap-2">
+                  {[
+                    { key: "customers" as const, label: "Customers CSV" },
+                    { key: "transactions" as const, label: "Transactions CSV" },
+                    { key: "archive" as const, label: "Full account archive (JSON)" },
+                  ].map((action) => (
+                    <Pressable
+                      key={action.key}
+                      onPress={() =>
+                        action.key === "archive"
+                          ? shareArchive()
+                          : shareCsv(action.key)
+                      }
+                      disabled={busy === action.key}
+                      className="min-h-[52px] items-center justify-center rounded-xl border border-line active:bg-surface-raised"
+                      accessibilityRole="button"
+                    >
+                      <Text className="font-mukta-semibold text-[14px] text-ink">
+                        {busy === action.key ? "Preparing…" : action.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {sampleDataEnabled && (
+              <View className="mb-6">
+                <SectionHeader label="Sample data" className="mb-3" />
+                <View className="rounded-2xl border border-line bg-surface p-4">
+                  <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                    Sample customers and entries are labelled and never appear in
+                    exports.
+                  </Text>
+                  <Button
+                    title={hasSamples ? "Remove sample data" : "Load sample data"}
+                    variant="secondary"
+                    onPress={toggleSamples}
+                    disabled={busy === "samples"}
+                    loading={busy === "samples"}
+                  />
+                </View>
+              </View>
             )}
           </View>
-        </View>
+        )}
 
-        <View className="mt-6">
-          <SectionHeader label="Sample data" className="mb-3" />
-          <View className="rounded-2xl border border-line bg-surface p-4">
-            <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-              Sample customers and entries are labelled and never appear in
-              exports.
-            </Text>
-            <Button
-              title={hasSamples ? "Remove sample data" : "Load sample data"}
-              variant="secondary"
-              onPress={toggleSamples}
-              disabled={busy === "samples"}
-              loading={busy === "samples"}
-            />
+        {/* Tab 2: Security & App Lock */}
+        {activeTab === "security" && (
+          <View>
+            <View className="mb-6">
+              <SectionHeader label="App lock" className="mb-3" />
+              <View className="rounded-2xl border border-line bg-surface p-4">
+                <View className="mb-2 flex-row items-center justify-between">
+                  <Text className="font-mukta-semibold text-[15px] text-ink">
+                    Require PIN to open
+                  </Text>
+                  <Switch
+                    value={lockEnabled}
+                    onValueChange={toggleLock}
+                    trackColor={{ true: colors.brand, false: colors.line }}
+                    thumbColor={colors.ink}
+                  />
+                </View>
+                <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                  Stored as a salted hash on this device only. After{" "}
+                  {COOLDOWN_THRESHOLD} wrong attempts a cooldown applies. Auto-locks
+                  after 60 seconds in background.
+                </Text>
+
+                {pinMode !== "idle" && (
+                  <View>
+                    <TextInput
+                      className="mb-2 rounded-xl border border-line bg-surface-raised px-4 py-3 font-plex text-[15px] tracking-[8px] text-ink"
+                      placeholder="Enter 4-6 digit PIN"
+                      placeholderTextColor={colors.inkFaint}
+                      value={pinInput}
+                      onChangeText={(text) =>
+                        setPinInput(text.replace(/\D/g, "").slice(0, 6))
+                      }
+                      keyboardType="number-pad"
+                      secureTextEntry
+                      maxLength={6}
+                    />
+                    {pinError && (
+                      <Text className="mb-2 font-mukta text-[12px] text-danger-text">
+                        {pinError}
+                      </Text>
+                    )}
+                    <View className="flex-row gap-2">
+                      <Button
+                        title="Cancel"
+                        variant="secondary"
+                        onPress={() => {
+                          setPinMode("idle");
+                          setPinInput("");
+                          setPinError(null);
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        title={pinMode === "setup" ? "Set PIN" : "Confirm"}
+                        onPress={confirmPin}
+                        disabled={pinInput.length < 4}
+                        className="flex-1"
+                      />
+                    </View>
+                  </View>
+                )}
+                {pinMode === "idle" && pinExists && (
+                  <Text className="font-mukta text-[12px] text-ink-muted">
+                    PIN is set. Turn the switch off and confirm your PIN to disable.
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {accountDeletionEnabled && (
+              <View className="mb-6">
+                <SectionHeader label="Danger Zone" className="mb-3" />
+                <View className="gap-3 rounded-2xl border border-danger/30 bg-surface p-4">
+                  <View>
+                    <Text className="mb-2 font-mukta-semibold text-[15px] text-danger-text">
+                      Delete account
+                    </Text>
+                    <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                      Permanently removes your identity, customers, transactions, and
+                      settings. Type DELETE to confirm.
+                    </Text>
+                    <TextInput
+                      className="mb-2 rounded-xl border border-danger/40 bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
+                      placeholder="DELETE"
+                      placeholderTextColor={colors.inkFaint}
+                      value={deleteText}
+                      onChangeText={setDeleteText}
+                      autoCapitalize="characters"
+                    />
+                    <Button
+                      title="Delete my account"
+                      variant="danger"
+                      onPress={handleDeleteAccount}
+                      disabled={deleteText !== "DELETE"}
+                      loading={deleting}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
-        </View>
+        )}
 
-        <View className="mt-6">
-          <SectionHeader label="Invite" className="mb-3" />
+        {/* Invite a shopkeeper */}
+        <View className="mb-6">
+          <SectionHeader label="Community" className="mb-3" />
           <Pressable
             onPress={shareApp}
-            className="flex-row items-center gap-4 rounded-2xl border border-brand/30 bg-surface p-4 active:opacity-80"
+            className="flex-row items-center gap-4 rounded-2xl border border-brand/30 bg-surface p-4 active:opacity-85 shadow-sm"
             accessibilityRole="button"
             accessibilityLabel="Invite a shopkeeper"
           >
             <View className="h-12 w-12 items-center justify-center rounded-xl bg-brand/10">
-              <Ionicons name="share-social" size={24} color={colors.brand} />
+              <Ionicons name="gift-outline" size={24} color={colors.brand} />
             </View>
             <View className="flex-1">
-              <Text className="font-mukta-semibold text-[15px] text-ink">
+              <Text className="font-mukta-bold text-[16px] text-ink">
                 Invite a shopkeeper
               </Text>
-              <Text className="mt-0.5 font-mukta text-[12px] text-ink-muted">
-                Share Ledger-X with another shop owner
+              <Text className="mt-0.5 font-mukta text-[13px] text-ink-muted leading-[18px]">
+                Share Ledger-X with friends and fellow shop owners to manage their khata.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />
           </Pressable>
         </View>
 
-        <View className="mt-6">
-          <SectionHeader label="Account" className="mb-3" />
-          <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
-            <View>
-              <Text className="mb-2 font-mukta-semibold text-[15px] text-ink">
-                Delete account
-              </Text>
-              <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-                Permanently removes your identity, customers, transactions, and
-                settings. Type DELETE to confirm.
-              </Text>
-              <TextInput
-                className="mb-2 rounded-xl border border-danger/40 bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
-                placeholder="DELETE"
-                placeholderTextColor={colors.inkFaint}
-                value={deleteText}
-                onChangeText={setDeleteText}
-                autoCapitalize="characters"
-              />
-              <Button
-                title="Delete my account"
-                variant="danger"
-                onPress={handleDeleteAccount}
-                disabled={deleteText !== "DELETE"}
-                loading={deleting}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View className="mt-6">
+        {/* Device Session Overview & Logout */}
+        <View className="mb-4">
           <SectionHeader label="Session" className="mb-3" />
           <View className="rounded-2xl border border-line bg-surface p-4">
+            <View className="flex-row items-center justify-between pb-3 mb-3 border-b border-line">
+              <View>
+                <Text className="font-mukta-semibold text-[14px] text-ink">
+                  Device status
+                </Text>
+                <Text className="font-mukta text-[12px] text-ink-muted">
+                  Logged in as {user.email}
+                </Text>
+              </View>
+              <View className="rounded-full bg-success/15 px-2.5 py-0.5">
+                <Text className="font-mukta-semibold text-[11px] text-success">
+                  Active
+                </Text>
+              </View>
+            </View>
+
             <Button
               title="Log out"
               variant="secondary"
               onPress={handleLogout}
               loading={isLoggingOut}
               icon={<Ionicons name="log-out-outline" size={18} color={colors.ink} />}
+              className="mt-1"
             />
           </View>
         </View>

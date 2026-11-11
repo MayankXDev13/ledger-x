@@ -204,6 +204,11 @@ export interface AccountArchive {
 export const customersApi = {
   list: () => request<Customer[]>("/customers"),
 
+  balances: () =>
+    request<Record<string, { outstanding: number; ageDays: number | null }>>(
+      "/customers/balances",
+    ),
+
   get: (id: string) => request<Customer>(`/customers/${id}`),
 
   create: (data: { id?: string; name: string; phone: string }) =>

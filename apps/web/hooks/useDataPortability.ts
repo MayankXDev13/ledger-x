@@ -39,9 +39,10 @@ export function useExportCustomers() {
   });
 }
 
-export function useExportTransactions() {
+export function useExportTransactions(customerId?: string) {
   return useMutation({
-    mutationFn: exportsApi.transactionsCsv,
+    mutationFn: (overrideCustomerId?: string) =>
+      exportsApi.transactionsCsv(overrideCustomerId ?? customerId),
     onSuccess: () => toast.success("Transactions CSV downloaded"),
     onError: (err: Error) => toast.error(err.message),
   });

@@ -265,5 +265,7 @@ export function queueFlags(
   db.queueSelect(
     { key: "collection", enabled: value("collection") },
     { key: "upi_collection", enabled: value("upi_collection") },
+    { key: "sample_data", enabled: value("sample_data") },
+    { key: "account_deletion", enabled: value("account_deletion") },
   );
 }

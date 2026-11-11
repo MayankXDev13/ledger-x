@@ -44,7 +44,7 @@ export function CustomerProfileHeader({
   onDelete,
 }: CustomerProfileHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const exportTransactions = useExportTransactions();
+  const exportTransactions = useExportTransactions(customer.id);
   const avatarFill = avatarGradient(customer.name);
 
   const isReceivable = balance > 0;

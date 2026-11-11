@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
+import { useCustomers, useCustomerBalances, useDeleteCustomer } from "@/hooks/useCustomers";
 import { useCollection } from "@/hooks/useCollection";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
@@ -16,12 +16,17 @@ import { Button } from "@/components/ui/button";
 
 export default function CustomersPage() {
   const { data: customers, isLoading, isError, refetch } = useCustomers();
+  const { data: balancesData } = useCustomerBalances();
   const { data: collectionData } = useCollection("amount");
   const deleteCustomer = useDeleteCustomer();
 
   const balances = useMemo(() => {
     const map = new Map<string, { outstanding: number; ageDays: number | null }>();
-    if (collectionData?.data) {
+    if (balancesData) {
+      for (const [customerId, val] of Object.entries(balancesData)) {
+        map.set(customerId, val);
+      }
+    } else if (collectionData?.data) {
       for (const row of collectionData.data) {
         map.set(row.customerId, {
           outstanding: row.outstanding,
@@ -30,7 +35,7 @@ export default function CustomersPage() {
       }
     }
     return map;
-  }, [collectionData]);
+  }, [balancesData, collectionData]);
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -58,6 +58,8 @@ describe("readFeatureFlags", () => {
 
     expect(flags.collection).toBe(true);
     expect(flags.upi_collection).toBe(true);
+    expect(flags.sample_data).toBe(true);
+    expect(flags.account_deletion).toBe(true);
   });
 });
 
@@ -86,7 +88,12 @@ describe("GET /feature-flags", () => {
     };
 
     expect(response.status).toBe(200);
-    expect(body.flags).toEqual({ collection: true, upi_collection: true });
+    expect(body.flags).toEqual({
+      collection: true,
+      upi_collection: true,
+      sample_data: true,
+      account_deletion: true,
+    });
   });
 
   it("reports a flag the administrator switched off", async () => {
@@ -101,6 +108,8 @@ describe("GET /feature-flags", () => {
     expect(response.status).toBe(200);
     expect(body.flags.collection).toBe(false);
     expect(body.flags.upi_collection).toBe(true);
+    expect(body.flags.sample_data).toBe(true);
+    expect(body.flags.account_deletion).toBe(true);
   });
 
   it("offers no route that changes a flag", async () => {

@@ -52,7 +52,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export type SessionUser = { id: string; email: string };
+export type SessionUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+};
 
 export async function signInWithGoogle(): Promise<SessionUser> {
   await authClient.signIn.social({
@@ -75,11 +80,46 @@ export async function signOut(): Promise<void> {
 export async function getSessionUser(): Promise<SessionUser | null> {
   const { data, error } = await authClient.getSession();
   if (error || !data?.user) {
+    const token = await getSessionToken();
+    if (token) {
+      try {
+        const res = await fetch(`${baseUrl()}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const u = (await res.json()) as {
+            id: string;
+            email: string;
+            name?: string | null;
+            image?: string | null;
+          };
+          return {
+            id: u.id,
+            email: u.email,
+            name: u.name ?? null,
+            image: u.image ?? null,
+          };
+        }
+      } catch {
+        // Fallback failed
+      }
+    }
     await setSessionToken(null);
     return null;
   }
   if (data.session?.token) {
     await setSessionToken(data.session.token);
   }
-  return { id: data.user.id, email: data.user.email };
+  const u = data.user as {
+    id: string;
+    email: string;
+    name?: string | null;
+    image?: string | null;
+  };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name ?? null,
+    image: u.image ?? null,
+  };
 }
