@@ -313,60 +313,66 @@ export default function CustomerDetailsScreen() {
       </View>
 
       {/* ACTIONS */}
-      <View style={styles.actions}>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
-          accessibilityRole="button"
-          accessibilityLabel="Record a credit"
-        >
-          <Ionicons name="add-circle" size={18} color={colors.brand} />
-          <Text style={styles.credit}>Credit</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
-          accessibilityRole="button"
-          accessibilityLabel="Record a payment received"
-        >
-          <Ionicons name="remove-circle" size={18} color={colors.positive} />
-          <Text style={styles.debit}>Payment</Text>
-        </Pressable>
-
-        <Link
-          href={`/customers/statement?id=${id}`}
-          style={styles.actionBtn}
-          asChild
-        >
+      <View style={styles.actionsSection}>
+        {/* Primary ledger actions */}
+        <View style={styles.primaryActionsRow}>
           <Pressable
+            style={[styles.primaryActionBtn, styles.creditBtn]}
+            onPress={() => router.push(`/ledger/add?contactId=${id}&type=credit`)}
             accessibilityRole="button"
-            accessibilityLabel={`View ${customer.name}'s statement`}
+            accessibilityLabel="Record a credit"
           >
-            <Ionicons name="document-text" size={18} color={colors.brand} />
-            <Text style={styles.smsText}>Statement</Text>
+            <Ionicons name="add-circle" size={20} color={colors.brand} />
+            <Text style={styles.creditText}>+ Credit</Text>
           </Pressable>
-        </Link>
 
-        <Pressable
-          style={styles.whatsappBtn}
-          onPress={sendWhatsApp}
-          accessibilityRole="button"
-          accessibilityLabel={`Send ${customer.name} a WhatsApp balance update`}
-        >
-          <Ionicons name="logo-whatsapp" size={18} color={colors.brand} />
-          <Text style={styles.whatsappText}>WhatsApp</Text>
-        </Pressable>
+          <Pressable
+            style={[styles.primaryActionBtn, styles.paymentBtn]}
+            onPress={() => router.push(`/ledger/add?contactId=${id}&type=debit`)}
+            accessibilityRole="button"
+            accessibilityLabel="Record a payment received"
+          >
+            <Ionicons name="remove-circle" size={20} color={colors.positive} />
+            <Text style={styles.paymentText}>Payment</Text>
+          </Pressable>
+        </View>
 
-        <Pressable
-          style={styles.smsBtn}
-          onPress={sendSMS}
-          accessibilityRole="button"
-          accessibilityLabel={`Send ${customer.name} an SMS balance update`}
-        >
-          <Ionicons name="chatbubble" size={18} color={colors.brand} />
-          <Text style={styles.smsText}>SMS</Text>
-        </Pressable>
+        {/* Communication and export actions */}
+        <View style={styles.utilityActionsRow}>
+          <Link
+            href={`/customers/statement?id=${id}`}
+            style={styles.utilityActionBtn}
+            asChild
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`View ${customer.name}'s statement`}
+            >
+              <Ionicons name="document-text-outline" size={17} color={colors.ink} />
+              <Text style={styles.utilityText}>Statement</Text>
+            </Pressable>
+          </Link>
+
+          <Pressable
+            style={[styles.utilityActionBtn, styles.whatsappUtilityBtn]}
+            onPress={sendWhatsApp}
+            accessibilityRole="button"
+            accessibilityLabel={`Send ${customer.name} a WhatsApp balance update`}
+          >
+            <Ionicons name="logo-whatsapp" size={17} color="#25D366" />
+            <Text style={styles.whatsappText}>WhatsApp</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.utilityActionBtn}
+            onPress={sendSMS}
+            accessibilityRole="button"
+            accessibilityLabel={`Send ${customer.name} an SMS balance update`}
+          >
+            <Ionicons name="chatbubble-outline" size={17} color={colors.ink} />
+            <Text style={styles.utilityText}>SMS</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* TRANSACTIONS */}
@@ -436,7 +442,7 @@ export default function CustomerDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bg },
 
   header: {
     paddingTop: Platform.OS === "android" ? 48 : 60,
@@ -496,48 +502,86 @@ const styles = StyleSheet.create({
 
   meta: { color: colors.inkMuted, fontSize: 13, fontVariant: ["tabular-nums"] },
 
-  actions: {
-    flexDirection: "row",
-    gap: 10,
+  actionsSection: {
     paddingHorizontal: 20,
-    marginVertical: 16,
+    marginVertical: 14,
   },
 
-  actionBtn: {
+  primaryActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  primaryActionBtn: {
     flex: 1,
-    height: 46,
+    height: 48,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-
-  whatsappBtn: {
-    flex: 1,
-    height: 46,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
     borderWidth: 1,
     borderColor: colors.line,
   },
 
-  whatsappText: { color: colors.brand, fontWeight: "600" },
-
-  smsBtn: {
-    flex: 1,
-    height: 46,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+  creditBtn: {
+    borderColor: "rgba(234, 88, 12, 0.35)",
+    backgroundColor: "rgba(234, 88, 12, 0.08)",
   },
 
-  smsText: { color: colors.brand, fontWeight: "600" },
+  paymentBtn: {
+    borderColor: "rgba(16, 185, 129, 0.35)",
+    backgroundColor: "rgba(16, 185, 129, 0.08)",
+  },
+
+  creditText: {
+    color: colors.brand,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  paymentText: {
+    color: colors.positive,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  utilityActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+
+  utilityActionBtn: {
+    flex: 1,
+    height: 42,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+
+  whatsappUtilityBtn: {
+    borderColor: "rgba(37, 211, 102, 0.3)",
+    backgroundColor: "rgba(37, 211, 102, 0.08)",
+  },
+
+  whatsappText: {
+    color: "#25D366",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  utilityText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "600",
+  },
 
   credit: { color: colors.ink, fontWeight: "600" },
   debit: { color: colors.inkMuted, fontWeight: "600" },

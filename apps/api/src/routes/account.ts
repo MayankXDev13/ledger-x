@@ -4,7 +4,8 @@ import { customers, transactions, user } from "../db/schema";
 import { writeAudit } from "../lib/audit";
 import { isExportable } from "../lib/csv";
 import { parseBody, deleteAccountSchema } from "../validators";
-import { validationResponse } from "../lib/errors";
+import { ApiError, validationResponse } from "../lib/errors";
+import { isEnabled, readFeatureFlags } from "../lib/feature-flags";
 import type { AppEnv } from "../types/hono";
 
 const accountApp = new Hono<AppEnv>();
@@ -58,6 +59,11 @@ accountApp.get("/export", async (ctx) => {
 accountApp.delete("/", async (ctx) => {
   const currentUser = ctx.get("user");
   const { withDb } = ctx.get("deps");
+
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+  if (!isEnabled(flags, "account_deletion")) {
+    throw new ApiError(403, "Account deletion is disabled");
+  }
 
   const { error } = await parseBody(ctx.req.raw, deleteAccountSchema);
   if (error) return validationResponse(ctx, error);

@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { customers, transactions } from "../db/schema";
 import { ensureDefaultBook } from "../lib/books";
 import { writeAudit } from "../lib/audit";
+import { isEnabled, readFeatureFlags } from "../lib/feature-flags";
+import { ApiError } from "../lib/errors";
 import type { AppEnv } from "../types/hono";
 
 const sampleDataApp = new Hono<AppEnv>();
@@ -17,6 +19,11 @@ const SAMPLE_CUSTOMERS = [
 sampleDataApp.post("/", async (ctx) => {
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
+
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+  if (!isEnabled(flags, "sample_data")) {
+    throw new ApiError(403, "Sample data is disabled");
+  }
 
   const result = await withDb(ctx, async (db) => {
     const book = await ensureDefaultBook(db, user.id);
@@ -81,6 +88,11 @@ sampleDataApp.post("/", async (ctx) => {
 sampleDataApp.delete("/", async (ctx) => {
   const user = ctx.get("user");
   const { withDb } = ctx.get("deps");
+
+  const flags = await withDb(ctx, (db) => readFeatureFlags(db));
+  if (!isEnabled(flags, "sample_data")) {
+    throw new ApiError(403, "Sample data is disabled");
+  }
 
   await withDb(ctx, async (db) => {
     await db

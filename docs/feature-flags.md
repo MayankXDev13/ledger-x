@@ -36,9 +36,10 @@ that writes a flag — a request that tries is answered `404`.
 | --- | --- |
 | `collection` | The receivables collection view: the Collection tab on web and mobile, the `/collection` screen, and `GET /collection` |
 | `upi_collection` | The UPI configuration: the UPI ID and payee name in Settings and in Profile, and every UPI QR and payment link built from them |
+| `sample_data` | Sample data generator and cleanup: controls to seed or remove demo customers/entries in Profile, and `/sample-data` API |
+| `account_deletion` | Irreversible account deletion: Delete account card in Profile/Settings, and `DELETE /account` API |
 
-Both ship **enabled**, so a deployment behaves exactly as it did before the
-registry existed.
+All ship registered or defaults; `sample_data` and `account_deletion` are disabled by default for end users so production data remains safe.
 
 ## What a disabled flag does
 

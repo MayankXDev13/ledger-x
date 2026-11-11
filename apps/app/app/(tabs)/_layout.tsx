@@ -13,19 +13,19 @@ export default function TabsLayout() {
   // flashes on screen.
   const collectionEnabled = !loading && isEnabled("collection");
 
+  const bottomPadding = Math.max(insets.bottom, 12);
+
   return (
       <Tabs
         screenOptions={{
           headerShown: false,
-          // The tab bar is sized by React Navigation so it accounts for the
-          // bottom safe area. Setting an explicit height here left only
-          // ~40px for a 24px icon and an 11px label, which clipped the label
-          // on notched devices.
           tabBarStyle: {
             backgroundColor: colors.bg,
             borderTopColor: colors.line,
             borderTopWidth: 1,
-            paddingTop: 6,
+            paddingTop: 8,
+            paddingBottom: bottomPadding,
+            height: 60 + bottomPadding,
           },
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.inkMuted,

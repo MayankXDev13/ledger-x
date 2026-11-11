@@ -228,12 +228,13 @@ export function EditTransactionModal({
 
             <View className="mt-8 pt-6 border-t border-line">
               <Pressable
-            accessibilityRole="button"
+                accessibilityRole="button"
                 accessibilityLabel="Delete transaction"
+                className="flex-row items-center justify-center gap-2 py-3.5 px-4 rounded-xl border border-red-500/30 bg-red-500/10 active:opacity-80"
                 onPress={handleDelete}
               >
-                <Ionicons name="trash-outline" size={20} color={colors.dangerText} />
-                <Text className="text-red-500 text-sm font-medium">
+                <Ionicons name="trash-outline" size={18} color={colors.dangerText} />
+                <Text className="text-red-500 font-semibold text-sm">
                   Delete Transaction
                 </Text>
               </Pressable>

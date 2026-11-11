@@ -41,6 +41,8 @@ export default function ProfileScreen() {
   const { isEnabled } = useFeatureFlags();
   // The UPI configuration is behind the administrator's UPI flag.
   const upiEnabled = isEnabled("upi_collection");
+  const sampleDataEnabled = isEnabled("sample_data");
+  const accountDeletionEnabled = isEnabled("account_deletion");
   const scrollRef = useRef<any>(null);
   const upiSectionY = useRef(0);
 
@@ -422,22 +424,24 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View className="mt-6">
-          <SectionHeader label="Sample data" className="mb-3" />
-          <View className="rounded-2xl border border-line bg-surface p-4">
-            <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-              Sample customers and entries are labelled and never appear in
-              exports.
-            </Text>
-            <Button
-              title={hasSamples ? "Remove sample data" : "Load sample data"}
-              variant="secondary"
-              onPress={toggleSamples}
-              disabled={busy === "samples"}
-              loading={busy === "samples"}
-            />
+        {sampleDataEnabled && (
+          <View className="mt-6">
+            <SectionHeader label="Sample data" className="mb-3" />
+            <View className="rounded-2xl border border-line bg-surface p-4">
+              <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                Sample customers and entries are labelled and never appear in
+                exports.
+              </Text>
+              <Button
+                title={hasSamples ? "Remove sample data" : "Load sample data"}
+                variant="secondary"
+                onPress={toggleSamples}
+                disabled={busy === "samples"}
+                loading={busy === "samples"}
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         <View className="mt-6">
           <SectionHeader label="Invite" className="mb-3" />
@@ -462,35 +466,37 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <View className="mt-6">
-          <SectionHeader label="Account" className="mb-3" />
-          <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
-            <View>
-              <Text className="mb-2 font-mukta-semibold text-[15px] text-ink">
-                Delete account
-              </Text>
-              <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
-                Permanently removes your identity, customers, transactions, and
-                settings. Type DELETE to confirm.
-              </Text>
-              <TextInput
-                className="mb-2 rounded-xl border border-danger/40 bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
-                placeholder="DELETE"
-                placeholderTextColor={colors.inkFaint}
-                value={deleteText}
-                onChangeText={setDeleteText}
-                autoCapitalize="characters"
-              />
-              <Button
-                title="Delete my account"
-                variant="danger"
-                onPress={handleDeleteAccount}
-                disabled={deleteText !== "DELETE"}
-                loading={deleting}
-              />
+        {accountDeletionEnabled && (
+          <View className="mt-6">
+            <SectionHeader label="Account" className="mb-3" />
+            <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
+              <View>
+                <Text className="mb-2 font-mukta-semibold text-[15px] text-ink">
+                  Delete account
+                </Text>
+                <Text className="mb-3 font-mukta text-[13px] text-ink-muted">
+                  Permanently removes your identity, customers, transactions, and
+                  settings. Type DELETE to confirm.
+                </Text>
+                <TextInput
+                  className="mb-2 rounded-xl border border-danger/40 bg-surface-raised px-4 py-3 font-mukta text-[15px] text-ink"
+                  placeholder="DELETE"
+                  placeholderTextColor={colors.inkFaint}
+                  value={deleteText}
+                  onChangeText={setDeleteText}
+                  autoCapitalize="characters"
+                />
+                <Button
+                  title="Delete my account"
+                  variant="danger"
+                  onPress={handleDeleteAccount}
+                  disabled={deleteText !== "DELETE"}
+                  loading={deleting}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         <View className="mt-6">
           <SectionHeader label="Session" className="mb-3" />

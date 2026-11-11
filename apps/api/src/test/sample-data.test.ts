@@ -4,6 +4,7 @@ import {
   authHeaders,
   fakeWithDb,
   makeTestApp,
+  queueFlags,
   requestApp,
 } from "./helpers";
 
@@ -14,6 +15,7 @@ function appWith(db: FakeDb) {
 describe("sample data", () => {
   it("seeds labeled sample customers and entries", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueSelect(); // book lookup
     db.queueInsert({ id: "book-1", userId: "user-1", isDefault: true });
     db.queueInsert(
@@ -40,6 +42,7 @@ describe("sample data", () => {
 
   it("removes only sample records", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueDelete();
     db.queueDelete();
 
@@ -51,6 +54,26 @@ describe("sample data", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true });
     expect(db.deleteCalls).toBe(2);
+  });
+
+  it("rejects seeding and deletion when sample_data flag is disabled", async () => {
+    const dbPost = new FakeDb();
+    queueFlags(dbPost, { sample_data: false });
+
+    const postResponse = await requestApp(appWith(dbPost), "/sample-data", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(postResponse.status).toBe(403);
+
+    const dbDelete = new FakeDb();
+    queueFlags(dbDelete, { sample_data: false });
+
+    const deleteResponse = await requestApp(appWith(dbDelete), "/sample-data", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    expect(deleteResponse.status).toBe(403);
   });
 
   it("requires authentication", async () => {

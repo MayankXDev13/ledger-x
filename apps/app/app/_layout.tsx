@@ -10,6 +10,7 @@ import { SettingsProvider } from "@/lib/settings-provider";
 import { FeatureFlagsProvider } from "@/lib/feature-flags-provider";
 import { OfflineQueueProvider } from "@/hooks/useOfflineQueue";
 import { StyleSheet } from "react-native";
+import { colors } from "@/lib/theme";
 import {
   useFonts,
   Mukta_400Regular,
@@ -52,7 +53,12 @@ export default function RootLayout() {
               <OfflineQueueProvider>
                 <AuthGuard>
                   <AppLockGate>
-                    <Stack screenOptions={{ headerShown: false }} />
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        contentStyle: { backgroundColor: colors.bg },
+                      }}
+                    />
                   </AppLockGate>
                 </AuthGuard>
               </OfflineQueueProvider>
@@ -67,5 +73,5 @@ export default function RootLayout() {
 export { publicRoutes };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.bg },
 });

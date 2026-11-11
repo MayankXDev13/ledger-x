@@ -4,6 +4,7 @@ import {
   authHeaders,
   fakeWithDb,
   makeTestApp,
+  queueFlags,
   requestApp,
 } from "./helpers";
 
@@ -45,6 +46,7 @@ describe("account data portability", () => {
 
   it("refuses deletion without explicit confirmation", async () => {
     const db = new FakeDb();
+    queueFlags(db);
 
     const response = await requestApp(appWith(db), "/account", {
       method: "DELETE",
@@ -61,6 +63,7 @@ describe("account data portability", () => {
 
   it("records the request before deleting the account", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueInsert({ id: "audit-1" }); // account.delete entry
     db.queueDelete({ id: "user-1" }); // user row removed
 
@@ -78,6 +81,7 @@ describe("account data portability", () => {
 
   it("records a failed deletion attempt without clearing data", async () => {
     const db = new FakeDb();
+    queueFlags(db);
     db.queueInsert({ id: "audit-1" }); // requested marker
     db.queueDeleteError(new Error("database unavailable"));
     db.queueInsert({ id: "audit-2" }); // failed marker
@@ -91,5 +95,19 @@ describe("account data portability", () => {
     expect(response.status).toBe(500);
     expect(db.insertCalls).toBe(2);
     expect(db.deleteCalls).toBe(1);
+  });
+
+  it("rejects deletion when account_deletion flag is disabled", async () => {
+    const db = new FakeDb();
+    queueFlags(db, { account_deletion: false });
+
+    const response = await requestApp(appWith(db), "/account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ confirm: "DELETE" }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(db.deleteCalls).toBe(0);
   });
 });

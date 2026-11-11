@@ -4,7 +4,12 @@
  * The values are owned by the deployment administrator, so a client never
  * writes them; it only reads them and honours what it is told.
  */
-export const FEATURE_FLAG_KEYS = ["collection", "upi_collection"] as const;
+export const FEATURE_FLAG_KEYS = [
+  "collection",
+  "upi_collection",
+  "sample_data",
+  "account_deletion",
+] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
 

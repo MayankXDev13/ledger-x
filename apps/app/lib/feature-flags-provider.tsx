@@ -17,7 +17,12 @@ import { AppState, type AppStateStatus } from "react-native";
 import { featureFlagsApi } from "@/lib/api";
 
 /** The flags the deployment ships with. */
-export const FEATURE_FLAG_KEYS = ["collection", "upi_collection"] as const;
+export const FEATURE_FLAG_KEYS = [
+  "collection",
+  "upi_collection",
+  "sample_data",
+  "account_deletion",
+] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
 
