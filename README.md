@@ -86,12 +86,18 @@ bun run test   # API + web + mobile unit/contract tests (no live database requir
 | `docs/dashboard-analytics.md` | `GET /dashboard/analytics` blocks and UTC months |
 | `docs/app-lock.md` | Mobile PIN/biometric lock, auto-lock, recovery |
 | `docs/onboarding-and-sample-data.md` | First-run flow and sample-data lifecycle |
+| `docs/mobile-visual-system.md` | Mobile color, type and layout contract |
+| `docs/ui-ux-audit.md` | Cross-platform UI/UX & accessibility audit (P0–P3 findings) |
+| `docs/ui-ux-verification.md` | Verification report for the UI/UX remediation |
+| `docs/ui-ux-audit-discrepancies.md` | Tasks checked off in `refine-mobile-ux-and-visual-system` that were not implemented |
+| `design-system/ledger-x/MASTER.md` | Design system of record for web + mobile |
 | `docs/auth-migration.md` | Google-only Better Auth sign-in contract |
 | `docs/audit-logs.md` | Audit event types and retention |
 | `docs/cloudflare-deploy.md` | Workers/Pages deployment runbook |
 | `docs/cutover.md` | Supabase → Postgres cutover runbook |
 | `docs/backup-r2.md` | Backup and restore procedures |
 | `docs/tags-removal.md` | Tags feature removal record |
+| `docs/api-specification.md` | Generated OpenAPI 3.0 contract and drift checks |
 
 ## Per-workspace commands
 
@@ -112,6 +118,8 @@ cd apps/api && bun run db:generate  # drizzle-kit generate
 cd apps/api && bun run db:migrate   # drizzle-kit migrate (uses DATABASE_URL from .dev.vars)
 cd apps/api && bun run db:studio
 cd apps/api && bun run cf-typegen
+cd apps/api && bun run openapi:generate # regenerate openapi.yaml
+cd apps/api && bun run openapi:check    # fail if openapi.yaml is stale
 ```
 
 ## Deployment

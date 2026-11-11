@@ -40,3 +40,15 @@ next-env.d.ts
 *.log
 .DS_Store
 .opencode/
+
+# Local agent tooling (installed skills, not project source)
+.agents/
+skills-lock.json
+
+# Python bytecode from local agent tooling
+__pycache__/
+*.pyc
+
+# Local setup notes from a past session (machine-specific paths and IPs)
+MOBILE_APP_READY.md
+MOBILE_DEV_SETUP.md
