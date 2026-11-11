@@ -620,7 +620,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Analytics: trend, debtors, aging ─── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
         {/* 12-month trend */}
         <Card className="xl:col-span-2 border-border/60 bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
