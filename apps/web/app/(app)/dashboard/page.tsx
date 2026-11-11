@@ -28,7 +28,6 @@ import {
   Activity,
   ArrowUpRight,
   ArrowDownRight,
-  RefreshCw,
   Plus,
   ChevronRight,
   LayoutDashboard,
@@ -322,19 +321,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchMetrics();
-              refetchTxns();
-              refetchAnalytics();
-            }}
-            className="gap-1.5 border-border/50 hover:border-primary/40 text-xs h-8"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </Button>
           <Link href="/customers">
             <Button
               size="sm"
