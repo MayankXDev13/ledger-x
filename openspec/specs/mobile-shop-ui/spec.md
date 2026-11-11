@@ -6,37 +6,13 @@ Defines the observable five-tab shopkeeper UI contract for the Ledger-X mobile a
 
 ## Requirements
 
-### Requirement: Home dashboard metric cards and greeting
-
-The Home screen SHALL show greeting header `Ledger-X` with notification affordance, `Welcome back to Ledger-X` subtitle, and a 2x2 grid of metric cards: Total Balance, Total Customers, This Month, To Collect, each with icon, formatted INR value, and label.
-
-#### Scenario: Metrics render from existing endpoints
-- **WHEN** dashboard metrics and analytics load successfully
-- **THEN** the four cards show Total Balance, Total Customers, monthly net, and total receivables with INR formatting
-
-#### Scenario: Loading and error states
-- **WHEN** metrics are loading or fail
-- **THEN** cards show skeleton/placeholder and retry via pull-to-refresh without crashing
-
-### Requirement: Home quick credit/payment actions and method selector
-
-The Home screen SHALL provide a solid-orange `+ Credit` button, an outlined `+ Payment` button, and a Cash/UPI/Other segmented selector that routes into the existing QuickEntry flow with the chosen method pre-selected.
-
-#### Scenario: Quick entry entry points
-- **WHEN** user taps + Credit or + Payment
-- **THEN** the existing QuickEntry modal opens with credit/debit type and selected payment method
-
-#### Scenario: Method selector persistence for session
-- **WHEN** user switches Cash/UPI/Other segment
-- **THEN** the selection is used as default for the next quick entry in that session
-
 ### Requirement: Home 12-month trend and top debtors
 
-The Home screen SHALL show a 12-Month Trend chart with Credit vs Paid legend and month labels, and a Top Debtors list with `View All` link to Customers, each row showing avatar initial, name, `Unpaid Nd`, and outstanding amount.
+The Home screen SHALL show a 12-Month Trend chart with a labelled Credit-versus-Paid legend and month labels, and a Top Debtors list with a `View All` link to Customers, each row showing an avatar initial, name, unpaid age and outstanding amount.
 
 #### Scenario: Trend with data
 - **WHEN** analytics trend contains non-zero months
-- **THEN** chart plots Credit (orange) and Paid (green) series with Jan/Mar/May/Jul/Sep/Nov labels
+- **THEN** the chart plots Credit as a neutral series and Paid as the emerald series, with the series distinguished by fill pattern and label as well as colour
 
 #### Scenario: Empty trend and debtors
 - **WHEN** no activity or no outstanding balances exist
@@ -48,11 +24,11 @@ The Home screen SHALL show a 12-Month Trend chart with Credit vs Paid legend and
 
 ### Requirement: Ledger filter and transaction list
 
-The Ledger screen SHALL show header with search affordance, All/Credit/Payment filter pills (All = solid orange when active), and a transaction list where each row shows blue-circle avatar initial, customer name, note type (Credit Note / Payment Received / UPI Payment), green `+` amount for credits and red `-` amount for payments, and date.
+The Ledger screen SHALL show a header with an inline search field, All/Credit/Payment filter tabs with counts, and a transaction list where each row shows a neutral avatar initial, customer name, note type, a signed amount in neutral ink for credit and the positive token for a received payment, and the date.
 
 #### Scenario: Filter behavior
-- **WHEN** user selects Credit or Payment pill
-- **THEN** list shows only matching entry types; All restores full recent list
+- **WHEN** user selects Credit or Payment tab
+- **THEN** list shows only matching entry types and the count on each tab; All restores the full recent list
 
 #### Scenario: Row navigation
 - **WHEN** user taps a ledger row
@@ -64,7 +40,7 @@ The Ledger screen SHALL show header with search affordance, All/Credit/Payment f
 
 ### Requirement: Collection scan-to-pay hero
 
-The Collection screen SHALL show an orange-bordered hero card with scan icon, `Scan to Pay` title, `Let customers scan and pay via UPI` subtitle, centered white QR encoding the shop UPI `upi://pay` URI, `OR` divider, and `Share QR Code` outlined button.
+The Collection screen SHALL show a `Scan to Pay` hero with the shop UPI intent encoded in a QR code on a white scanning plate, and SHALL explain that payment completion is recorded manually in the customer ledger.
 
 #### Scenario: QR encodes shop UPI intent
 - **WHEN** UPI ID is configured in settings
@@ -75,12 +51,12 @@ The Collection screen SHALL show an orange-bordered hero card with scan icon, `S
 - **THEN** hero shows setup guidance linking to Profile Payment Settings instead of a scannable QR
 
 #### Scenario: Share action
-- **WHEN** user taps Share QR Code
-- **THEN** OS share sheet opens with QR image/link
+- **WHEN** user taps the share action
+- **THEN** OS share sheet opens with the QR image
 
 ### Requirement: Collection quick actions
 
-The Collection screen SHALL show a Quick Actions card with three rows: Copy UPI ID, Download QR, Print QR, each with icon and chevron.
+The Collection screen SHALL show a Quick actions section on the dark surface with three rows — Copy UPI ID, Download QR and Print QR — each with an icon, and SHALL NOT present them inside a white content card.
 
 #### Scenario: Copy UPI ID
 - **WHEN** user taps Copy UPI ID
@@ -92,7 +68,7 @@ The Collection screen SHALL show a Quick Actions card with three rows: Copy UPI 
 
 ### Requirement: Customers search and debtor list
 
-The Customers screen SHALL show header with search affordance, a `Search customers...` input with filter icon, and rows with blue-circle avatar initial, name, `Unpaid Nd` in orange (or phone when settled), outstanding INR amount, and chevron.
+The Customers screen SHALL show a header with an inline search field, and rows with a neutral avatar initial, name, the unpaid age where a balance exists, the outstanding INR amount, and a chevron.
 
 #### Scenario: Search filters by name or phone
 - **WHEN** user types in search box
@@ -106,29 +82,9 @@ The Customers screen SHALL show header with search affordance, a `Search custome
 - **WHEN** filter matches nothing
 - **THEN** screen shows `No customers found` state
 
-### Requirement: Profile shop header and menu
-
-The Profile screen SHALL show header with settings gear, centered shop avatar, `My Shop` name, `Ledger-X User` subtitle, and menu rows: Business Details, Payment Settings, Share App, Help & Support, About Ledger-X, Logout (red), each with icon and chevron.
-
-#### Scenario: Menu navigation
-- **WHEN** user taps Business Details or Payment Settings
-- **THEN** app opens the existing UPI/settings form or business form
-
-#### Scenario: Logout and share
-- **WHEN** user taps Logout or Share App
-- **THEN** app signs out via existing session flow or opens OS share sheet respectively
-
-### Requirement: Profile growth promo card
-
-The Profile screen SHALL show a `Grow Your Business with Ledger-X` promo card with chart icon, `Keep track, collect faster, and manage better.` copy below the menu.
-
-#### Scenario: Promo is informational
-- **WHEN** Profile loads
-- **THEN** promo card is visible without blocking menu actions and has no destructive side effects
-
 ### Requirement: Global tab bar and dark-orange theme
 
-The app SHALL provide a five-tab bottom bar (Home, Ledger, Collection, Customers, Profile) with dark background, orange active tint, muted inactive tint, and focused/unfocused icons, preserving existing route names.
+The app SHALL provide a five-tab bottom bar (Home, Ledger, Collection, Customers, Profile) with a dark background, orange active tint, muted inactive tint, and focused/unfocused icons, preserving existing route names.
 
 #### Scenario: Active tab indication
 - **WHEN** user is on any of the five tabs
@@ -136,4 +92,44 @@ The app SHALL provide a five-tab bottom bar (Home, Ledger, Collection, Customers
 
 #### Scenario: Theme consistency
 - **WHEN** any of the five screens render
-- **THEN** background is near-black, cards use dark surfaces except Quick Actions (white per mock), primary actions use orange, semantic green/red are preserved for credit/paid amounts
+- **THEN** the background is near-black, content sits on dark surfaces, primary actions use orange, and emerald appears only on money received
+
+### Requirement: Home hero, greeting and supporting stats
+
+The Home screen SHALL greet the signed-in user by name, present total outstanding money as a single hero figure with the proportional aging strip and its legend beneath it, and follow it with one inline row of supporting stats (Customers, This month, Net balance) separated by hairlines rather than a grid of metric cards.
+
+#### Scenario: Hero renders from existing endpoints
+- **WHEN** dashboard metrics and analytics load successfully
+- **THEN** the hero shows total outstanding with INR formatting, the aging strip segments are proportional to the rupees in each bucket, and the supporting row shows customer count, monthly net and net balance
+
+#### Scenario: Oldest unpaid is stated in text
+- **WHEN** a receivable is outstanding
+- **THEN** the screen states the age of the oldest unpaid credit in days alongside the aging legend
+
+#### Scenario: Loading and error states
+- **WHEN** metrics are loading or fail
+- **THEN** the screen reserves the hero's layout, shows a skeleton or an error state with a retry, and does not present the failure as an empty ledger
+
+### Requirement: Home quick credit and payment actions
+
+The Home screen SHALL provide a solid-orange `+ Credit` action and an outlined `+ Payment` action that route into the existing QuickEntry flow, with the payment method chosen in the quick-entry modal rather than on the Home screen.
+
+#### Scenario: Quick entry entry points
+- **WHEN** user taps + Credit or + Payment
+- **THEN** the existing QuickEntry modal opens with the credit or debit type, and its own Cash/UPI/Other selector sets the method
+
+### Requirement: Profile identity and sections
+
+The Profile screen SHALL show the signed-in account's identity rather than placeholder copy, and SHALL separate identity, payment settings and the destructive session actions into distinct sections.
+
+#### Scenario: Real identity
+- **WHEN** Profile loads for a signed-in user
+- **THEN** the header reflects that user's account rather than a hardcoded shop name
+
+#### Scenario: Payment settings are a form
+- **WHEN** the user opens the payment settings section
+- **THEN** the UPI ID and payee name are editable in a labelled form that rejects an invalid UPI ID with an inline message
+
+#### Scenario: Account deletion is guarded
+- **WHEN** the user chooses to delete the account
+- **THEN** deletion requires a separate confirmation with an explicit typed confirmation and cannot be triggered by a single tap

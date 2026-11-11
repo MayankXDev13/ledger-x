@@ -53,6 +53,19 @@ Separately, `mobile-five-screen-ui-refresh` (16/17) introduces a `mobile-shop-ui
 2x2 white metric cards, white Quick Actions card and cross-colour money semantics contradict the
 `mobile-visual-system` capability. Reconcile the two before archiving either.
 
+## What was done about it
+
+The `mobile-shop-ui` delta was **reconciled before archive**. Its four superseded requirements —
+the 2x2 metric-card grid, the segmented method selector on Home, the placeholder Profile header
+and the growth promo card — are removed, and the requirements that remain describe the behaviour
+the app actually ships: one hero figure with a supporting stat row, the method selector owned by
+the quick-entry modal, the signed-in account's real identity, and emerald reserved for money
+received.
+
+`mobile-visual-system` is therefore the single contract for the mobile client, and the two
+capabilities no longer contradict each other. The remaining open task in both changes (8.6 and
+7.2) is the mobile screenshot matrix, which still needs a device.
+
 ## How the earlier checkmarks should be read from now on
 
 A checked task in these changes means "the code was edited", not "the behavior was verified".

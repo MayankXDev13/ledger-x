@@ -112,16 +112,24 @@ function mergeIntoMain(capability: string, delta: string): { main: string; chang
     for (const block of splitRequirements(body)) {
       const name = requirementName(block);
       const index = existing.findIndex((b) => requirementName(b) === name);
-      if (kind === "MODIFIED" || kind === "REMOVED") {
+      if (kind === "REMOVED") {
         if (index === -1) {
           throw new Error(
-            `${capability}: ${kind} requirement "${name}" has no counterpart in the main spec`,
+            `${capability}: REMOVED requirement "${name}" has no counterpart in the main spec`,
           );
         }
-        if (kind === "MODIFIED") {
-          existing[index] = block;
-          changed.push(`modified: ${name}`);
+        existing.splice(index, 1);
+        changed.push(`removed: ${name}`);
+        continue;
+      }
+      if (kind === "MODIFIED") {
+        if (index === -1) {
+          throw new Error(
+            `${capability}: MODIFIED requirement "${name}" has no counterpart in the main spec`,
+          );
         }
+        existing[index] = block;
+        changed.push(`modified: ${name}`);
       } else {
         if (index !== -1) {
           existing[index] = block;

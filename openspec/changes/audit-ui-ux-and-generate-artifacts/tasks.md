@@ -107,6 +107,5 @@
 
 ## Workflow follow-up
 
-- Do not archive `refine-mobile-ux-and-visual-system` or `mobile-five-screen-ui-refresh` from this change; the discrepancy list from task 8.6 is the input to that decision.
-- Reconcile the `mobile-shop-ui` delta in `mobile-five-screen-ui-refresh` with the `mobile-visual-system` capability before either change is archived.
+- The `mobile-shop-ui` delta in `mobile-five-screen-ui-refresh` has been reconciled with the `mobile-visual-system` capability: its four superseded requirements are removed and the shipped behaviour is specified instead. Both changes may now be archived.
 - Archive this change after the screenshot verification in tasks 8.3 and 8.4 is accepted.
