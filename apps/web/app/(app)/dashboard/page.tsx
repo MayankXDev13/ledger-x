@@ -622,8 +622,8 @@ export default function DashboardPage() {
       {/* ─── Analytics: trend, debtors, aging ─── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
         {/* 12-month trend */}
-        <Card className="xl:col-span-2 border-border/60 bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-4 px-5">
+        <Card className="xl:col-span-2 border-border/60 bg-card h-fit self-start py-4 gap-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-0 pt-0 px-5">
             <div>
               <CardTitle className="text-sm font-semibold text-foreground">
                 12-Month Trend
@@ -653,7 +653,7 @@ export default function DashboardPage() {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="pt-4 px-2 pb-4">
+          <CardContent className="pt-2 px-2 pb-2">
             {analyticsLoading ? (
               <Skeleton className="h-56 w-full" />
             ) : analyticsError ? (
