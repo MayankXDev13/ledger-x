@@ -89,7 +89,13 @@ function getGreeting() {
 }
 
 function monthLabel(month: string) {
-  return format(new Date(`${month}-01T00:00:00Z`), "MMM yy");
+  try {
+    const d = new Date(`${month}-01T00:00:00Z`);
+    if (isNaN(d.getTime())) return month;
+    return format(d, "MMM yy");
+  } catch {
+    return month;
+  }
 }
 
 /* ── Metric Card ── */
@@ -807,54 +813,125 @@ export default function DashboardPage() {
                         Monthly figures
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-lg bg-card border-border/60">
-                      <DialogHeader>
-                        <DialogTitle className="text-base font-semibold">
-                          12-Month Figures Breakdown
-                        </DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
-                          Monthly credit given vs payments received over the last 12 months.
-                        </DialogDescription>
+                    <DialogContent className="max-w-3xl sm:max-w-3xl w-[94vw] bg-card border-border/60 p-6 shadow-2xl">
+                      <DialogHeader className="space-y-1.5 pb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <Calendar className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <DialogTitle className="text-lg font-bold text-foreground">
+                              12-Month Figures Breakdown
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground">
+                              Comprehensive month-by-month financial ledger flow over the last 12 months.
+                            </DialogDescription>
+                          </div>
+                        </div>
                       </DialogHeader>
-                      <div className="max-h-80 overflow-y-auto rounded-lg border border-border/60 mt-2">
-                        <table className="w-full text-xs">
+
+                      {/* 3 Overview Stat Badges */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-2">
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Total Credit Given</p>
+                          <p className="text-base font-bold text-chart-2 mt-0.5 tabular-nums">
+                            {formatCurrency(trendTotals.credit)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Total Payments Received</p>
+                          <p className="text-base font-bold text-chart-1 mt-0.5 tabular-nums">
+                            {formatCurrency(trendTotals.paid)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                          <p className="text-xs font-medium text-muted-foreground">Net Ledger Flow</p>
+                          <p
+                            className={cn(
+                              "text-base font-bold mt-0.5 tabular-nums",
+                              trendTotals.paid >= trendTotals.credit ? "text-chart-1" : "text-destructive"
+                            )}
+                          >
+                            {trendTotals.paid >= trendTotals.credit ? "+" : "-"}
+                            {formatCurrency(Math.abs(trendTotals.paid - trendTotals.credit))}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Spacious Table with sticky header and total footer */}
+                      <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-border/60 mt-1">
+                        <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-border bg-muted/40">
-                              <th scope="col" className="px-3 py-2 text-left font-semibold">
+                            <tr className="border-b border-border bg-muted/60 sticky top-0 backdrop-blur z-10">
+                              <th scope="col" className="px-4 py-3 text-left font-semibold text-muted-foreground">
                                 Month
                               </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-right font-semibold text-chart-2"
-                              >
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-chart-2">
                                 Credit given
                               </th>
-                              <th
-                                scope="col"
-                                className="px-3 py-2 text-right font-semibold text-chart-1"
-                              >
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-chart-1">
                                 Payment received
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-right font-semibold text-muted-foreground">
+                                Net Flow
                               </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {analytics.trend.map((row) => (
-                              <tr
-                                key={row.month}
-                                className="border-b border-border/40 last:border-0 hover:bg-muted/20"
-                              >
-                                <td className="px-3 py-2 font-medium">
-                                  {monthLabel(row.month)}
-                                </td>
-                                <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                                  {formatCurrency(row.credit ?? 0)}
-                                </td>
-                                <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                                  {formatCurrency(row.debit ?? 0)}
-                                </td>
-                              </tr>
-                            ))}
+                            {analytics.trend.map((row) => {
+                              const credit = row.credit ?? 0;
+                              const debit = row.debit ?? 0;
+                              const net = debit - credit;
+                              return (
+                                <tr
+                                  key={row.month}
+                                  className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors"
+                                >
+                                  <td className="px-4 py-2.5 font-medium text-foreground">
+                                    {monthLabel(row.month)}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                                    {formatCurrency(credit)}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                                    {formatCurrency(debit)}
+                                  </td>
+                                  <td
+                                    className={cn(
+                                      "px-4 py-2.5 text-right tabular-nums font-semibold",
+                                      net > 0
+                                        ? "text-chart-1"
+                                        : net < 0
+                                          ? "text-destructive"
+                                          : "text-muted-foreground"
+                                    )}
+                                  >
+                                    {net > 0 ? `+${formatCurrency(net)}` : net < 0 ? `-${formatCurrency(Math.abs(net))}` : "₹0"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-border bg-muted/40 font-bold sticky bottom-0 backdrop-blur">
+                              <td className="px-4 py-3 text-foreground">Total</td>
+                              <td className="px-4 py-3 text-right tabular-nums text-chart-2">
+                                {formatCurrency(trendTotals.credit)}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums text-chart-1">
+                                {formatCurrency(trendTotals.paid)}
+                              </td>
+                              <td
+                                className={cn(
+                                  "px-4 py-3 text-right tabular-nums",
+                                  trendTotals.paid >= trendTotals.credit ? "text-chart-1" : "text-destructive"
+                                )}
+                              >
+                                {trendTotals.paid >= trendTotals.credit ? "+" : "-"}
+                                {formatCurrency(Math.abs(trendTotals.paid - trendTotals.credit))}
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </div>
                     </DialogContent>
