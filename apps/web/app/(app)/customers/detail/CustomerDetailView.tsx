@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,12 +22,11 @@ import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialo
 
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionList } from "@/components/transactions/TransactionList";
-import { TransactionPagination } from "@/components/transactions/TransactionPagination";
 import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransactionDialog";
 
 import { useCustomer, useDeleteCustomer } from "@/hooks/useCustomers";
 import {
-  useCustomerTransactions,
+  useInfiniteCustomerTransactions,
   useDeleteTransaction,
 } from "@/hooks/useTransactions";
 
@@ -45,8 +44,8 @@ export function CustomerDetailView() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get("id") ?? "";
 
-  const [page, setPage] = useState(1);
   const pageSize = 10;
+  const observerRef = useRef<HTMLDivElement | null>(null);
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -60,29 +59,48 @@ export function CustomerDetailView() {
   const { data: customer, isLoading: customerLoading } =
     useCustomer(customerId);
 
-  const { data: txns, isLoading: txnsLoading } = useCustomerTransactions(
-    customerId,
-    { page, pageSize },
-  );
+  const {
+    data: txnsData,
+    isLoading: txnsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteCustomerTransactions(customerId, { pageSize });
 
   const deleteTransaction = useDeleteTransaction();
   const deleteCustomer = useDeleteCustomer();
   const router = useRouter();
 
-  const pageTransactions = txns?.data ?? [];
+  const allTransactions = txnsData?.pages.flatMap((p) => p.data) ?? [];
+  const firstPage = txnsData?.pages[0];
 
   /* ─ Analytics: whole-customer aggregates from the server, independent of
-     the visible page. Guards keep older API responses rendering instead of
+     the visible batch. Guards keep older API responses rendering instead of
      NaN during the rollout window. ─ */
-  const totalCredit = Number(txns?.totalCredit ?? 0);
-  const totalDebit = Number(txns?.totalDebit ?? 0);
+  const totalCredit = Number(firstPage?.totalCredit ?? 0);
+  const totalDebit = Number(firstPage?.totalDebit ?? 0);
 
   const balance = totalCredit - totalDebit;
-  const totalPages = txns ? Math.ceil(txns.total / pageSize) : 1;
+  const totalCount = firstPage?.total ?? 0;
 
-  /* ─ Search + type filter (client-side over the loaded page; each row
-     already carries its server-computed cumulative running balance) ─ */
-  const filtered = pageTransactions.filter((tx) => {
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    const el = observerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  /* ─ Search + type filter (client-side over the loaded transactions) ─ */
+  const filtered = allTransactions.filter((tx) => {
     const matchesSearch = search
       ? tx.note?.toLowerCase().includes(search.toLowerCase()) ||
         tx.type.includes(search.toLowerCase())
@@ -142,7 +160,7 @@ export function CustomerDetailView() {
           totalCredit={totalCredit}
           totalDebit={totalDebit}
           netBalance={balance}
-          txCount={txns?.total ?? 0}
+          txCount={totalCount}
           loading={txnsLoading}
         />
 
@@ -154,9 +172,9 @@ export function CustomerDetailView() {
               <h2 className="text-sm font-semibold text-foreground">
                 Transactions
               </h2>
-              {txns && (
+              {txnsData && (
                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
-                  {txns.total}
+                  {allTransactions.length} of {totalCount}
                 </span>
               )}
             </div>
@@ -225,14 +243,30 @@ export function CustomerDetailView() {
             onDelete={setDeletingTxId}
           />
 
-          {txns && txns.total > pageSize && (
-            <TransactionPagination
-              page={page}
-              totalPages={totalPages}
-              total={txns.total}
-              onPrev={() => setPage((p) => p - 1)}
-              onNext={() => setPage((p) => p + 1)}
-            />
+          {/* Infinite scroll sentinel & status */}
+          {hasNextPage && (
+            <div
+              ref={observerRef}
+              className="py-4 flex justify-center border-t border-border/50 bg-card"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="text-xs text-muted-foreground gap-2"
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : null}
+                {isFetchingNextPage ? "Loading more…" : "Load more transactions"}
+              </Button>
+            </div>
+          )}
+          {!hasNextPage && allTransactions.length > 0 && (
+            <div className="py-3 text-center text-xs text-muted-foreground border-t border-border/40">
+              Showing all {allTransactions.length} transaction{allTransactions.length === 1 ? "" : "s"}
+            </div>
           )}
         </div>
       </div>

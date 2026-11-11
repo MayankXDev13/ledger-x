@@ -39,9 +39,14 @@ function monthLabel(month: string): string {
   return MONTH_LABELS[Number(m) - 1] ?? month;
 }
 
-function greetingName(email: string | undefined): string {
+function greetingName(name: string | null | undefined, email: string | undefined): string {
+  if (name && name.trim()) {
+    const first = name.trim().split(/\s+/)[0];
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  }
   const local = email?.split("@")[0] ?? "shopkeeper";
-  const pretty = local.replace(/[._-]+/g, " ").trim();
+  const cleaned = local.replace(/[0-9]+$/, "");
+  const pretty = (cleaned || local).replace(/[._-]+/g, " ").trim();
   return pretty.charAt(0).toUpperCase() + pretty.slice(1);
 }
 
@@ -155,7 +160,7 @@ export default function DashboardScreen() {
     null,
   );
   const hasTrend = (analytics?.trend ?? []).some((t) => t.credit || t.debit);
-  const firstName = greetingName(session.user.email);
+  const firstName = greetingName(session.user.name, session.user.email);
   const hasCustomers = (metrics?.totalCustomers ?? 0) > 0;
 
   return (

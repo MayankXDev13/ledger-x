@@ -159,6 +159,13 @@ export const exportsApi = {
 export const customersApi = {
   list: () => apiClient.get<Customer[]>("/customers").then((r) => r.data),
 
+  balances: () =>
+    apiClient
+      .get<Record<string, { outstanding: number; ageDays: number | null }>>(
+        "/customers/balances",
+      )
+      .then((r) => r.data),
+
   get: (id: string) =>
     apiClient.get<Customer>(`/customers/${id}`).then((r) => r.data),
 

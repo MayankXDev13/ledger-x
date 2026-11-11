@@ -15,6 +15,7 @@ import type { PaymentMethod, Transaction } from "@/lib/api";
 import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface EditTransactionModalProps {
   visible: boolean;
@@ -37,6 +38,7 @@ export function EditTransactionModal({
   onSave,
   onDelete,
 }: EditTransactionModalProps) {
+  const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<"credit" | "debit">("credit");
   const [note, setNote] = useState("");
@@ -97,7 +99,14 @@ export function EditTransactionModal({
         className="flex-1 bg-bg"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View className="flex-row justify-between items-center px-4 py-4 border-b border-line">
+        <View
+          style={{
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: 14,
+            paddingHorizontal: 16,
+          }}
+          className="flex-row justify-between items-center border-b border-line bg-bg"
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close"
@@ -120,7 +129,12 @@ export function EditTransactionModal({
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingBottom: Math.max(insets.bottom, 24) + 20,
+          }}
+        >
           <View className="p-4">
             <View className="mb-6">
               <Text className="text-ink-muted text-sm font-medium mb-2">

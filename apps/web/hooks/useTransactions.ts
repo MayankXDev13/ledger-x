@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api-error";
 import { dashboardKeys } from "./useDashboard";
@@ -15,6 +15,10 @@ export const transactionKeys = {
     params
       ? ([...transactionKeys.all, "customer", customerId, params] as const)
       : ([...transactionKeys.all, "customer", customerId] as const),
+  byCustomerInfinite: (customerId: string, params?: object) =>
+    params
+      ? ([...transactionKeys.all, "customer-infinite", customerId, params] as const)
+      : ([...transactionKeys.all, "customer-infinite", customerId] as const),
   detail: (id: string) => [...transactionKeys.all, "detail", id] as const,
 };
 
@@ -25,6 +29,29 @@ export function useCustomerTransactions(
   return useQuery({
     queryKey: transactionKeys.byCustomer(customerId, params),
     queryFn: () => transactionsApi.listByCustomer(customerId, params),
+    enabled: !!customerId,
+  });
+}
+
+export function useInfiniteCustomerTransactions(
+  customerId: string,
+  params?: { pageSize?: number; start?: string; end?: string }
+) {
+  const pageSize = params?.pageSize ?? 10;
+  return useInfiniteQuery({
+    queryKey: transactionKeys.byCustomerInfinite(customerId, params),
+    queryFn: ({ pageParam = 1 }) =>
+      transactionsApi.listByCustomer(customerId, {
+        page: pageParam,
+        pageSize,
+        start: params?.start,
+        end: params?.end,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const fetched = allPages.length * pageSize;
+      return fetched < lastPage.total ? allPages.length + 1 : undefined;
+    },
     enabled: !!customerId,
   });
 }
@@ -41,12 +68,12 @@ export function useCreateTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.create,
-    onSuccess: async (data) => {
+    onSuccess: async () => {
       // A transaction changes the balance the customer domain shows, so that
       // domain is invalidated too. Awaiting the invalidation means the
       // mutation settles only once the affected views hold fresh data.
       await Promise.all([
-        qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) }),
+        qc.invalidateQueries({ queryKey: transactionKeys.all }),
         qc.invalidateQueries({ queryKey: customerKeys.all }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
         qc.invalidateQueries({ queryKey: collectionKeys.all }),
@@ -74,10 +101,9 @@ export function useUpdateTransaction() {
         note?: string;
       };
     }) => transactionsApi.update(id, data),
-    onSuccess: async (data) => {
+    onSuccess: async () => {
       await Promise.all([
-        qc.invalidateQueries({ queryKey: transactionKeys.byCustomer(data.customerId) }),
-        qc.invalidateQueries({ queryKey: transactionKeys.detail(data.id) }),
+        qc.invalidateQueries({ queryKey: transactionKeys.all }),
         qc.invalidateQueries({ queryKey: customerKeys.all }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
         qc.invalidateQueries({ queryKey: collectionKeys.all }),

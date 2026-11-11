@@ -139,6 +139,25 @@ export const OPERATIONS: Record<string, OperationDefinition> = {
       ...errorResponses(401),
     },
   },
+  "GET /customers/balances": {
+    summary: "Get balance and aging map for non-deleted customers",
+    tags: ["customers"],
+    auth: true,
+    responses: {
+      200: jsonResponse("Map of customer balances", {
+        type: "object",
+        additionalProperties: {
+          type: "object",
+          properties: {
+            outstanding: { type: "integer" },
+            ageDays: { type: "integer", nullable: true },
+          },
+          required: ["outstanding"],
+        },
+      }),
+      ...errorResponses(401),
+    },
+  },
   "GET /customers/:id": {
     summary: "Get a single customer",
     tags: ["customers"],
