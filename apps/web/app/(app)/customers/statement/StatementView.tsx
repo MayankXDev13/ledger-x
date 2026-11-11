@@ -9,6 +9,7 @@ import {
   FileText,
   Printer,
   CheckCircle2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { useStatement } from "@/hooks/useStatement";
 import { paymentMethodLabel } from "@/lib/payments";
@@ -127,31 +134,65 @@ export function StatementView() {
             <Label htmlFor="statement-start" className="text-xs font-semibold">
               Start date
             </Label>
-            <Input
-              id="statement-start"
-              name="start"
-              type="date"
-              value={start}
-              onChange={(event) => setStart(event.target.value)}
-              aria-invalid={periodError ? true : undefined}
-              aria-describedby={periodError ? "statement-period-error" : undefined}
-              className="h-9 w-40 bg-muted/20 border-border/50"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="statement-start"
+                  variant="outline"
+                  data-empty={!start}
+                  className="w-48 justify-start text-left font-normal h-9 bg-muted/20 border-border/50 data-[empty=true]:text-muted-foreground text-xs"
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {start ? (
+                    format(new Date(start + "T00:00:00"), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={start ? new Date(start + "T00:00:00") : undefined}
+                  onSelect={(date) => {
+                    setStart(date ? format(date, "yyyy-MM-dd") : "");
+                  }}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="statement-end" className="text-xs font-semibold">
               End date
             </Label>
-            <Input
-              id="statement-end"
-              name="end"
-              type="date"
-              value={end}
-              onChange={(event) => setEnd(event.target.value)}
-              aria-invalid={periodError ? true : undefined}
-              aria-describedby={periodError ? "statement-period-error" : undefined}
-              className="h-9 w-40 bg-muted/20 border-border/50"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="statement-end"
+                  variant="outline"
+                  data-empty={!end}
+                  className="w-48 justify-start text-left font-normal h-9 bg-muted/20 border-border/50 data-[empty=true]:text-muted-foreground text-xs"
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {end ? (
+                    format(new Date(end + "T00:00:00"), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={end ? new Date(end + "T00:00:00") : undefined}
+                  onSelect={(date) => {
+                    setEnd(date ? format(date, "yyyy-MM-dd") : "");
+                  }}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <Button
             type="submit"
