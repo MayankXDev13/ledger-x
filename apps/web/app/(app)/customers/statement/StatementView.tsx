@@ -108,9 +108,6 @@ export function StatementView() {
               <FileText className="w-5 h-5 text-primary" />
               Account statement
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Print or save this statement as a PDF from your browser.
-            </p>
           </div>
           <Button
             onClick={() => window.print()}
