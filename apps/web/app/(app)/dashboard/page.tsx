@@ -49,7 +49,12 @@ import {
   Bar,
   Cell,
 } from "recharts";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { useAuth } from "@/hooks/useAuth";
 import { deriveFirstName } from "@/lib/name";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
@@ -64,11 +69,13 @@ const flowChartConfig = {
 } satisfies ChartConfig;
 
 const typeChartConfig = {
+  activities: { label: "Transactions" },
   credit: { label: "Credit given", color: "var(--chart-2)" },
   paid: { label: "Payment received", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 const trendChartConfig = {
+  activities: { label: "12-Month Activity" },
   credit: { label: "Credit given", color: "var(--chart-2)" },
   debit: { label: "Payment received", color: "var(--chart-1)" },
 } satisfies ChartConfig;
@@ -578,9 +585,24 @@ export default function DashboardPage() {
                       width={46}
                       tickFormatter={(v) => formatCompactCurrency(v)}
                     />
-                    <RechartsTooltip
-                      content={<FlowTooltip />}
-                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          labelKey="activities"
+                          indicator="line"
+                          formatter={(value, name, item) => (
+                            <div className="flex w-full items-center justify-between gap-4">
+                              <span className="text-muted-foreground">
+                                {item?.payload?.toneLabel ?? name}
+                              </span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {formatCurrency(Number(value))}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                      cursor={false}
                     />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                       {chartData.map((entry, index) => (
@@ -726,9 +748,25 @@ export default function DashboardPage() {
                       width={52}
                       tickFormatter={(v) => formatCompactCurrency(v)}
                     />
-                    <RechartsTooltip
-                      content={<TrendTooltip />}
-                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          labelKey="activities"
+                          indicator="line"
+                          labelFormatter={(value) =>
+                            typeof value === "string" ? monthLabel(value) : value
+                          }
+                          formatter={(value, name) => (
+                            <div className="flex w-full items-center justify-between gap-4">
+                              <span className="text-muted-foreground">{name}</span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {formatCurrency(Number(value))}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                      cursor={false}
                     />
                     <Bar
                       dataKey="credit"
