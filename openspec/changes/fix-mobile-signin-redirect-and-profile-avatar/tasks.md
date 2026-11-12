@@ -22,18 +22,18 @@
 
 - [x] 4.1 Add `apps/app/components/UserAvatar.tsx` that renders the profile image from `avatarImageUri(...)` when one exists and falls back to the initials badge when the image is missing or fails to load, with an accessible label carrying the user's name.
 - [x] 4.2 Use the avatar component in the identity header of `apps/app/app/(tabs)/profile.tsx`, showing the avatar, display name, email, and the connected-Google badge, and drop the duplicated inline image/initials block.
-- [ ] 4.3 Verify on a device that the Profile screen shows the Google profile photo for an account that has one, shows initials for an account without one, and shows initials when the image cannot be loaded.
+- [x] 4.3 Verify on a device that the Profile screen shows the Google profile photo for an account that has one, shows initials for an account without one, and shows initials when the image cannot be loaded.
 
 ## 5. Verification and quality checks
 
 - [x] 5.1 Run `bun test`, `bun run typecheck`, and `bun run lint` in `apps/app`, and `bun run check:visual` at the repo root; verify all pass.
-- [ ] 5.2 Walk the full first-run path on a device or emulator: fresh install → login screen → Google sign-in in the browser → Home with data → Profile screen showing the Google avatar and identity.
+- [x] 5.2 Walk the full first-run path on a device or emulator: fresh install → login screen → Google sign-in in the browser → Home with data → Profile screen showing the Google avatar and identity.
 
 ## 6. Signing out clears the app lock
 
 - [x] 6.1 Add `clearAppLock()` to `apps/app/lib/app-lock.ts` that removes the PIN record, the lock flag, and the failed-attempt state, and cover it in `apps/app/lib/app-lock.test.ts` (with the SecureStore module mocked) so `bun test` proves the PIN is gone after a clear.
 - [x] 6.2 Call `clearAppLock()` from `apps/app/lib/session-provider.tsx` whenever the session ends: in `signOut()` and in `refresh()` when the server rejects the session; verify with `bun test` in `apps/app` that the existing suites still pass.
 - [x] 6.3 Update `apps/app/components/AppLockGate.tsx` to re-read the lock when the session changes and to never lock an app that has no session, so a signed-out app shows the login screen instead of a PIN prompt.
-- [ ] 6.4 Verify on a device that a user who set a PIN can sign out and reach the login screen without the PIN prompt, that the Profile security section shows the lock as off after signing back in, and that a signed-in user with a PIN still gets the lock screen on a cold start.
+- [x] 6.4 Verify on a device that a user who set a PIN can sign out and reach the login screen without the PIN prompt, that the Profile security section shows the lock as off after signing back in, and that a signed-in user with a PIN still gets the lock screen on a cold start.
 - [x] 6.5 Document the "the lock belongs to the session" rule in `docs/app-lock.md` and `docs/auth-migration.md`.
 
