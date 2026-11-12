@@ -1,5 +1,7 @@
 # LedgerX
 
+[![Android APK](https://github.com/MayankXDev13/ledger-x/actions/workflows/android-apk.yml/badge.svg)](https://github.com/MayankXDev13/ledger-x/actions/workflows/android-apk.yml)
+
 An Android ledger app for small shops: record credit and payments per customer,
 see who owes what, and collect faster.
 
@@ -75,12 +77,22 @@ types/                   # TypeScript types
 
 ## Building for Production
 
+The release APK is built by **GitHub Actions** (free for public repositories) —
+no paid build service is involved:
+
 ```bash
 bun --cwd apps/app build:apk
 ```
 
-The `preview` EAS profile produces an installable APK (`eas build --platform
-android --profile preview`).
+That triggers the **Android APK** workflow. The APK is attached to the run as an
+artifact; download it from the Actions run page, then install it on a device:
+
+```bash
+adb install -r ledgerx.apk
+```
+
+The build reads `EXPO_PUBLIC_API_URL` from the workflow environment (override it
+with a repository variable of the same name).
 
 ## License
 

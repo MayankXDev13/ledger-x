@@ -1,5 +1,7 @@
 # Ledger-X
 
+[![Android APK](https://github.com/MayankXDev13/ledger-x/actions/workflows/android-apk.yml/badge.svg)](https://github.com/MayankXDev13/ledger-x/actions/workflows/android-apk.yml)
+
 A bun-managed Turborepo containing the Ledger-X mobile app, web app, and API.
 
 A public khata (digital ledger) for small shops: record credits and payments,
