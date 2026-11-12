@@ -279,8 +279,8 @@ export default function ProfileScreen() {
               {user.email}
             </Text>
             <View className="mt-1 flex-row items-center gap-1.5">
-              <View className="h-2 w-2 rounded-full bg-success" />
-              <Text className="font-mukta-medium text-[12px] text-success">
+              <View className="h-2 w-2 rounded-full bg-brand-primary" />
+              <Text className="font-mukta-medium text-[12px] text-brand-primary">
                 Google Account Connected
               </Text>
             </View>
@@ -560,11 +560,11 @@ export default function ProfileScreen() {
           <SectionHeader label="Community" className="mb-3" />
           <Pressable
             onPress={shareApp}
-            className="flex-row items-center gap-4 rounded-2xl border border-brand/30 bg-surface p-4 active:opacity-85 shadow-sm"
+            className="flex-row items-center gap-4 rounded-2xl border border-brand-primary/30 bg-surface p-4 active:opacity-85 shadow-sm"
             accessibilityRole="button"
             accessibilityLabel="Invite a shopkeeper"
           >
-            <View className="h-12 w-12 items-center justify-center rounded-xl bg-brand/10">
+            <View className="h-12 w-12 items-center justify-center rounded-xl bg-brand-primary/10">
               <Ionicons name="gift-outline" size={24} color={colors.brand} />
             </View>
             <View className="flex-1">
@@ -592,8 +592,8 @@ export default function ProfileScreen() {
                   Logged in as {user.email}
                 </Text>
               </View>
-              <View className="rounded-full bg-success/15 px-2.5 py-0.5">
-                <Text className="font-mukta-semibold text-[11px] text-success">
+              <View className="rounded-full bg-brand-primary/15 px-2.5 py-0.5">
+                <Text className="font-mukta-semibold text-[11px] text-brand-primary">
                   Active
                 </Text>
               </View>

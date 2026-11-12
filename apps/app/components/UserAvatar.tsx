@@ -44,7 +44,7 @@ export default function UserAvatar({
       <Image
         source={{ uri }}
         style={dimension}
-        className="border-2 border-brand/40"
+        className="border-2 border-brand-primary/40"
         resizeMode="cover"
         onError={() => setFailed(true)}
         accessible
@@ -57,7 +57,7 @@ export default function UserAvatar({
   return (
     <View
       style={dimension}
-      className="items-center justify-center rounded-full border border-brand/30 bg-brand/15"
+      className="items-center justify-center rounded-full border border-brand-primary/30 bg-brand-primary/15"
       accessible
       accessibilityRole="image"
       accessibilityLabel={`${label} profile initials`}
@@ -67,7 +67,7 @@ export default function UserAvatar({
           fontSize: Math.round(size * 0.34),
           lineHeight: Math.round(size * 0.42),
         }}
-        className="font-mukta-bold text-brand"
+        className="font-mukta-bold text-brand-primary"
       >
         {initials}
       </Text>

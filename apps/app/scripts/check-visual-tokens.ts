@@ -62,6 +62,12 @@ const RULES: Rule[] = [
     why: "the legacy brand-* aliases were replaced by the neutral tokens",
     pattern: /\bbrand-(?:dark|card|border|muted|surface)\b/,
   },
+  {
+    id: "unbuilt-color-token",
+    why: "a bare 'brand' or 'success' colour class is never generated; use brand-primary, brand-soft, positive, ink-muted, …",
+    pattern:
+      /\b(?:bg|text|border|fill|from|to|ring|divide|placeholder)-(?:brand|success)(?:\/[0-9]+)?(?![a-z0-9-])/i,
+  },
 ];
 
 function* walk(dir: string): Generator<string> {
