@@ -1,92 +1,86 @@
 # LedgerX
 
-A minimal, fast, Android-only ledger app to record credit/debit for customers and send SMS reminders.
+An Android ledger app for small shops: record credit and payments per customer,
+see who owes what, and collect faster.
 
 ## Tech Stack
 
-- **Frontend:** Expo (React Native) + TypeScript
-- **Backend:** Supabase (Auth + PostgreSQL)
-- **Navigation:** Expo Router
+- **Frontend:** Expo SDK 58 (React Native) + TypeScript + Expo Router
+- **Backend:** Cloudflare Workers API (`apps/api`) on Hono
+- **Database:** Neon (Postgres) via Drizzle ORM
+- **Auth:** Google OAuth only, through Better Auth (no passwords)
 - **Package Manager:** Bun
 
 ## Getting Started
 
-### 1. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 bun install
 ```
 
-### 2. Set Up Supabase
+### 2. Point the app at the API
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to the SQL Editor and run the contents of `supabase-schema.sql`
-3. Create a `.env` file in the project root:
+Create `apps/app/.env`:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_API_URL=https://your-worker.workers.dev
 ```
+
+That is the only variable the app reads. The API issues the Google session
+token; the app stores it in `SecureStore` and sends it as
+`Authorization: Bearer <token>`.
 
 ### 3. Run on Android
 
 ```bash
-bun android
+bun --cwd apps/app android
 ```
 
-This will start the Metro bundler and launch the Android emulator (or device if connected).
+This starts the Metro bundler and launches the app on a connected device or
+emulator.
 
 ## Project Structure
 
 ```
 app/
-├── _layout.tsx          # Root layout with navigation
-├── index.tsx            # Landing page
-├── auth/                # Authentication screens
-│   ├── login.tsx
-│   └── signup.tsx
-├── customers/           # Customer management
-│   ├── index.tsx        # Customer list
-│   ├── add.tsx          # Add customer
-│   └── details.tsx      # Customer ledger
+├── _layout.tsx          # Root layout: session, settings, flags, auth guard
+├── index.tsx            # Entry route — resolves the session, then routes
+├── auth/login.tsx       # Google sign-in
+├── (tabs)/              # Home, Ledger, Collection, Customers, Profile
+├── customers/           # Customer list, detail, add, edit, statement
 ├── ledger/              # Ledger entries
-│   └── add.tsx          # Add entry
-├── components/          # Reusable components
-├── hooks/               # Custom hooks
-├── lib/                 # Utilities (Supabase client)
-└── types/               # TypeScript types
+components/              # Reusable components (UserAvatar, AppLockGate, …)
+hooks/                   # useAuth, useSettings, useInsights, …
+lib/                     # API client, session provider, app lock, helpers
+types/                   # TypeScript types
 ```
 
 ## Features
 
-- **Authentication:** Email/password sign up and login
-- **Customer Management:** Add, view, and search customers
-- **Ledger Tracking:** Record credit/debit transactions per customer
-- **Balance Calculation:** Automatic running balance per customer
-- **SMS Reminders:** Send balance updates via native SMS app
-- **Offline Support:** Session persistence with AsyncStorage
-- **Black & White UI:** Minimal, distraction-free design
-
-## Database Schema
-
-The app uses three tables with Row Level Security (RLS):
-
-- `contacts` - Customer information (linked to user_id)
-- `ledger_entries` - Transaction records (linked to contact_id)
-- `get_contact_balance()` - SQL function for balance calculation
+- **Authentication:** Google sign-in only; the session resolves once for the app
+  and is refreshed when the app returns to the foreground.
+- **Customer management:** Add, view, search, and open a customer's ledger.
+- **Ledger tracking:** Record credit and payment entries per customer.
+- **Balances and aging:** Outstanding totals with 0–30 / 31–60 / 60+ day aging.
+- **Collections:** UPI collection with a QR code and a printable statement.
+- **Offline support:** Entries recorded offline are queued and replayed.
+- **App lock:** Optional device-local PIN, removed together with the session.
 
 ## Environment Variables
 
-| Variable                        | Description               |
-| ------------------------------- | ------------------------- |
-| `EXPO_PUBLIC_SUPABASE_URL`      | Your Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key    |
+| Variable               | Description                        |
+| ---------------------- | ---------------------------------- |
+| `EXPO_PUBLIC_API_URL`  | Public origin of the Workers API   |
 
 ## Building for Production
 
 ```bash
-eas build --platform android
+bun --cwd apps/app build:apk
 ```
+
+The `preview` EAS profile produces an installable APK (`eas build --platform
+android --profile preview`).
 
 ## License
 

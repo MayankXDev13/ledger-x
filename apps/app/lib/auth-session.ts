@@ -59,6 +59,90 @@ export type SessionUser = {
   image?: string | null;
 };
 
+/**
+ * The outcome of asking the server who is signed in.
+ *
+ * `unreachable` is kept apart from `anonymous` on purpose: a dropped
+ * connection must never sign a shopkeeper out of the app.
+ */
+export type SessionState =
+  | { status: "authenticated"; user: SessionUser }
+  | { status: "anonymous" }
+  | { status: "unreachable" };
+
+function toSessionUser(u: {
+  id: string;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+}): SessionUser {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name ?? null,
+    image: u.image ?? null,
+  };
+}
+
+/**
+ * Resolve the current session without ever signing the user out on a
+ * network error.
+ *
+ * The session is read from the Better Auth client (cookie held in
+ * SecureStore) and, as a fallback, from `GET /auth/me` with the stored
+ * bearer token. The token is cleared only when the server rejects it.
+ */
+export async function revalidateSession(): Promise<SessionState> {
+  // The client call can throw (no network) as well as return an error, and
+  // neither means the session is gone.
+  let result: Awaited<ReturnType<typeof authClient.getSession>> | null = null;
+  try {
+    result = await authClient.getSession();
+  } catch {
+    result = null;
+  }
+
+  if (result && !result.error && result.data?.user) {
+    if (result.data.session?.token) {
+      await setSessionToken(result.data.session.token);
+    }
+    return {
+      status: "authenticated",
+      user: toSessionUser(result.data.user as Parameters<typeof toSessionUser>[0]),
+    };
+  }
+
+  const token = await getSessionToken();
+  if (!token) return { status: "anonymous" };
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl()}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // The network is down. Keep the token; the user may still be signed in.
+    return { status: "unreachable" };
+  }
+
+  if (res.ok) {
+    const u = (await res.json()) as {
+      id: string;
+      email: string;
+      name?: string | null;
+      image?: string | null;
+    };
+    return { status: "authenticated", user: toSessionUser(u) };
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    await setSessionToken(null);
+    return { status: "anonymous" };
+  }
+
+  return { status: "unreachable" };
+}
+
 export async function signInWithGoogle(): Promise<SessionUser> {
   await authClient.signIn.social({
     provider: "google",
@@ -78,48 +162,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const { data, error } = await authClient.getSession();
-  if (error || !data?.user) {
-    const token = await getSessionToken();
-    if (token) {
-      try {
-        const res = await fetch(`${baseUrl()}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const u = (await res.json()) as {
-            id: string;
-            email: string;
-            name?: string | null;
-            image?: string | null;
-          };
-          return {
-            id: u.id,
-            email: u.email,
-            name: u.name ?? null,
-            image: u.image ?? null,
-          };
-        }
-      } catch {
-        // Fallback failed
-      }
-    }
-    await setSessionToken(null);
-    return null;
-  }
-  if (data.session?.token) {
-    await setSessionToken(data.session.token);
-  }
-  const u = data.user as {
-    id: string;
-    email: string;
-    name?: string | null;
-    image?: string | null;
-  };
-  return {
-    id: u.id,
-    email: u.email,
-    name: u.name ?? null,
-    image: u.image ?? null,
-  };
+  const result = await revalidateSession();
+  return result.status === "authenticated" ? result.user : null;
 }
+

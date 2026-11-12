@@ -23,13 +23,24 @@ export async function isLockEnabled(): Promise<boolean> {
   return (await SecureStore.getItemAsync(ENABLED_KEY)) === "true";
 }
 
+/**
+ * Remove every trace of the device-local lock.
+ *
+ * The lock belongs to the signed-in session: when the session ends, the PIN,
+ * the lock flag and the failed-attempt state go with it, so a signed-out app
+ * never asks for a PIN.
+ */
+export async function clearAppLock(): Promise<void> {
+  await SecureStore.deleteItemAsync(PIN_RECORD_KEY);
+  await SecureStore.deleteItemAsync(ENABLED_KEY);
+  await SecureStore.deleteItemAsync(ATTEMPTS_KEY);
+}
+
 export async function setLockEnabled(enabled: boolean): Promise<void> {
   if (enabled) {
     await SecureStore.setItemAsync(ENABLED_KEY, "true");
   } else {
-    await SecureStore.deleteItemAsync(ENABLED_KEY);
-    await SecureStore.deleteItemAsync(PIN_RECORD_KEY);
-    await SecureStore.deleteItemAsync(ATTEMPTS_KEY);
+    await clearAppLock();
   }
 }
 

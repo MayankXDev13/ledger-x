@@ -1,0 +1,65 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/app/**"
+      - ".github/workflows/android-apk.yml"
+      - "bun.lock"
+      - "package.json"
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      # Public API origin baked into the bundle. Override with a repository
+      # variable named EXPO_PUBLIC_API_URL to point at another environment.
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://server-v2.mayankxdev13.workers.dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+
+      - name: Generate the native Android project
+        working-directory: apps/app
+        run: bun x expo prebuild --platform android --no-install
+
+      - name: Build the release APK
+        working-directory: apps/app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledgerx-apk
+          path: apps/app/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -1,6 +1,5 @@
 // Typed client for the Ledger-X Workers API. Auth uses the Better Auth
-// session token from `@/lib/auth-session`; the mobile app no longer talks to
-// Supabase for ledger data.
+// session token from `@/lib/auth-session`.
 import { getAuthHeaders } from "./auth-session";
 import {
   formatApiErrorMessage,

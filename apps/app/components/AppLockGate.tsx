@@ -18,6 +18,7 @@ import {
   verifyPin,
 } from "@/lib/app-lock";
 import { isLocked, recordFailure } from "@/lib/app-lock-core";
+import { useAuth } from "@/hooks/useAuth";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
 
@@ -30,8 +31,13 @@ const AUTO_LOCK_MS = 60_000;
  * - biometrics unlock with PIN fallback,
  * - the app-switcher snapshot is masked via expo-screen-capture,
  * - five consecutive wrong PINs start an exponential cooldown.
+ *
+ * The lock belongs to the signed-in session: a signed-out app is never
+ * locked, and the gate re-reads the lock when the session changes so a
+ * sign-out releases the app immediately.
  */
 export function AppLockGate({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
   const [checking, setChecking] = useState(true);
   const [locked, setLocked] = useState(false);
   const [pin, setPin] = useState("");
@@ -41,6 +47,12 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
   const [bioAvailable, setBioAvailable] = useState(false);
   const [lockOn, setLockOn] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
+  // Read inside the AppState listener, which must not be re-subscribed on
+  // every session change.
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   // Mask the app-switcher snapshot only while app lock is enabled.
   // When the lock is off, screenshots stay available (e.g. sharing a
@@ -54,9 +66,16 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
   }, [lockOn]);
 
   const evaluate = useCallback(async () => {
+    // The session is not resolved yet. Keep waiting so the app is never
+    // briefly unlocked in front of ledger content.
+    if (loading) return;
+
     const enabled = await isLockEnabled();
     setLockOn(enabled);
-    if (!enabled) {
+    // Without a session there is nothing to protect: the lock is removed
+    // with the session, so a signed-out app goes straight to the login
+    // screen instead of a PIN prompt.
+    if (!enabled || !session) {
       setLocked(false);
       setChecking(false);
       return;
@@ -67,7 +86,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
     const biometrics = await LocalAuthentication.hasHardwareAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
     setBioAvailable(biometrics && enrolled);
-  }, []);
+  }, [loading, session]);
 
   const tryBiometrics = useCallback(async () => {
     const result = await LocalAuthentication.authenticateAsync({
@@ -93,7 +112,8 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
         backgroundedAt.current = null;
         if (bgAt !== null && Date.now() - bgAt >= AUTO_LOCK_MS) {
           isLockEnabled().then((enabled) => {
-            if (enabled) {
+            // A signed-out app has no lock to return to.
+            if (enabled && sessionRef.current) {
               setLocked(true);
               setPin("");
               setError(null);

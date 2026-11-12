@@ -459,7 +459,7 @@ export default function CustomerDetailsScreen() {
             <View style={{ paddingVertical: 18, alignItems: "center" }}>
               <ActivityIndicator size="small" color={colors.brand} />
             </View>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 48 }}>

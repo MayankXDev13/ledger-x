@@ -1,4 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -8,7 +12,6 @@ import {
   Alert,
   Switch,
   Share,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -26,6 +29,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useFeatureFlags } from "@/lib/feature-flags-provider";
 import { Button } from "@/components/Button";
 import { SectionHeader } from "@/components/SectionHeader";
+import UserAvatar from "@/components/UserAvatar";
 import {
   disableWithPin,
   hasPin,
@@ -34,6 +38,7 @@ import {
 } from "@/lib/app-lock";
 import { COOLDOWN_THRESHOLD } from "@/lib/app-lock-core";
 import { colors } from "@/lib/theme";
+import { LOGIN_ROUTE } from "@/lib/routes";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -211,7 +216,7 @@ export default function ProfileScreen() {
     try {
       await accountApi.delete();
       await signOut();
-      router.replace("/auth/login");
+      router.replace(LOGIN_ROUTE);
     } catch (error) {
       Alert.alert(
         "Deletion failed",
@@ -225,7 +230,7 @@ export default function ProfileScreen() {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
     await signOut();
-    router.replace("/auth/login");
+    router.replace(LOGIN_ROUTE);
   };
 
   const shareApp = async () => {
@@ -245,16 +250,6 @@ export default function ProfileScreen() {
     user.name ||
     user.email.split("@")[0].replace(/\d+$/, "") ||
     "Shopkeeper";
-  const initials = (
-    user.name
-      ? user.name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-      : user.email[0]
-  )
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <View className="flex-1 bg-bg">
@@ -270,19 +265,12 @@ export default function ProfileScreen() {
       >
         {/* User Card */}
         <View className="mb-6 flex-row items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
-          {user.image ? (
-            <Image
-              source={{ uri: user.image }}
-              className="h-16 w-16 rounded-full border-2 border-brand/40"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="h-16 w-16 items-center justify-center rounded-full bg-brand/15 border border-brand/30">
-              <Text className="font-mukta-bold text-[22px] text-brand">
-                {initials}
-              </Text>
-            </View>
-          )}
+          <UserAvatar
+            name={user.name}
+            email={user.email}
+            image={user.image}
+            size={64}
+          />
           <View className="flex-1">
             <Text className="font-mukta-bold text-[20px] leading-[26px] text-ink">
               {displayName}

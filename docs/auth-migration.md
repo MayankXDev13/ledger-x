@@ -53,11 +53,39 @@ Re-enabling passwords is impossible without hashes — restore the `account`
 table from the pre-cutover backup. OAuth sessions stay valid. Point
 clients back only after restore.
 
+## Mobile session resolution
+
+The Google flow runs in the system browser, so the app is backgrounded and
+resumed while it happens. The session therefore has to be re-resolved at the
+moments where a routing decision is made:
+
+- `SessionProvider` (`apps/app/lib/session-provider.tsx`) owns the one session
+  the whole app reads. It resolves it once on start, re-resolves it when the
+  app becomes active again (an `AppState` listener), and keeps the current
+  session when the server cannot be reached — a dropped connection must never
+  sign a shopkeeper out.
+- `signInWithGoogle()` hands the authenticated user to the provider
+  (`completeSignIn`), so the signed-in state is true before the app navigates.
+- The entry route (`apps/app/app/index.tsx`) is the deep link that carries the
+  user back from the browser. It resolves the session first
+  (`resolveEntryRoute` in `apps/app/lib/routes.ts`): an authenticated user
+  lands on the home screen, an anonymous user on the login screen.
+- The login screen never navigates while rendering; it redirects from an
+  effect and re-checks the session when it regains focus.
+- The device-local app lock belongs to the session: signing out (or a session
+  the server rejects) removes the PIN, the lock flag and the attempt state, so
+  a signed-out app reaches the login screen without a PIN prompt. See
+  `docs/app-lock.md`.
+
 ## Verification
 
 - API: `bun run test` covers `410`s, session revocation, and auth audit
   emissions (`apps/api/src/test/auth*.test.ts`).
+- Mobile: `bun test` in `apps/app` covers the routing decision
+  (`lib/routes.test.ts`) and the avatar helpers (`lib/avatar.test.ts`).
 - Staging (required before production cutover): complete a Google sign-in
   with the same email, `GET /auth/me` -> `200` with the original `user.id`,
   customers/transactions intact; a different Google email must NOT touch
-  the existing user.
+  the existing user. On a device, a completed Google sign-in must land on
+  the home screen and never return to the login page, and the Profile screen
+  must show the Google profile photo.

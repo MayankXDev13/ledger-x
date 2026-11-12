@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { signInWithGoogle } from "@/lib/auth-session";
@@ -10,20 +10,44 @@ import { LANDING_ROUTE } from "@/lib/routes";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
+  const { session, refresh, completeSignIn } = useAuth();
   const [loading, setLoading] = useState(false);
+  // The sign-in handler navigates itself; the effect below must not push a
+  // second navigation for the same session.
+  const navigated = useRef(false);
+  // The provider already resolves the session when the app starts, so the
+  // first focus does not need another round trip.
+  const focused = useRef(false);
 
-  if (session) {
-    router.replace(LANDING_ROUTE);
-    return null;
-  }
+  // A user who authenticated in the browser comes back to this screen. The
+  // session is re-resolved on focus so the app can move them on.
+  useFocusEffect(
+    useCallback(() => {
+      if (!focused.current) {
+        focused.current = true;
+        return;
+      }
+      void refresh();
+    }, [refresh]),
+  );
+
+  useEffect(() => {
+    if (session && !navigated.current) {
+      router.replace(LANDING_ROUTE);
+    }
+  }, [session]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      // The session is established on the server before this point, so the
+      // app can go straight to the landing route.
+      navigated.current = true;
+      completeSignIn(user);
       router.replace(LANDING_ROUTE);
     } catch (err) {
+      navigated.current = false;
       Alert.alert(
         "Sign-in failed",
         err instanceof Error ? err.message : "Please try again",
