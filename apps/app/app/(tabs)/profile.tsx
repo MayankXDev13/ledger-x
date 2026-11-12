@@ -203,11 +203,11 @@ export default function ProfileScreen() {
   };
 
   const toggleLock = async (enabled: boolean) => {
-    if (enabled) {
-      setPinMode("setup");
-    } else {
-      setPinMode("disable");
-    }
+    // Switching modes starts from an empty field: a PIN typed for the other
+    // mode would otherwise be submitted as-is.
+    setPinInput("");
+    setPinError(null);
+    setPinMode(enabled ? "setup" : "disable");
   };
 
   const handleDeleteAccount = async () => {
