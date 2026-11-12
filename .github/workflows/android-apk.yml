@@ -2,6 +2,11 @@ name: Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (defaults to the version in apps/app/app.json)"
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -19,6 +24,8 @@ jobs:
     name: Build release APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write
 
     env:
       # Public API origin baked into the bundle. Override with a repository
@@ -28,6 +35,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # Full history and tags so the release notes can list what changed
+          # since the previous release.
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -58,6 +69,30 @@ jobs:
           fi
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
 
+      - name: Resolve the version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(jq -r '.expo.version // "1.0.0"' apps/app/app.json)
+          fi
+          # The version code has to grow for every build so an APK can be
+          # installed over the previous one.
+          VERSIONCODE=${{ github.run_number }}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "versioncode=$VERSIONCODE" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "apk=ledger-x-v$VERSION-$VERSIONCODE.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Apply the version
+        run: |
+          jq --arg version "${{ steps.version.outputs.version }}" \
+             --argjson code "${{ steps.version.outputs.versioncode }}" \
+             '.expo.version = $version | .expo.android.versionCode = $code' \
+             apps/app/app.json > apps/app/app.json.tmp
+          mv apps/app/app.json.tmp apps/app/app.json
+          cat apps/app/app.json | jq '{version: .expo.version, versionCode: .expo.android.versionCode}'
+
       - name: Generate the native Android project
         working-directory: apps/app
         run: bun x expo prebuild --platform android --no-install
@@ -66,10 +101,44 @@ jobs:
         working-directory: apps/app/android
         run: ./gradlew assembleRelease --no-daemon
 
+      - name: Name the APK
+        run: |
+          mv apps/app/android/app/build/outputs/apk/release/app-release.apk \
+             "apps/app/android/app/build/outputs/apk/release/${{ steps.version.outputs.apk }}"
+          ls -la apps/app/android/app/build/outputs/apk/release/
+
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
-          name: ledgerx-apk
-          path: apps/app/android/app/build/outputs/apk/release/*.apk
+          name: ${{ steps.version.outputs.apk }}
+          path: apps/app/android/app/build/outputs/apk/release/${{ steps.version.outputs.apk }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Write the release notes
+        run: |
+          PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          {
+            echo "Ledger-X ${{ steps.version.outputs.version }} for Android."
+            echo
+            echo "Install with \`adb install -r ${{ steps.version.outputs.apk }}\`."
+            echo
+            echo "## Changes"
+            if [ -n "$PREVIOUS" ]; then
+              git log --pretty='- %s (%h)' "$PREVIOUS"..HEAD
+            else
+              git log --pretty='- %s (%h)' -20
+            fi
+          } > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: apps/app/android/app/build/outputs/apk/release/${{ steps.version.outputs.apk }}
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
