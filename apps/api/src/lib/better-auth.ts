@@ -7,6 +7,7 @@ import { Client as PgClient } from "pg";
 import * as schema from "../db/schema";
 import { auditLogs } from "../db/schema";
 import type { Bindings } from "../types/hono";
+import { browserLoginURL } from "./auth-redirects";
 
 /**
  * Per-request Better Auth factory. The instance cannot live at module scope:
@@ -61,6 +62,9 @@ export function getAuth(env: Bindings) {
   const auth = betterAuth({
     baseURL: env.BETTER_AUTH_URL || "http://localhost:8787",
     secret: env.BETTER_AUTH_SECRET,
+    // Failed OAuth callbacks must land on a page we own, never Better Auth's
+    // standalone default error page at `${baseURL}/error`.
+    onAPIError: { errorURL: browserLoginURL(env) },
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: { enabled: false },
     socialProviders: {

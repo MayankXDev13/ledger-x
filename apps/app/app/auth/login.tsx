@@ -5,6 +5,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { signInWithGoogle } from "@/lib/auth-session";
+import { attemptMobileSignIn } from "@/lib/auth-error";
 import { colors } from "@/lib/theme";
 import { LANDING_ROUTE } from "@/lib/routes";
 
@@ -40,18 +41,18 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const user = await signInWithGoogle();
+      const result = await attemptMobileSignIn(signInWithGoogle);
+      if (!result.ok) {
+        // Stay on the login screen; never advance navigation after a failure.
+        navigated.current = false;
+        Alert.alert("Sign-in failed", result.message);
+        return;
+      }
       // The session is established on the server before this point, so the
       // app can go straight to the landing route.
       navigated.current = true;
-      completeSignIn(user);
+      completeSignIn(result.user);
       router.replace(LANDING_ROUTE);
-    } catch (err) {
-      navigated.current = false;
-      Alert.alert(
-        "Sign-in failed",
-        err instanceof Error ? err.message : "Please try again",
-      );
     } finally {
       setLoading(false);
     }

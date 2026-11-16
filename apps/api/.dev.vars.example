@@ -17,5 +17,10 @@ DATABASE_URL=
 # --- Better Auth ---
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:8787
-# Comma-separated trusted web origins for Better Auth + CORS (must include Pages URL in prod).
+# Browser origin of the web app. Failed OAuth callbacks redirect to
+# <WEB_APP_URL>/login instead of Better Auth's default error page.
+WEB_APP_URL=http://localhost:3000
+# Comma-separated trusted web origins for Better Auth + CORS (must include the
+# WEB_APP_URL origin and the Pages URL in prod). Non-browser schemes such as
+# ledgerx:// are allowed here but are never used as browser redirect targets.
 TRUSTED_ORIGINS=http://localhost:3000

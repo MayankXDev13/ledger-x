@@ -13,6 +13,8 @@ export type Bindings = {
   TRUSTED_ORIGINS?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  // Browser origin of the web app; used as the default OAuth error target.
+  WEB_APP_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BACKUP_BUCKET?: R2Bucket;
