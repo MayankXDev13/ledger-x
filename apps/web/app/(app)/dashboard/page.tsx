@@ -60,6 +60,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { deriveFirstName } from "@/lib/name";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { QueryErrorState } from "@/components/QueryErrorState";
+import { TransactionDialog } from "@/components/transactions/TransactionDialog";
+import { TOTAL_OUTSTANDING_LABEL } from "@/lib/labels";
 import { paymentMethodLabel } from "@/lib/payments";
 import { formatCurrency, formatCompactCurrency } from "@/lib/format";
 import { moneyPresentation, moneyTextClass } from "@/lib/money";
@@ -261,6 +263,14 @@ export default function DashboardPage() {
   const { data: customers } = useCustomers();
   const { user } = useAuth();
 
+  const [entryOpen, setEntryOpen] = React.useState(false);
+  const [entryType, setEntryType] = React.useState<"credit" | "debit">("debit");
+
+  function openEntry(type: "credit" | "debit") {
+    setEntryType(type);
+    setEntryOpen(true);
+  }
+
   // Real first name from the Google identity, falling back to the email
   // local-part, then "there" as the greeting placeholder.
   const firstName = user ? deriveFirstName(user.name, user.email) : "there";
@@ -321,12 +331,22 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/customers">
+          <Button
+            asChild
+            size="icon"
+            aria-label="Add customer"
+            className="size-11 lg:hidden bg-muted text-foreground border border-border"
+          >
+            <Link href="/customers">
+              <Plus className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </Button>
+          <Link href="/customers" className="hidden lg:block">
             <Button
               size="sm"
               className="gap-1.5 bg-gradient-brand text-primary-foreground font-semibold text-xs h-8 shadow-sm shadow-primary/20 hover:opacity-90"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
               Add Customer
             </Button>
           </Link>
@@ -341,9 +361,60 @@ export default function DashboardPage() {
           onRetry={() => refetchMetrics()}
         />
       ) : null}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Mobile: one hero, one primary action, one compact stat row. */}
+      <div className="lg:hidden flex flex-col gap-4">
+        <div className="rounded-xl border border-primary/20 bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {TOTAL_OUTSTANDING_LABEL}
+          </p>
+          {metricsLoading ? (
+            <Skeleton className="h-9 w-40 mt-2" />
+          ) : (
+            <p className="text-3xl font-bold text-foreground tabular-nums mt-2">
+              {metrics ? formatCurrency(metrics.totalBalance) : "—"}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Across {metrics ? metrics.totalCustomers : "—"} customers owing you
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button
+              className="h-12 gap-1.5 bg-gradient-brand text-primary-foreground font-semibold"
+              onClick={() => openEntry("debit")}
+            >
+              <ArrowDownRight className="w-4 h-4" aria-hidden="true" />
+              Record payment
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 gap-1.5 border-border/60 font-semibold"
+              onClick={() => openEntry("credit")}
+            >
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              Give credit
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card grid grid-cols-2 divide-x divide-border/60">
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground">Customers</p>
+            <p className="text-lg font-bold text-foreground tabular-nums mt-0.5">
+              {metrics ? metrics.totalCustomers : "—"}
+            </p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground">Monthly net</p>
+            <p className="text-lg font-bold text-foreground tabular-nums mt-0.5">
+              {metrics ? formatCurrency(metrics.monthlyNet) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: the three-tile row is unchanged. */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-4">
         <MetricCard
-          title="Total Balance"
+          title={TOTAL_OUTSTANDING_LABEL}
           value={metrics ? formatCurrency(metrics.totalBalance) : "—"}
           icon={DollarSign}
           trend={
@@ -353,7 +424,7 @@ export default function DashboardPage() {
                 : "down"
               : "neutral"
           }
-          trendLabel="Overall ledger balance"
+          trendLabel="Across active customers"
           accent={{
             bg: "bg-primary/10",
             icon: "bg-primary/15 text-primary",
@@ -1160,6 +1231,12 @@ export default function DashboardPage() {
       </Card>
 
       <OnboardingFlow />
+
+      <TransactionDialog
+        open={entryOpen}
+        onClose={() => setEntryOpen(false)}
+        initialType={entryType}
+      />
     </div>
   );
 }

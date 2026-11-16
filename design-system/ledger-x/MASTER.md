@@ -75,16 +75,25 @@ chromatic hue in a product this small reads as a different brand.
 |---|---|---|---|
 | Payment received / money in | emerald `#34D399` (`positive`) | received payments, "collected" totals, positive balance deltas | onboarding steps, app-lock buttons, selection states, "online" status, generic success icons |
 | Credit given / money out | **neutral ink**, never a hue | credit rows, credit totals | any green/red fill |
-| Outstanding balance | neutral `ink` | balances, list amounts | painting a receivable red by default |
+| Outstanding balance | neutral `ink` (`balanceTone`: neutral < 60d, danger ≥ 60d) | balances, list amounts, customer detail hero | painting a receivable brand orange or red by default |
 | Overdue 0–30 d | neutral segment | aging strip | — |
 | Overdue 31–60 d | `danger-text` `#FB7185` | aging strip segment | — |
-| Overdue 60+ d | `danger` `#E11D48` | aging strip segment, overdue label | — |
+| Overdue 60+ d | `danger` `#E11D48` | aging strip segment, overdue label, balanceTone(60+) | — |
 | Destructive action | `danger` / `danger-text` | delete, destructive confirm, account deletion | ordinary balances, ordinary rows |
 
 > Green is **not** a generic "good/active/selected" color here. In a ledger, green means
 > "this money arrived". Reusing it for selection states destroys the meaning.
+> Outstanding balances use neutral text by default and switch to `text-destructive` only at
+> 60+ days via `balanceTone(ageDays)`. Brand orange is an action/identity token, never a balance tone.
 
-### 1.4 Contrast floors
+### 1.4 Shared labels and language
+
+- **Total outstanding:** `TOTAL_OUTSTANDING_LABEL = "Total outstanding"` in `apps/web/lib/labels.ts`. Used everywhere the ledger total is displayed (Dashboard, Collection). Never "Total balance", "Total receivables", or "Overall ledger balance".
+- **Aging phrase:** `oldestUnpaidLabel(days: number)` in `apps/web/lib/labels.ts` returns `"Oldest unpaid N days"` (or `"Oldest unpaid 1 day"`). Never abbreviated to `"Unpaid Nd"` or `"Oldest unpaid: N days"`.
+- **Navigation label:** The collection destination is consistently labelled **"Collection"** in both `AppSidebar.tsx` and `MobileBottomNav.tsx`. Never "Collect".
+- **Login copy:** Honest benefit labels ("Zero paper slips", "UPI collection link", "Works offline"), single `<h1>` ("Welcome back"), plain product description without vanity metrics or "1-Tap UPI collection" claims. Small labels on brand panel meet 4.5:1 contrast against the gradient.
+
+### 1.5 Contrast floors
 
 | Pair | Ratio | Verdict |
 |---|---|---|
@@ -99,7 +108,7 @@ chromatic hue in a product this small reads as a different brand.
 Minimum 4.5:1 for body text, 3:1 for large text (≥24px, or ≥18.66px bold) and for non-text
 UI (icons, borders, chart strokes).
 
-### 1.5 Chart series palette (web)
+### 1.6 Chart series palette (web)
 
 The dashboard plots **credit given** vs **payments received** and a 12-month trend. Requirements:
 

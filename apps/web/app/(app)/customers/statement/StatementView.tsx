@@ -127,7 +127,7 @@ export function StatementView() {
             applyPeriod();
           }}
         >
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full min-w-0 sm:w-auto">
             <Label htmlFor="statement-start" className="text-xs font-semibold">
               Start date
             </Label>
@@ -159,7 +159,7 @@ export function StatementView() {
               </PopoverContent>
             </Popover>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full min-w-0 sm:w-auto">
             <Label htmlFor="statement-end" className="text-xs font-semibold">
               End date
             </Label>
@@ -228,7 +228,7 @@ export function StatementView() {
 
       {/* Printable document */}
       <div className="statement-document rounded-xl border border-border bg-card p-6 sm:p-8 print:border-0 print:p-0">
-        <div className="flex items-start justify-between gap-6 pb-5 border-b border-border">
+        <div className="flex flex-wrap items-start justify-between gap-6 pb-5 border-b border-border">
           <div>
             <p className="text-lg font-bold text-foreground tracking-tight">
               Ledger<span className="text-primary">-X</span>
@@ -237,12 +237,12 @@ export function StatementView() {
               Customer account statement
             </p>
           </div>
-          <div className="text-right">
+          <div className="w-full min-w-0 text-right sm:w-auto">
             <p className="text-xs text-muted-foreground">Statement period</p>
             <p className="text-sm font-semibold text-foreground">
               {periodLabel}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
               Generated {format(new Date(), "dd MMM yyyy, h:mm a")}
             </p>
           </div>

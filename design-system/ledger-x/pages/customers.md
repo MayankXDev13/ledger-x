@@ -22,41 +22,31 @@
 
 ## 2. Customer card
 
-- Row actions must be **visible without hover**: add `focus-visible:opacity-100` and
-  `group-focus-within:opacity-100`, or render the actions permanently on touch viewports.
-  `components/customers/CustomerCard.tsx:67` currently uses `opacity-0 group-hover:opacity-100`.
-- Do not nest `<button>` inside `<Link>` (`CustomerCard.tsx:39,68-93`). Move the actions outside
-  the anchor or use a dropdown menu.
-- Target size ≥ 44px on mobile web; `size="icon"` buttons are 32–36px today.
-- The "⋯" overflow menu (`CustomerProfileHeader.tsx:226-232`) needs an `aria-label`.
+- **Legibility & line structure:** Customer name occupies a dedicated first line with at least 60% of row width and truncation threshold around 18 characters. Outstanding amount and aging (`oldestUnpaidLabel`) occupy a second line. Phone number is removed from the card and displayed on the detail screen instead.
+- **Aging tone:** Driven by `balanceTone(balance.ageDays)`: neutral (< 60d), danger (≥ 60d).
+- Row actions must be **visible without hover**: always visible on touch and keyboard with 44px touch targets (`size-11`).
+- Do not nest `<button>` inside `<Link>`. Move the actions outside the anchor.
 
 ## 3. Customer detail
 
-- Hero: outstanding balance, 24–32px, `tabular-nums`, neutral `ink`. Turn it `danger-text` only
-  when the oldest unpaid credit is 60+ days (matching the mobile rule).
-- The 5 action buttons in one row must wrap on narrow screens or move to a menu.
-- Transaction filter select needs an accessible name (`CustomerDetailView.tsx:167-179`).
-- Transaction search needs a label (`CustomerDetailView.tsx:157-163`).
+- **One primary action:** Exactly one visually primary CTA per viewport. The sticky bottom bar is the primary on small screens; desktop header owns the primary "Add Transaction". The in-card "+ Add" button is demoted to a named icon control (`size-11`) with `aria-label="Add transaction"`.
+- **Hero & balance tone:** Current balance uses `balanceTone(ageDays)`: neutral below 60 days, `text-destructive` at 60+ days. Text explicitly states the direction ("▲ Receivable from customer", "▼ Payable to customer", "✓ All settled") so colour is never the sole indicator.
+- **Statistics below `sm`:** Rendered as stacked hairline rows without icons so labels and amounts fit legibly on one line each without wrapping. Desktop renders the 4-card grid.
+- Transaction filter select needs an accessible name (`CustomerDetailView.tsx`).
+- Transaction search needs a label (`CustomerDetailView.tsx`).
 - **Pagination truth:** the badge shows `txns.total` while the table shows the current page
-  filtered by the search string (`CustomerDetailView.tsx:78-85,146-150,211-219`). Either filter
-  server-side or label the counts honestly ("2 of 40 match on this page").
-- "Customer since" must show the real creation date, not `new Date()`
-  (`CustomerProfileHeader.tsx:162`).
-- The Receivable / Payable / Settled pill relies on `.chip-receivable` / `.chip-payable` /
-  `.chip-settled`, which **do not exist** — the pill renders as bare text. Define the three
-  utilities or replace them with the `Badge` primitive.
+  filtered by the search string. Either filter server-side or label the counts honestly.
+- "Customer since" must show the real creation date, not `new Date()`.
+- The Receivable / Payable / Settled pill uses the `Badge` primitive.
 
 ## 4. Statement (`/customers/statement`)
 
-- Print layout is already good (`globals.css:171-224`) — keep it.
-- On screen the 5-column table is clipped: `StatementView.tsx:232` uses `overflow-hidden` with no
-  `overflow-x-auto`. Add horizontal scrolling, or switch to a stacked card list under `sm`.
-- Amounts: `tabular-nums`, and **signed** — the current statement shows unsigned amounts and
-  relies on the column heading plus colour (WCAG 1.4.1 risk).
-- `<th>` elements need `scope="col"` (`StatementView.tsx:236-245`).
-- The period filter is not a `<form>` and Enter does nothing (`StatementView.tsx:104-150`); it
-  should also reject `start > end` with an inline message instead of silently showing
-  "No transactions in this period."
+- **Filter layout:** Start date, End date, Apply and Clear share one `flex-wrap` row with consistent `gap-3` so Clear is never stranded on its own line.
+- **Timestamp:** The generated timestamp uses `whitespace-nowrap` and full available width on narrow screens to prevent awkward mid-phrase wrapping.
+- Print layout is already good (`globals.css`) — keep it.
+- On screen the 5-column table is clipped: add horizontal scrolling.
+- Amounts: `tabular-nums`, and **signed** with money presentation.
+- `<th>` elements need `scope="col"`.
 
 ## 5. Dialogs
 

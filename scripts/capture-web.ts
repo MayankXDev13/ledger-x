@@ -19,7 +19,8 @@ import { mkdirSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "http://127.0.0.1:3000";
 const OUT =
-  "/home/mayank/Coding/ledger-x/openspec/changes/audit-ui-ux-and-generate-artifacts/screenshots/web";
+  process.env.OUT_DIR ??
+  "/home/mayank/Coding/ledger-x/openspec/changes/design-critique-fixes/screenshots/web";
 
 /** The customer the mock API seeds first; used by the detail and statement routes. */
 const CUSTOMER_ID = "c1";
@@ -39,7 +40,7 @@ interface Shot {
 
 const SCREENS: Shot[] = [
   { name: "01-login", path: "/login", width: 1440, height: 900, waitFor: "Continue with Google" },
-  { name: "02-dashboard", path: "/dashboard", width: 1440, height: 900, waitFor: "Total Balance" },
+  { name: "02-dashboard", path: "/dashboard", width: 1440, height: 900, waitFor: "Total outstanding" },
   { name: "03-customers", path: "/customers", width: 1440, height: 900, waitFor: "Customers" },
   {
     name: "04-customer-detail",
@@ -58,7 +59,7 @@ const SCREENS: Shot[] = [
   { name: "06-collection", path: "/collection", width: 1440, height: 900, waitFor: "Collection" },
   { name: "07-settings", path: "/settings", width: 1440, height: 900, waitFor: "Account" },
   { name: "08-login-360", path: "/login", width: 360, height: 800, mobile: true, waitFor: "Continue with Google" },
-  { name: "09-dashboard-360", path: "/dashboard", width: 360, height: 800, mobile: true, waitFor: "Total Balance" },
+  { name: "09-dashboard-360", path: "/dashboard", width: 360, height: 800, mobile: true, waitFor: "Total outstanding" },
   { name: "10-customers-360", path: "/customers", width: 360, height: 800, mobile: true, waitFor: "Customers" },
   {
     name: "11-customer-detail-360",
@@ -111,6 +112,14 @@ async function captureTheme(theme: Theme) {
       }
       // Let charts and transitions settle.
       await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (shot.mobile) {
+        const hasHorizontalScroll = await cdp.evaluate<boolean>(
+          `document.documentElement.scrollWidth > document.documentElement.clientWidth`
+        );
+        if (hasHorizontalScroll) {
+          failures.push(`${shot.name}-${theme}: horizontal scroll detected at 360px`);
+        }
+      }
       await cdp.screenshot(file, true);
       console.log(`✓ ${shot.name}-${theme}`);
     } catch (error) {

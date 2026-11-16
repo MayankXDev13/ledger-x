@@ -2,25 +2,40 @@
 
 > Overrides `design-system/ledger-x/MASTER.md` for `apps/web/app/(app)/dashboard/page.tsx`.
 
-## 1. Page shape
+## 1. Page shape and responsive hierarchy
 
+### Desktop (≥ 1024px / 1440px)
 ```
-[ page title · greeting (first name)         ]
-[ 4 stat tiles in a row, hairline separated  ]
+[ page title · greeting (first name)         ] [ Add Customer primary ]
+[ 3 stat tiles in a row: Total outstanding, Customers, Monthly net     ]
 [ 2 chart cards          ] [ chart card      ]
 [ 12-month trend (2/3)   ] [ top debtors     ]
 [                         ] [ aging summary   ]
 ```
 
-- One hero: the "total outstanding" figure. Everything else is a tile or a chart card.
+### Mobile (< 1024px / 360px)
+```
+[ greeting (first name)                      ] [ Add Customer icon btn ]
+[ HERO CARD: Total outstanding figure        ]
+[   Across N customers owing you             ]
+[   [ Record payment (primary) ] [ Give credit (secondary) ] ]
+[ 2-CELL STAT ROW: Customers | Monthly net   ]
+[ Recents list & charts...                   ]
+```
+
+- **One hero number:** "Total outstanding" (`TOTAL_OUTSTANDING_LABEL = "Total outstanding"`).
+- **Primary action on mobile:** "Record payment" is the single primary CTA on the dashboard. "Give credit" is secondary. Both open the transaction dialog with their respective type preselected.
+- **Add Customer demoted below `lg`:** Becomes a named icon button in the header so only one full-emphasis primary exists on the screen.
 - The dashboard is currently `"use client"` at the page root and bundles recharts eagerly.
   Move the charts into a `next/dynamic` island (`{ ssr: false }`) and keep the page a server
   component that renders the data shell.
 - `hooks/useDashboard.ts` polls three queries every 30 s with no visibility gating and no
   `isFetching` feedback. Gate on `document.visibilityState` and surface a subtle refresh state.
 
-## 2. Stat tiles
+## 2. Stat tiles & hero
 
+- Total outstanding uses `TOTAL_OUTSTANDING_LABEL`.
+- Below `lg`, secondary metrics are collapsed into a compact two-cell hairline grid (56px tall).
 - Amounts: `tabular-nums`, `Intl.NumberFormat("en-IN")`, never `text-[10px]`.
 - No `text-[9px]`/`text-[10px]`/`text-[11px]` — the web floor is 12px.
 - A failed metrics request currently renders a permanent "—". Render an error state with a retry
