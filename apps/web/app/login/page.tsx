@@ -1,24 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithGoogle } from "@/lib/auth";
+import { LOGIN_ROUTE } from "@/lib/auth-redirect";
+import { attemptGoogleSignIn, GENERIC_AUTH_ERROR } from "@/lib/auth-error";
+import { AuthErrorBanner } from "@/components/login/AuthErrorBanner";
 import { BrandPanel } from "@/components/login/BrandPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Better Auth reports failures via `error`; `error_description` is read only
+  // so its query parameter is cleared too, never rendered verbatim.
+  const errorCode = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
+  // Copy the error into local state before clearing the query so the message
+  // survives the URL change without a setState call inside an effect.
+  const [shownError, setShownError] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("error");
+  });
   const [loading, setLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
+  useEffect(() => {
+    if (!errorCode && !errorDescription) return;
+    router.replace(LOGIN_ROUTE);
+  }, [errorCode, errorDescription, router]);
+
+  const handleGoogleSignIn = useCallback(async () => {
     setLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign-in failed");
-      setLoading(false);
+    setShownError(null);
+    // Failures keep the user on this screen; no navigation is issued here.
+    const result = await attemptGoogleSignIn(signInWithGoogle);
+    if (!result.ok) {
+      toast.error(result.message ?? GENERIC_AUTH_ERROR);
     }
-  };
+    setLoading(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -32,6 +54,9 @@ export default function LoginPage() {
                 Sign in with your Google account to continue
               </p>
             </div>
+            {shownError && (
+              <AuthErrorBanner code={shownError} onRetry={handleGoogleSignIn} />
+            )}
             <Button
               onClick={handleGoogleSignIn}
               disabled={loading}
@@ -43,5 +68,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

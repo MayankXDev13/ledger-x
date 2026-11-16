@@ -15,19 +15,14 @@ import collectionApp from "./routes/collection";
 import featureFlagsApp from "./routes/feature-flags";
 import sampleDataApp from "./routes/sample-data";
 import { getAuth } from "./lib/better-auth";
+import {
+  resolveErrorCallbackURL,
+  trustedOrigins,
+} from "./lib/auth-redirects";
 import { withDb as defaultWithDb } from "./db";
 import { verifyToken as defaultVerifyToken } from "./lib/auth";
 import { ApiError } from "./lib/errors";
 import type { AppDependencies, AppEnv, Bindings } from "./types/hono";
-
-const DEFAULT_TRUSTED_ORIGIN = "http://localhost:3000";
-
-function trustedOrigins(env: Bindings): string[] {
-  return (env.TRUSTED_ORIGINS ?? DEFAULT_TRUSTED_ORIGIN)
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-}
 
 export function createApp(overrides: Partial<AppDependencies> = {}) {
   const deps: AppDependencies = {
@@ -81,6 +76,10 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.get("/api/auth/redirect/google", async (ctx) => {
     const callbackURL =
       ctx.req.query("callbackURL") || trustedOrigins(ctx.env)[0] || "/";
+    const errorCallbackURL = resolveErrorCallbackURL(
+      ctx.req.query("errorCallbackURL"),
+      ctx.env,
+    );
     const { auth, connect, release } = getAuth(ctx.env);
     try {
       await connect();
@@ -90,7 +89,11 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: "google", callbackURL }),
+          body: JSON.stringify({
+            provider: "google",
+            callbackURL,
+            errorCallbackURL,
+          }),
         },
       );
       const res = await auth.handler(internalReq);

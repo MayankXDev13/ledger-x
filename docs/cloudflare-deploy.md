@@ -13,6 +13,10 @@
    wrangler secret put BETTER_AUTH_URL   # https://server-v2.mayankxdev13.workers.dev
    ```
    Set `TRUSTED_ORIGINS` to the Pages URL (comma-separated allowlist).
+   Set `WEB_APP_URL` to that same Pages origin (e.g.
+   `https://ledgerx-613.pages.dev`). Failed OAuth callbacks redirect to
+   `<WEB_APP_URL>/login`, and Better Auth only accepts the target when its
+   origin is in `TRUSTED_ORIGINS`.
 3. Deploy: `bun run deploy` (from `apps/api`). The Worker is
    `server-v2`, so its origin is `https://server-v2.mayankxdev13.workers.dev`.
    The `api.ledgex.mayankxdev.shop` custom domain is still commented out in
