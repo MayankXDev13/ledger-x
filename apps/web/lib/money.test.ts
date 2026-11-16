@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { moneyPresentation, moneyTextClass, OVERDUE_AFTER_DAYS } from "./money";
+import { balanceTone, moneyPresentation, moneyTextClass, OVERDUE_AFTER_DAYS } from "./money";
 import { formatCurrency, formatCompactCurrency, formatMonthLabel } from "./format";
 
 describe("moneyPresentation", () => {
@@ -32,6 +32,20 @@ describe("moneyPresentation", () => {
 
   test("a payment stays a payment even when it is old", () => {
     expect(moneyPresentation({ type: "debit", paymentMethod: "upi", ageDays: 200 }).tone).toBe("paid");
+  });
+});
+
+describe("balanceTone", () => {
+  test("a current or unknown age is neutral", () => {
+    expect(balanceTone(null)).toBe("neutral");
+    expect(balanceTone(undefined)).toBe("neutral");
+    expect(balanceTone(12)).toBe("neutral");
+    expect(balanceTone(OVERDUE_AFTER_DAYS - 1)).toBe("neutral");
+  });
+
+  test("an overdue age is danger", () => {
+    expect(balanceTone(OVERDUE_AFTER_DAYS)).toBe("danger");
+    expect(balanceTone(66)).toBe("danger");
   });
 });
 

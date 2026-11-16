@@ -34,6 +34,7 @@ import {
   useCreateTransaction,
   useUpdateTransaction,
 } from "@/hooks/useTransactions";
+import { useCustomers } from "@/hooks/useCustomers";
 
 import { transactionSchema, type TransactionFormData } from "@/lib/validation";
 
@@ -42,8 +43,11 @@ import type { Transaction } from "@/lib/api";
 interface TransactionDialogProps {
   open: boolean;
   onClose: () => void;
-  customerId: string;
+  /** Omit for quick entry from the dashboard; a customer picker is shown instead. */
+  customerId?: string;
   transaction?: Transaction | null;
+  /** Preselected entry type for quick-entry entry points. */
+  initialType?: "credit" | "debit";
 }
 
 export function TransactionDialog({
@@ -51,10 +55,14 @@ export function TransactionDialog({
   onClose,
   customerId,
   transaction,
+  initialType = "credit",
 }: TransactionDialogProps) {
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
+  const { data: customers } = useCustomers();
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const effectiveCustomerId = customerId ?? selectedCustomerId;
 
   const isEditing = !!transaction;
 
@@ -85,6 +93,10 @@ export function TransactionDialog({
 
   const handleSubmit = async (data: TransactionFormData) => {
     setSubmitError(null);
+    if (!effectiveCustomerId) {
+      setSubmitError("Select a customer before recording this entry.");
+      return;
+    }
     try {
       const paymentMethod = data.paymentMethod ?? null;
 
@@ -102,7 +114,7 @@ export function TransactionDialog({
         });
       } else {
         await createTransaction.mutateAsync({
-          customerId,
+          customerId: effectiveCustomerId,
           amount: data.amount,
           type: data.transactionType,
           paymentMethod,
@@ -127,12 +139,12 @@ export function TransactionDialog({
     } else {
       form.reset({
         amount: 0,
-        transactionType: "credit",
+        transactionType: initialType,
         paymentMethod: null,
         note: "",
       });
     }
-  }, [transaction, open, form]);
+  }, [transaction, open, form, initialType]);
 
   const loading =
     createTransaction.isPending || updateTransaction.isPending;
@@ -166,13 +178,43 @@ export function TransactionDialog({
             <DialogDescription className="text-xs text-muted-foreground">
               {isEditing
                 ? "Update the transaction details below"
-                : "Record a payment or receipt for this customer"}
+                : customerId
+                  ? "Record a payment or receipt for this customer"
+                  : "Choose a customer, then record what happened"}
             </DialogDescription>
           </DialogHeader>
 
           {/* The schema owns the messaging, so the browser must not block the
               submit with its own step/min tooltips. */}
           <form noValidate onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-1">
+          {/* Quick entry from the dashboard has no customer in context. */}
+          {!customerId ? (
+            <div className="space-y-2">
+              <Label
+                htmlFor="quick-customer"
+                className="text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+              >
+                Customer
+              </Label>
+              <select
+                id="quick-customer"
+                value={selectedCustomerId}
+                onChange={(event) => {
+                  setSelectedCustomerId(event.target.value);
+                  setSubmitError(null);
+                }}
+                className="h-11 w-full rounded-lg border border-border/60 bg-muted/20 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Select a customer</option>
+                {(customers ?? []).map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
           {/* Type selector — radiogroup */}
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

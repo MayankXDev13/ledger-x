@@ -27,6 +27,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { TOTAL_OUTSTANDING_LABEL, oldestUnpaidLabel } from "@/lib/labels";
+import { balanceTone } from "@/lib/money";
 
 import { useCollection } from "@/hooks/useCollection";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -48,25 +50,18 @@ import {
 } from "@/components/ui/breadcrumb";
 
 
-function ageLabel(ageDays: number | null) {
-  if (ageDays === null) return "—";
-  if (ageDays === 0) return "Today";
-  if (ageDays === 1) return "1 day";
-  return `${ageDays} days`;
-}
+/** Sentinel used by the top-level UPI block, which is not tied to one debtor. */
+const GENERIC_UPI_ID = "__upi__";
 
 /**
  * Aging tone for an unpaid age.
  *
- * The aging map is shared across clients: neutral up to 30 days, rose for
- * 31–60, and the deeper rose past 60. It is never emerald — emerald means
- * money received.
+ * Uses the shared balanceTone helper: neutral until 60+ days, then danger.
  */
 function ageTone(ageDays: number | null) {
-  if (ageDays === null) return "text-muted-foreground";
-  if (ageDays > 60) return "text-destructive";
-  if (ageDays > 30) return "text-destructive/80";
-  return "text-muted-foreground";
+  return balanceTone(ageDays) === "danger"
+    ? "text-destructive"
+    : "text-muted-foreground";
 }
 
 export default function CollectionPage() {
@@ -104,7 +99,10 @@ export default function CollectionPage() {
       upiId,
       payeeName,
       amount: row.outstanding,
-      note: `Khata balance for ${row.name}`,
+      note:
+        row.customerId === GENERIC_UPI_ID
+          ? undefined
+          : `Khata balance for ${row.name}`,
     });
 
   const copyLink = async (row: CollectionRow) => {
@@ -121,6 +119,16 @@ export default function CollectionPage() {
 
   const rows = data?.data ?? [];
   const total = data?.totalReceivables ?? 0;
+
+  // The compact UPI block reuses the same copy/QR helpers as the debtor rows.
+  const genericRow: CollectionRow = {
+    customerId: GENERIC_UPI_ID,
+    name: payeeName,
+    phone: "",
+    outstanding: total,
+    oldestUnpaidCreditAt: null,
+    ageDays: null,
+  };
 
   const totalCount = useMemo(() => rows.length, [rows]);
 
@@ -160,31 +168,37 @@ export default function CollectionPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
+        <div
+          role="tablist"
+          aria-label="Sort outstanding balances"
+          className="flex items-center gap-5 border-b border-border/60"
+        >
           <button
             type="button"
-            aria-pressed={sort === "amount"}
+            role="tab"
+            aria-selected={sort === "amount"}
             onClick={() => setSort("amount")}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+              "-mb-px border-b-2 px-0.5 pb-2 pt-1 text-xs font-semibold transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sort === "amount"
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground",
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             By amount
           </button>
           <button
             type="button"
-            aria-pressed={sort === "age"}
+            role="tab"
+            aria-selected={sort === "age"}
             onClick={() => setSort("age")}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+              "-mb-px border-b-2 px-0.5 pb-2 pt-1 text-xs font-semibold transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sort === "age"
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground",
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             By age
@@ -192,51 +206,72 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border-primary/20 bg-card">
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Total receivables
-            </p>
-            <p className="text-2xl font-bold text-foreground tabular-nums mt-1">
-              {isLoading ? "—" : formatCurrency(total)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Outstanding across active customers
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card">
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Collect via UPI
-            </p>
+      {/* Summary — one compact block so the first debtor stays above the fold. */}
+      <Card className="border-primary/20 bg-card">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {TOTAL_OUTSTANDING_LABEL}
+              </p>
+              <p className="text-2xl font-bold text-foreground tabular-nums mt-0.5">
+                {isLoading ? "—" : formatCurrency(total)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Outstanding across active customers
+              </p>
+            </div>
+
             {upiId ? (
-              <div className="mt-1">
-                <p className="text-sm font-semibold text-foreground truncate">
+              <div className="flex w-full items-center gap-2 min-w-0 sm:w-auto">
+                <span
+                  className="flex-1 min-w-0 truncate text-xs font-semibold text-foreground"
+                  title={upiId}
+                >
                   {upiId}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Payee: {payeeName}
-                </p>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 gap-1.5 h-8 text-xs border-border/60"
+                  disabled={!upiId}
+                  onClick={() => copyLink(genericRow)}
+                  title="Copy a UPI collection link"
+                >
+                  {copiedId === GENERIC_UPI_ID ? (
+                    <Check className="w-3.5 h-3.5 text-brand-text" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  Copy link
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 gap-1.5 h-8 text-xs border-border/60"
+                  disabled={!upiId}
+                  onClick={() => setQrRow(genericRow)}
+                  title="Show a UPI QR code"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  QR
+                </Button>
               </div>
             ) : (
-              <div className="mt-1 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Add your UPI ID to generate links and QR codes.
-                </p>
-                <Link href="/settings">
-                  <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
-                    <Settings className="w-3.5 h-3.5" />
-                    Configure UPI
-                  </Button>
-                </Link>
-              </div>
+              <Link href="/settings">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-8 text-xs border-border/60"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Configure UPI
+                </Button>
+              </Link>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* List */}
       <Card className="border-border/60 bg-card overflow-hidden">
@@ -317,22 +352,24 @@ export default function CollectionPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 sm:gap-5 sm:shrink-0">
-                    <div className="text-right min-w-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5 sm:shrink-0">
+                    <div className="min-w-0 sm:text-right">
                       <p className="text-sm font-bold text-foreground tabular-nums truncate">
                         {formatCurrency(row.outstanding)}
                       </p>
                       <p
                         className={cn(
-                          "text-xs font-medium",
+                          "text-xs font-medium whitespace-nowrap",
                           ageTone(row.ageDays),
                         )}
                       >
-                        Oldest unpaid: {ageLabel(row.ageDays)}
+                        {row.ageDays === null
+                          ? "—"
+                          : oldestUnpaidLabel(row.ageDays)}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Button
                         size="sm"
                         variant="outline"
@@ -391,11 +428,19 @@ export default function CollectionPage() {
         <DialogContent className="sm:max-w-sm border-border/60 bg-card">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">
-              Collect from {qrRow?.name}
+              {qrRow?.customerId === GENERIC_UPI_ID
+                ? "Collect via UPI"
+                : `Collect from ${qrRow?.name}`}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Scan with any UPI app to pay {formatCurrency(qrRow?.outstanding ?? 0)} to{" "}
-              {payeeName}.
+              {qrRow?.customerId === GENERIC_UPI_ID ? (
+                "Scan with any UPI app to pay into your UPI account."
+              ) : (
+                <>
+                  Scan with any UPI app to pay{" "}
+                  {formatCurrency(qrRow?.outstanding ?? 0)} to {payeeName}.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 

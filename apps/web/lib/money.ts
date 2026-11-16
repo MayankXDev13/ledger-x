@@ -50,6 +50,16 @@ export function moneyPresentation(entry: MoneyInput): MoneyPresentation {
   return { tone: "debit", sign: "−", label: "Debit" };
 }
 
+/**
+ * Presentational tone for an outstanding balance.
+ *
+ * Neutral until the oldest unpaid credit is overdue, then danger. Brand orange
+ * is never used here: it is an action colour, not a money colour.
+ */
+export function balanceTone(ageDays: number | null | undefined): "neutral" | "danger" {
+  return ageDays != null && ageDays >= OVERDUE_AFTER_DAYS ? "danger" : "neutral";
+}
+
 /** Tailwind text classes for each tone. Emerald is reserved for `paid`. */
 export function moneyTextClass(tone: MoneyTone): string {
   switch (tone) {

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Phone, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { Customer } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { avatarGradient } from "@/lib/avatar";
 import { formatCurrency } from "@/lib/format";
+import { oldestUnpaidLabel } from "@/lib/labels";
+import { balanceTone } from "@/lib/money";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -26,14 +28,14 @@ export default function CustomerCard({
 
   return (
     <div className="relative flex items-center justify-between gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors duration-150">
-      {/* Avatar + identity + balance are the main link target */}
+      {/* Avatar + name + balance share one link target; actions sit outside it */}
       <Link
         href={`/customers/detail?id=${customer.id}`}
         className="flex items-center gap-3.5 flex-1 min-w-0 group"
       >
         <div
           className={cn(
-            "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
+            "size-10 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm",
             gradient
           )}
           aria-hidden="true"
@@ -41,35 +43,32 @@ export default function CustomerCard({
           {customer.name.charAt(0).toUpperCase()}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-            {customer.name}
-          </h3>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <Phone className="w-3 h-3 shrink-0" aria-hidden="true" />
-            <span className="truncate">{customer.phone}</span>
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+          {/* First line — the name owns the width so it stays identifiable */}
+          <div className="flex min-w-0">
+            <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+              {customer.name}
+            </h3>
           </div>
-        </div>
 
-        {/* Balance column */}
-        <div className="shrink-0 text-right pr-1">
+          {/* Second line — amount and full aging phrase, phone intentionally omitted */}
           {hasBalance ? (
-            <div>
-              <p className="text-sm font-bold text-foreground tabular-nums">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="text-sm font-bold text-foreground tabular-nums">
                 {formatCurrency(balance.outstanding)}
-              </p>
-              <p
+              </span>
+              <span
                 className={cn(
-                  "text-[11px] font-medium mt-0.5",
-                  balance.ageDays !== null && balance.ageDays > 60
+                  "text-[11px] font-medium whitespace-nowrap",
+                  balanceTone(balance.ageDays) === "danger"
                     ? "text-destructive"
-                    : balance.ageDays !== null && balance.ageDays > 30
-                      ? "text-destructive/80"
-                      : "text-muted-foreground"
+                    : "text-muted-foreground"
                 )}
               >
-                {balance.ageDays === null ? "Unpaid" : `Unpaid ${balance.ageDays}d`}
-              </p>
+                {balance.ageDays === null
+                  ? "Unpaid"
+                  : oldestUnpaidLabel(balance.ageDays)}
+              </span>
             </div>
           ) : (
             <span className="text-xs text-muted-foreground font-medium">Settled</span>
@@ -82,7 +81,7 @@ export default function CustomerCard({
         <Button
           variant="ghost"
           size="icon"
-          className="size-10 sm:size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+          className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted"
           onClick={() => onEdit(customer)}
           aria-label={`Edit ${customer.name}`}
         >
@@ -91,7 +90,7 @@ export default function CustomerCard({
         <Button
           variant="ghost"
           size="icon"
-          className="size-10 sm:size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="size-11 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           onClick={() => onDelete(customer.id)}
           aria-label={`Delete ${customer.name}`}
         >

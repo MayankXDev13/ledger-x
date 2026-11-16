@@ -27,32 +27,28 @@ export function BrandPanel() {
             Daily khata for small shops
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+          <p className="text-4xl sm:text-5xl font-bold text-white leading-tight">
             Know who owes you, record entries, and collect faster.
-          </h1>
+          </p>
           <p className="text-white/90 text-base sm:text-lg leading-relaxed max-w-sm">
-            Clear balances, instant payment tracking, and timely collection right at your counter.
+            Keep a clear balance for every customer, note payments as you receive them, and share a
+            UPI link to collect what they owe.
           </p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 pt-2">
-          {[
-            { value: "0", label: "Paper slips" },
-            { value: "1-Tap", label: "UPI collection" },
-            { value: "Offline", label: "Ready writes" },
-          ].map(({ value, label }) => (
+          {["Zero paper slips", "UPI collection link", "Works offline"].map((benefit) => (
             <div
-              key={label}
-              className="p-3.5 rounded-xl border border-white/15 bg-black/15 flex flex-col items-center justify-center text-center"
+              key={benefit}
+              className="p-3.5 rounded-xl border border-white/15 bg-black/15 flex items-center justify-center text-center"
             >
-              <div className="text-lg font-bold text-white">{value}</div>
-              <div className="text-xs text-white/80 mt-1">{label}</div>
+              <span className="text-sm font-medium text-white">{benefit}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="relative z-10 text-white/80 text-sm font-medium tracking-wide">
+      <div className="relative z-10 text-white text-sm font-medium tracking-wide">
         Built for the counter, not the boardroom
       </div>
     </div>

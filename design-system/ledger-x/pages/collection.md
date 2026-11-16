@@ -8,18 +8,19 @@
 The page answers one question: **"who owes me money, and how do I collect it?"**
 
 ```
-[ title + outstanding total (hero)      ]
-[ aging summary (inline stats)          ]
-[ customer rows                          ]
-[ UPI config notice (only when needed)  ]
+[ title + sort tabs (underline tabs: By amount | By age) ]
+[ COMPACT SUMMARY CARD                                   ]
+[   Total outstanding (left) · UPI ID + Copy + QR (right)]
+[ customer rows (first row visible at 360×800)           ]
 ```
 
-- Rows: customer name (1 line, truncated) + phone (12px muted) on the left;
-  **outstanding amount** (`tabular-nums`) + "Oldest unpaid: N days" on the right;
+- **Compact summary card:** The total outstanding (`TOTAL_OUTSTANDING_LABEL`) and the UPI block are merged into a single compact card with the UPI id, Copy link and QR on a single line. At 360×800 the first debtor row is visible without scrolling.
+- **Sort tabs:** Replaced filled pills with underline tabs using `role="tab"` and `aria-selected` with a 2px active underline.
+- **Rows:** Customer name (1 line, truncated) on the left;
+  **outstanding amount** (`tabular-nums`) + full aging phrase `oldestUnpaidLabel` on the right;
   the two actions at the end.
-- The amount block must not overflow at 320–375px — it currently has no `truncate`/`min-w-0`
-  (`collection/page.tsx:276-289`). A 7-digit balance (₹12,34,567) forces horizontal overflow.
-- "Copy link" and "QR" are `size="sm"` → 32px tall. Touch targets must be ≥ 44px on mobile web.
+- **Aging label & tone:** Uses `balanceTone` (neutral < 60d, danger ≥ 60d) and `whitespace-nowrap` above action buttons on narrow viewports so "Oldest unpaid 38 days" never overlaps Copy link or QR.
+- "Copy link" and "QR" are `size="sm"` buttons. On mobile rows, touch targets remain accessible.
 - The disabled state of those buttons is explained only through `title=`, which is not reliably
   announced. Use `aria-describedby` pointing at the visible notice.
 - The notice under the list uses a `Loader2` **spinner** for a static condition, in an off-token

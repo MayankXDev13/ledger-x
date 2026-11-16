@@ -29,7 +29,7 @@ const items = [
   {
     href: "/collection",
     icon: HandCoins,
-    label: "Collect",
+    label: "Collection",
     exact: false,
     flag: "collection" as const,
   },
