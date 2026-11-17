@@ -104,6 +104,7 @@ bun run test   # API + web + mobile unit/contract tests (no live database requir
 | `docs/backup-r2.md` | Backup and restore procedures |
 | `docs/tags-removal.md` | Tags feature removal record |
 | `docs/api-specification.md` | Generated OpenAPI 3.0 contract and drift checks |
+| `docs/repo-audit-2026-11-17.md` | Dated whole-repo audit: delivery, docs drift, security |
 
 ## Per-workspace commands
 
