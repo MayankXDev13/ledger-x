@@ -37,6 +37,7 @@ jobs:
       deploy_api: ${{ steps.filter.outputs.deploy_api }}
       deploy_web: ${{ steps.filter.outputs.deploy_web }}
       sha: ${{ steps.filter.outputs.sha }}
+      short_sha: ${{ steps.filter.outputs.short_sha }}
 
     steps:
       - name: Checkout
@@ -49,7 +50,9 @@ jobs:
         id: filter
         run: |
           SHA=$(git rev-parse HEAD)
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TARGET="${{ inputs.target }}"
@@ -80,7 +83,7 @@ jobs:
           DEPLOY_API=false
           DEPLOY_WEB=false
 
-          if echo "$CHANGED" | grep -qE '^(package\.json|bun\.lock|\.github/workflows/deploy\.yml)$'; then
+          if echo "$CHANGED" | grep -qE '^(package\.json|bun\.lock|\.github/workflows/deploy\.yml|scripts/cloudflare/)'; then
             DEPLOY_API=true
             DEPLOY_WEB=true
           else
@@ -101,6 +104,13 @@ jobs:
     if: needs.detect-changes.outputs.deploy_api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      version_id: ${{ steps.deploy.outputs.version_id }}
+      previous_version_id: ${{ steps.previous.outputs.version_id }}
+      url: ${{ env.API_URL }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -120,16 +130,73 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Deploy Cloudflare Worker
-        run: bun run --cwd apps/api deploy
-
-      - name: Run smoke check (rollback on failure)
+      - name: Capture previous Worker Version ID
+        id: previous
         working-directory: apps/api
         run: |
+          if bun x wrangler deployments list --json > /tmp/worker-deployments-before.json 2>/dev/null; then
+            bun run ../../scripts/cloudflare/cloudflare-ops.ts parse-worker-active /tmp/worker-deployments-before.json --github-output
+          else
+            echo "version_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy Cloudflare Worker
+        id: deploy
+        working-directory: apps/api
+        run: |
+          set -o pipefail
+          SHORT_SHA="${{ needs.detect-changes.outputs.short_sha }}"
+          bun x wrangler deploy --minify \
+            --tag "sha-${SHORT_SHA}" \
+            --message "Deploy ${SHORT_SHA}" 2>&1 | tee /tmp/worker-deploy.log
+
+          PARSED=$(bun run ../../scripts/cloudflare/cloudflare-ops.ts parse-worker-deploy /tmp/worker-deploy.log)
+          VERSION_ID=$(echo "$PARSED" | jq -r '.versionId // ""')
+
+          if [ -z "$VERSION_ID" ]; then
+            if bun x wrangler versions list --json > /tmp/worker-versions-after.json 2>/dev/null; then
+              FALLBACK=$(bun run ../../scripts/cloudflare/cloudflare-ops.ts parse-worker-active /tmp/worker-versions-after.json)
+              VERSION_ID=$(echo "$FALLBACK" | jq -r '.versionId // ""')
+            fi
+          fi
+
+          echo "Captured Worker Version ID: ${VERSION_ID:-<unavailable>}"
+          echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Run smoke check (rollback on failure)
+        id: smoke
+        working-directory: apps/api
+        run: |
+          SHORT_SHA="${{ needs.detect-changes.outputs.short_sha }}"
           if ! API_URL="$API_URL" bash scripts/smoke.sh; then
             echo "::error::Post-deploy smoke check failed; rolling back Worker deployment."
-            bun x wrangler rollback --yes
+            bun x wrangler rollback --yes --message "Auto-rollback: post-deploy smoke check failed for ${SHORT_SHA}"
             exit 1
+          fi
+
+      - name: Record GitHub Deployment (API)
+        if: always() && steps.deploy.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION_ID="${{ steps.deploy.outputs.version_id }}"
+          SHORT_SHA="${{ needs.detect-changes.outputs.short_sha }}"
+          STATE=$( [ "${{ steps.deploy.outcome }}" = "success" ] && [ "${{ steps.smoke.outcome }}" = "success" ] && echo "success" || echo "failure" )
+          DESC="Cloudflare Worker version ${VERSION_ID:-unknown} (sha ${SHORT_SHA})"
+
+          DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments" \
+            -f ref="${{ needs.detect-changes.outputs.sha }}" \
+            -f environment="production-api" \
+            -F auto_merge=false \
+            -f description="$DESC" \
+            -f 'required_contexts=[]' \
+            --jq '.id' || echo "")
+
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/deployments/${DEPLOYMENT_ID}/statuses" \
+              -f state="$STATE" \
+              -f environment_url="$API_URL" \
+              -f description="$DESC" >/dev/null || true
           fi
 
   deploy-web:
@@ -138,6 +205,17 @@ jobs:
     if: needs.detect-changes.outputs.deploy_web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      deployment_id: ${{ steps.resolve.outputs.deployment_id }}
+      deployment_hash: ${{ steps.resolve.outputs.deployment_hash }}
+      deployment_url: ${{ steps.resolve.outputs.deployment_url }}
+      production_url: ${{ steps.resolve.outputs.production_url }}
+      previous_deployment_id: ${{ steps.previous.outputs.deployment_id }}
+      previous_deployment_hash: ${{ steps.previous.outputs.deployment_hash }}
+      project_name: ${{ env.CLOUDFLARE_PAGES_PROJECT }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -159,13 +237,175 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Capture previous Pages deployment
+        id: previous
+        run: |
+          if ! bun run scripts/cloudflare/cloudflare-ops.ts pages-current \
+            --project "$CLOUDFLARE_PAGES_PROJECT" \
+            --github-output; then
+            echo "Could not query previous Pages deployment; continuing."
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+            echo "deployment_hash=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build static web export
         run: bun run --cwd apps/web build
 
       - name: Deploy Cloudflare Pages
+        id: deploy
         working-directory: apps/api
-        run: >-
-          bun x wrangler pages deploy ../web/out
-          --project-name "$CLOUDFLARE_PAGES_PROJECT"
-          --branch main
-          --commit-hash "${{ needs.detect-changes.outputs.sha }}"
+        run: |
+          set -o pipefail
+          bun x wrangler pages deploy ../web/out \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT" \
+            --branch main \
+            --commit-hash "${{ needs.detect-changes.outputs.sha }}" 2>&1 | tee /tmp/pages-deploy.log
+
+          bun run ../../scripts/cloudflare/cloudflare-ops.ts parse-pages-deploy /tmp/pages-deploy.log --github-output
+
+      - name: Resolve Pages Deployment ID & URLs
+        id: resolve
+        run: |
+          PARSED_URL="${{ steps.deploy.outputs.deployment_url }}"
+          PARSED_HASH="${{ steps.deploy.outputs.deployment_hash }}"
+
+          if ! bun run scripts/cloudflare/cloudflare-ops.ts pages-find-deployment \
+            --project "$CLOUDFLARE_PAGES_PROJECT" \
+            --url "$PARSED_URL" \
+            --hash "$PARSED_HASH" \
+            --commit "${{ needs.detect-changes.outputs.sha }}" \
+            --github-output; then
+            echo "Falling back to parsed wrangler output."
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+            echo "deployment_hash=$PARSED_HASH" >> "$GITHUB_OUTPUT"
+            echo "deployment_url=$PARSED_URL" >> "$GITHUB_OUTPUT"
+            echo "production_url=https://${CLOUDFLARE_PAGES_PROJECT}.pages.dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Pages deployment (rollback on failure)
+        id: smoke
+        run: |
+          CHECK_URL="${{ steps.resolve.outputs.deployment_url || steps.resolve.outputs.production_url }}"
+          PREV_ID="${{ steps.previous.outputs.deployment_id }}"
+
+          if [ -z "$CHECK_URL" ]; then
+            echo "No deployment URL available to smoke-check; skipping HTTP probe."
+            exit 0
+          fi
+
+          OK=false
+          for attempt in 1 2 3 4 5; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$CHECK_URL" || echo "000")
+            echo "Pages smoke check attempt ${attempt}: HTTP ${CODE} (${CHECK_URL})"
+            if [ "$CODE" = "200" ]; then
+              OK=true
+              break
+            fi
+            sleep 3
+          done
+
+          if [ "$OK" != "true" ]; then
+            echo "::error::Pages post-deploy check failed for ${CHECK_URL}."
+            if [ -n "$PREV_ID" ]; then
+              echo "Rolling back Cloudflare Pages to previous deployment ${PREV_ID}..."
+              bun run scripts/cloudflare/cloudflare-ops.ts pages-rollback \
+                --project "$CLOUDFLARE_PAGES_PROJECT" \
+                --target "$PREV_ID" || true
+            fi
+            exit 1
+          fi
+
+      - name: Record GitHub Deployment (Web)
+        if: always() && steps.deploy.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HASH="${{ steps.resolve.outputs.deployment_hash }}"
+          DEP_ID="${{ steps.resolve.outputs.deployment_id }}"
+          DEP_URL="${{ steps.resolve.outputs.deployment_url || steps.resolve.outputs.production_url }}"
+          STATE=$( [ "${{ steps.deploy.outcome }}" = "success" ] && [ "${{ steps.smoke.outcome }}" = "success" ] && echo "success" || echo "failure" )
+          DESC="Cloudflare Pages hash ${HASH:-unknown} (${DEP_ID:-no-id})"
+
+          DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments" \
+            -f ref="${{ needs.detect-changes.outputs.sha }}" \
+            -f environment="production-web" \
+            -F auto_merge=false \
+            -f description="$DESC" \
+            -f 'required_contexts=[]' \
+            --jq '.id' || echo "")
+
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/deployments/${DEPLOYMENT_ID}/statuses" \
+              -f state="$STATE" \
+              -f environment_url="$DEP_URL" \
+              -f description="$DESC" >/dev/null || true
+          fi
+
+  publish-summary:
+    name: Deployment Summary & Release
+    needs: [detect-changes, deploy-api, deploy-web]
+    if: >-
+      always() &&
+      (needs.detect-changes.outputs.deploy_api == 'true' ||
+       needs.detect-changes.outputs.deploy_web == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEPLOY_SHA: ${{ needs.detect-changes.outputs.sha }}
+      API_DEPLOYED: ${{ needs.detect-changes.outputs.deploy_api }}
+      API_OUTCOME: ${{ needs.deploy-api.result }}
+      API_VERSION_ID: ${{ needs.deploy-api.outputs.version_id }}
+      API_PREVIOUS_VERSION_ID: ${{ needs.deploy-api.outputs.previous_version_id }}
+      API_URL: ${{ needs.deploy-api.outputs.url }}
+      WEB_DEPLOYED: ${{ needs.detect-changes.outputs.deploy_web }}
+      WEB_OUTCOME: ${{ needs.deploy-web.result }}
+      WEB_DEPLOYMENT_ID: ${{ needs.deploy-web.outputs.deployment_id }}
+      WEB_DEPLOYMENT_HASH: ${{ needs.deploy-web.outputs.deployment_hash }}
+      WEB_DEPLOYMENT_URL: ${{ needs.deploy-web.outputs.deployment_url }}
+      WEB_PRODUCTION_URL: ${{ needs.deploy-web.outputs.production_url }}
+      WEB_PREVIOUS_DEPLOYMENT_ID: ${{ needs.deploy-web.outputs.previous_deployment_id }}
+      WEB_PREVIOUS_DEPLOYMENT_HASH: ${{ needs.deploy-web.outputs.previous_deployment_hash }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ needs.deploy-web.outputs.project_name || vars.CLOUDFLARE_PAGES_PROJECT || 'ledgerx' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.detect-changes.outputs.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Write GitHub Actions Deployment Summary
+        run: |
+          bun run scripts/cloudflare/cloudflare-ops.ts format-deploy-summary \
+            --write-summary > DEPLOY_SUMMARY.md
+          cat DEPLOY_SUMMARY.md
+
+      - name: Publish Cloud Deploy Release
+        if: >-
+          (needs.detect-changes.outputs.deploy_api != 'true' || needs.deploy-api.result == 'success') &&
+          (needs.detect-changes.outputs.deploy_web != 'true' || needs.deploy-web.result == 'success')
+        run: |
+          SHORT_SHA="${{ needs.detect-changes.outputs.short_sha }}"
+          TAG="cloud-deploy-${SHORT_SHA}-${{ github.run_number }}"
+
+          TITLE_PARTS="Cloud Deploy"
+          if [ "$API_DEPLOYED" = "true" ]; then
+            SHORT_VER="${API_VERSION_ID:0:8}"
+            TITLE_PARTS="${TITLE_PARTS} · API ${SHORT_VER:-live}"
+          fi
+          if [ "$WEB_DEPLOYED" = "true" ]; then
+            TITLE_PARTS="${TITLE_PARTS} · Web ${WEB_DEPLOYMENT_HASH:-live}"
+          fi
+
+          gh release create "$TAG" \
+            --target "$DEPLOY_SHA" \
+            --title "$TITLE_PARTS" \
+            --notes-file DEPLOY_SUMMARY.md \
+            --latest=false

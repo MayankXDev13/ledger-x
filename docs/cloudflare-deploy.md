@@ -66,12 +66,35 @@ so, rather than reporting a false pass.
 - **CD** (`.github/workflows/deploy.yml`) runs automatically after `CI` succeeds
   on a push to `main` (or manually via `workflow_dispatch` with `target`:
   `all`, `api`, or `web`).
-  - Changes under `apps/web/**` deploy only **Cloudflare Pages**.
-  - Changes under `apps/api/**` deploy only **Cloudflare Workers** and run
-    `apps/api/scripts/smoke.sh` (rolling back via `wrangler rollback --yes` on
-    failure).
-  - Changes to root `package.json`, `bun.lock`, or
-    `.github/workflows/deploy.yml` deploy both targets.
+  - Changes under `apps/web/**` deploy only **Cloudflare Pages**, capture the
+    unique deployment hash (`https://<hash>.<project>.pages.dev`) and full
+    Deployment ID, and verify HTTP 200 (automatically rolling back to the
+    previous production Pages deployment on failure).
+  - Changes under `apps/api/**` deploy only **Cloudflare Workers**, capture the
+    Cloudflare **Worker Version ID**, and run `apps/api/scripts/smoke.sh`
+    (rolling back via `wrangler rollback --yes` on failure).
+  - Changes to root `package.json`, `bun.lock`, `.github/workflows/deploy.yml`,
+    or `scripts/cloudflare/**` deploy both targets.
+  - Every deployment records GitHub Deployments (`production-api` /
+    `production-web`), writes a **Production Deployment Summary** in the
+    GitHub Actions Job Summary with the live Worker Version ID and Pages unique
+    hash/ID, and (when all triggered targets succeed) publishes a
+    `cloud-deploy-*` GitHub Release (with `--latest=false`) containing the live
+    identifiers and instant rollback commands.
+- **Instant Rollback** (`.github/workflows/rollback.yml` — **Rollback Production**)
+  lets a developer immediately roll back `api`, `web`, or `all` from GitHub
+  Actions (`workflow_dispatch`):
+  - Leave `worker_version_id` or `pages_deployment_id` blank to revert to the
+    previous healthy deployment, or paste a specific Worker Version ID / Pages
+    unique hash (or full Deployment ID).
+  - Local CLI equivalents:
+    ```bash
+    # Roll back Workers API to a specific Version ID (or omit ID for previous)
+    bun x --cwd apps/api wrangler rollback <version-id> --yes --message "Rollback reason"
+
+    # Roll back Pages Web to a specific hash / Deployment ID (or omit --target for previous)
+    bun run scripts/cloudflare/cloudflare-ops.ts pages-rollback --project ledgerx --target <hash-or-id>
+    ```
 
 ### Required GitHub Actions Secrets & Variables
 

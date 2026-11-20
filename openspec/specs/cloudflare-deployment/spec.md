@@ -98,3 +98,19 @@ After deploying the Workers API, the CD workflow SHALL run `apps/api/scripts/smo
 #### Scenario: Failed smoke check triggers rollback
 - **WHEN** `apps/api/scripts/smoke.sh` exits non-zero after `wrangler deploy`
 - **THEN** the job runs `wrangler rollback --yes` and exits non-zero to report the deployment failure
+
+### Requirement: Production version and deployment hash tracking
+
+After deploying Cloudflare Workers and/or Cloudflare Pages, the CD workflow SHALL capture the Cloudflare Worker Version ID and the Cloudflare Pages unique deployment hash (and Deployment ID), record GitHub Deployments (`production-api` / `production-web`), write a consolidated Production Deployment Summary to `$GITHUB_STEP_SUMMARY`, and publish a non-latest GitHub Release (`cloud-deploy-*`) when all triggered targets succeed.
+
+#### Scenario: Successful deployment records live version ID and Pages hash
+- **WHEN** the CD workflow deploys Workers and/or Pages and all post-deploy checks pass
+- **THEN** the workflow outputs the live Worker Version ID and/or Pages unique hash and Deployment ID in `$GITHUB_STEP_SUMMARY`, records GitHub Deployments, and publishes a `cloud-deploy-*` release with instant rollback instructions
+
+### Requirement: Automated Pages smoke check and instant manual rollback
+
+After deploying Cloudflare Pages, the CD workflow SHALL verify the deployed URL responds with HTTP 200 and SHALL roll back to the previous production Pages deployment via the Cloudflare Pages API if verification fails. The repository SHALL also provide a manual `Rollback Production` workflow (`.github/workflows/rollback.yml`) that lets developers instantly roll back `api`, `web`, or `all` to either the previous deployment or a specific Worker Version ID / Pages deployment hash or ID.
+
+#### Scenario: Developer triggers instant production rollback
+- **WHEN** a developer runs `Rollback Production` via `workflow_dispatch` with `target: api`, `web`, or `all` (optionally specifying a Worker Version ID or Pages hash/ID)
+- **THEN** the workflow immediately rolls back the selected Cloudflare target(s), verifies post-rollback health, updates GitHub Deployments, and writes a Rollback Summary showing the active version/hash now serving production
