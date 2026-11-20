@@ -9,20 +9,31 @@ import { collectionKeys } from "./useCollection";
 export const customerKeys = {
   all: ["customers"] as const,
   lists: () => [...customerKeys.all, "list"] as const,
+  balances: () => [...customerKeys.all, "balances"] as const,
   detail: (id: string) => [...customerKeys.all, "detail", id] as const,
 };
 
-export function useCustomers() {
+/**
+ * Keep customer balances in sync with writes from other tabs or devices on the
+ * same cadence as the dashboard, so the customer views never lag behind it.
+ */
+const CUSTOMER_POLL_INTERVAL = 10_000;
+
+export function useCustomers(enabled = true) {
   return useQuery({
     queryKey: customerKeys.lists(),
     queryFn: customersApi.list,
+    enabled,
+    refetchOnWindowFocus: true,
   });
 }
 
 export function useCustomerBalances() {
   return useQuery({
-    queryKey: [...customerKeys.all, "balances"] as const,
+    queryKey: customerKeys.balances(),
     queryFn: customersApi.balances,
+    refetchInterval: CUSTOMER_POLL_INTERVAL,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -31,6 +42,7 @@ export function useCustomer(id: string) {
     queryKey: customerKeys.detail(id),
     queryFn: () => customersApi.get(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
   });
 }
 
