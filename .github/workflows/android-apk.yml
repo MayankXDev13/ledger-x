@@ -7,6 +7,13 @@ on:
         description: "Release version (defaults to the version in apps/app/app.json)"
         required: false
         type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/app/**"
+      - ".github/workflows/android-apk.yml"
+      - "bun.lock"
+      - "package.json"
   push:
     branches: [main]
     paths:
@@ -16,7 +23,7 @@ on:
       - "package.json"
 
 concurrency:
-  group: android-apk-${{ github.ref }}
+  group: android-apk-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -116,6 +123,7 @@ jobs:
           retention-days: 14
 
       - name: Write the release notes
+        if: github.event_name != 'pull_request'
         run: |
           PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           {
@@ -133,6 +141,7 @@ jobs:
           cat RELEASE_NOTES.md
 
       - name: Publish the GitHub release
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
