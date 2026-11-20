@@ -125,7 +125,7 @@ jobs:
       - name: Write the release notes
         if: github.event_name != 'pull_request'
         run: |
-          PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          PREVIOUS=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || echo "")
           {
             echo "Ledger-X ${{ steps.version.outputs.version }} for Android."
             echo

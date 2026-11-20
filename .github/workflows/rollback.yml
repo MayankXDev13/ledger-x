@@ -1,0 +1,215 @@
+name: Rollback Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Production target to roll back"
+        required: true
+        default: api
+        type: choice
+        options:
+          - api
+          - web
+          - all
+      worker_version_id:
+        description: "Cloudflare Worker Version ID to roll back to (leave blank for previous version)"
+        required: false
+        type: string
+      pages_deployment_id:
+        description: "Cloudflare Pages Deployment ID or unique hash to roll back to (leave blank for previous production deployment)"
+        required: false
+        type: string
+      reason:
+        description: "Reason for rollback"
+        required: false
+        default: "Manual production rollback"
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rollback-api:
+    name: Rollback API (Workers)
+    if: inputs.target == 'api' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      active_version_id: ${{ steps.active.outputs.version_id }}
+      url: ${{ env.API_URL }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://server-v2.mayankxdev13.workers.dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Roll back Cloudflare Worker
+        working-directory: apps/api
+        run: |
+          VERSION_ID="${{ inputs.worker_version_id }}"
+          REASON="${{ inputs.reason || 'Manual production rollback' }}"
+          if [ -n "$VERSION_ID" ]; then
+            echo "Rolling back Cloudflare Worker to version ${VERSION_ID}..."
+            bun x wrangler rollback "$VERSION_ID" --yes --message "$REASON"
+          else
+            echo "Rolling back Cloudflare Worker to previous version..."
+            bun x wrangler rollback --yes --message "$REASON"
+          fi
+
+      - name: Capture active Worker Version ID
+        id: active
+        working-directory: apps/api
+        run: |
+          if bun x wrangler deployments list --json > /tmp/worker-deployments-after.json 2>/dev/null; then
+            bun run ../../scripts/cloudflare/cloudflare-ops.ts parse-worker-active /tmp/worker-deployments-after.json --github-output
+          else
+            echo "version_id=${{ inputs.worker_version_id }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify rolled-back Worker health
+        working-directory: apps/api
+        run: API_URL="$API_URL" bash scripts/smoke.sh
+
+      - name: Record GitHub Deployment (API Rollback)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ACTIVE_VER="${{ steps.active.outputs.version_id }}"
+          DESC="Rollback: Cloudflare Worker version ${ACTIVE_VER:-previous} (${{ inputs.reason || 'Manual production rollback' }})"
+          DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments" \
+            -f ref="${{ github.sha }}" \
+            -f environment="production-api" \
+            -F auto_merge=false \
+            -f description="$DESC" \
+            -f 'required_contexts=[]' \
+            --jq '.id' || echo "")
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/deployments/${DEPLOYMENT_ID}/statuses" \
+              -f state="success" \
+              -f environment_url="$API_URL" \
+              -f description="$DESC" >/dev/null || true
+          fi
+
+  rollback-web:
+    name: Rollback Web (Pages)
+    if: inputs.target == 'web' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      deployment_id: ${{ steps.rollback.outputs.deployment_id }}
+      deployment_hash: ${{ steps.rollback.outputs.deployment_hash }}
+      deployment_url: ${{ steps.rollback.outputs.deployment_url }}
+      production_url: ${{ steps.rollback.outputs.production_url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'ledgerx' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Roll back Cloudflare Pages
+        id: rollback
+        run: |
+          TARGET="${{ inputs.pages_deployment_id }}"
+          if [ -n "$TARGET" ]; then
+            bun run scripts/cloudflare/cloudflare-ops.ts pages-rollback \
+              --project "$CLOUDFLARE_PAGES_PROJECT" \
+              --target "$TARGET" \
+              --github-output
+          else
+            bun run scripts/cloudflare/cloudflare-ops.ts pages-rollback \
+              --project "$CLOUDFLARE_PAGES_PROJECT" \
+              --github-output
+          fi
+
+      - name: Verify rolled-back Pages production URL
+        run: |
+          URL="${{ steps.rollback.outputs.production_url || steps.rollback.outputs.deployment_url }}"
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$URL" || echo "000")
+          echo "Pages rollback check: HTTP ${CODE} (${URL})"
+          [ "$CODE" = "200" ]
+
+      - name: Record GitHub Deployment (Web Rollback)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HASH="${{ steps.rollback.outputs.deployment_hash }}"
+          DEP_ID="${{ steps.rollback.outputs.deployment_id }}"
+          DEP_URL="${{ steps.rollback.outputs.deployment_url || steps.rollback.outputs.production_url }}"
+          DESC="Rollback: Cloudflare Pages hash ${HASH:-previous} (${DEP_ID:-unknown})"
+          DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments" \
+            -f ref="${{ github.sha }}" \
+            -f environment="production-web" \
+            -F auto_merge=false \
+            -f description="$DESC" \
+            -f 'required_contexts=[]' \
+            --jq '.id' || echo "")
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/deployments/${DEPLOYMENT_ID}/statuses" \
+              -f state="success" \
+              -f environment_url="$DEP_URL" \
+              -f description="$DESC" >/dev/null || true
+          fi
+
+  rollback-summary:
+    name: Rollback Summary
+    needs: [rollback-api, rollback-web]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ROLLBACK_REASON: ${{ inputs.reason || 'Manual production rollback' }}
+      API_EXECUTED: ${{ inputs.target == 'api' || inputs.target == 'all' }}
+      API_OUTCOME: ${{ needs.rollback-api.result }}
+      API_REQUESTED_VERSION_ID: ${{ inputs.worker_version_id }}
+      API_ACTIVE_VERSION_ID: ${{ needs.rollback-api.outputs.active_version_id }}
+      API_URL: ${{ needs.rollback-api.outputs.url }}
+      WEB_EXECUTED: ${{ inputs.target == 'web' || inputs.target == 'all' }}
+      WEB_OUTCOME: ${{ needs.rollback-web.result }}
+      WEB_REQUESTED_TARGET: ${{ inputs.pages_deployment_id }}
+      WEB_ACTIVE_DEPLOYMENT_ID: ${{ needs.rollback-web.outputs.deployment_id }}
+      WEB_ACTIVE_DEPLOYMENT_HASH: ${{ needs.rollback-web.outputs.deployment_hash }}
+      WEB_ACTIVE_DEPLOYMENT_URL: ${{ needs.rollback-web.outputs.deployment_url }}
+      WEB_PRODUCTION_URL: ${{ needs.rollback-web.outputs.production_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Write Rollback Summary
+        run: |
+          bun run scripts/cloudflare/cloudflare-ops.ts format-rollback-summary --write-summary
