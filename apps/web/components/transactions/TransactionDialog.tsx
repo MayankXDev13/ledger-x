@@ -59,7 +59,7 @@ export function TransactionDialog({
 }: TransactionDialogProps) {
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
-  const { data: customers } = useCustomers();
+  const { data: customers } = useCustomers(!customerId);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const effectiveCustomerId = customerId ?? selectedCustomerId;

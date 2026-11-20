@@ -1,13 +1,36 @@
 "use client";
 
-import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { transactionsApi } from "@/lib/api";
+import {
+  useQuery,
+  useMutation,
+  useInfiniteQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
+import {
+  transactionsApi,
+  type PagedTransactions,
+  type Transaction,
+} from "@/lib/api";
 import { formatApiError } from "@/lib/api-error";
+import {
+  applyBalanceDelta,
+  applyCreatedTransactionToInfinite,
+  applyDeletedTransactionToInfinite,
+  applyUpdatedTransactionToInfinite,
+  type CustomerBalancesMap,
+} from "@/lib/transaction-cache";
 import { dashboardKeys } from "./useDashboard";
 import { collectionKeys } from "./useCollection";
 import { statementKeys } from "./useStatement";
 import { customerKeys } from "./useCustomers";
 import { toast } from "sonner";
+
+/**
+ * Match the dashboard's polling cadence so a customer's ledger refreshes
+ * automatically when entries arrive from another tab or device.
+ */
+const TRANSACTIONS_POLL_INTERVAL = 10_000;
 
 export const transactionKeys = {
   all: ["transactions"] as const,
@@ -30,6 +53,8 @@ export function useCustomerTransactions(
     queryKey: transactionKeys.byCustomer(customerId, params),
     queryFn: () => transactionsApi.listByCustomer(customerId, params),
     enabled: !!customerId,
+    refetchInterval: TRANSACTIONS_POLL_INTERVAL,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -53,6 +78,8 @@ export function useInfiniteCustomerTransactions(
       return fetched < lastPage.total ? allPages.length + 1 : undefined;
     },
     enabled: !!customerId,
+    refetchInterval: TRANSACTIONS_POLL_INTERVAL,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -68,13 +95,37 @@ export function useCreateTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.create,
-    onSuccess: async () => {
-      // A transaction changes the balance the customer domain shows, so that
-      // domain is invalidated too. Awaiting the invalidation means the
-      // mutation settles only once the affected views hold fresh data.
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: transactionKeys.all }),
-        qc.invalidateQueries({ queryKey: customerKeys.all }),
+    onSuccess: (created) => {
+      // Patch the customer's transaction list, balances, and recent list
+      // immediately from the server response so the UI updates without waiting
+      // for background refetches, then reconcile with the server in parallel.
+      qc.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: transactionKeys.byCustomerInfinite(created.customerId) },
+        (old) => applyCreatedTransactionToInfinite(old, created),
+      );
+
+      const delta = created.type === "credit" ? created.amount : -created.amount;
+      qc.setQueryData<CustomerBalancesMap>(customerKeys.balances(), (old) =>
+        applyBalanceDelta(old, created.customerId, delta),
+      );
+
+      qc.setQueryData<Transaction[]>(
+        dashboardKeys.recentTransactions(),
+        (old) => {
+          if (!old) return old;
+          if (old.some((tx) => tx.id === created.id)) return old;
+          return [created, ...old].slice(0, 5);
+        },
+      );
+
+      void Promise.all([
+        qc.invalidateQueries({
+          queryKey: transactionKeys.byCustomerInfinite(created.customerId),
+        }),
+        qc.invalidateQueries({
+          queryKey: transactionKeys.byCustomer(created.customerId),
+        }),
+        qc.invalidateQueries({ queryKey: customerKeys.balances() }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
         qc.invalidateQueries({ queryKey: collectionKeys.all }),
         qc.invalidateQueries({ queryKey: statementKeys.all }),
@@ -101,10 +152,32 @@ export function useUpdateTransaction() {
         note?: string;
       };
     }) => transactionsApi.update(id, data),
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: transactionKeys.all }),
-        qc.invalidateQueries({ queryKey: customerKeys.all }),
+    onSuccess: (updated) => {
+      let balanceDelta = 0;
+      qc.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: transactionKeys.byCustomerInfinite(updated.customerId) },
+        (old) => {
+          const res = applyUpdatedTransactionToInfinite(old, updated);
+          if (res.balanceDelta !== 0) balanceDelta = res.balanceDelta;
+          return res.next;
+        },
+      );
+
+      if (balanceDelta !== 0) {
+        qc.setQueryData<CustomerBalancesMap>(customerKeys.balances(), (old) =>
+          applyBalanceDelta(old, updated.customerId, balanceDelta),
+        );
+      }
+
+      void Promise.all([
+        qc.invalidateQueries({
+          queryKey: transactionKeys.byCustomerInfinite(updated.customerId),
+        }),
+        qc.invalidateQueries({
+          queryKey: transactionKeys.byCustomer(updated.customerId),
+        }),
+        qc.invalidateQueries({ queryKey: transactionKeys.detail(updated.id) }),
+        qc.invalidateQueries({ queryKey: customerKeys.balances() }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
         qc.invalidateQueries({ queryKey: collectionKeys.all }),
         qc.invalidateQueries({ queryKey: statementKeys.all }),
@@ -119,10 +192,28 @@ export function useDeleteTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.delete,
-    onSuccess: async () => {
-      await Promise.all([
+    onSuccess: (_, deletedId) => {
+      let removed: Transaction | undefined;
+      qc.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: [...transactionKeys.all, "customer-infinite"] },
+        (old) => {
+          const res = applyDeletedTransactionToInfinite(old, deletedId);
+          if (res.removed) removed = res.removed;
+          return res.next;
+        },
+      );
+
+      if (removed) {
+        const delta =
+          removed.type === "credit" ? -removed.amount : removed.amount;
+        qc.setQueryData<CustomerBalancesMap>(customerKeys.balances(), (old) =>
+          applyBalanceDelta(old, removed!.customerId, delta),
+        );
+      }
+
+      void Promise.all([
         qc.invalidateQueries({ queryKey: transactionKeys.all }),
-        qc.invalidateQueries({ queryKey: customerKeys.all }),
+        qc.invalidateQueries({ queryKey: customerKeys.balances() }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
         qc.invalidateQueries({ queryKey: collectionKeys.all }),
         qc.invalidateQueries({ queryKey: statementKeys.all }),

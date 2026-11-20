@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useCustomers, useCustomerBalances, useDeleteCustomer } from "@/hooks/useCustomers";
 import { useCollection } from "@/hooks/useCollection";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { CustomersHeader } from "@/components/customers/CustomersHeader";
@@ -17,7 +18,11 @@ import { Button } from "@/components/ui/button";
 export default function CustomersPage() {
   const { data: customers, isLoading, isError, refetch } = useCustomers();
   const { data: balancesData } = useCustomerBalances();
-  const { data: collectionData } = useCollection("amount");
+  const { isEnabled } = useFeatureFlags();
+  const { data: collectionData } = useCollection(
+    "amount",
+    !balancesData && isEnabled("upi_collection"),
+  );
   const deleteCustomer = useDeleteCustomer();
 
   const balances = useMemo(() => {
