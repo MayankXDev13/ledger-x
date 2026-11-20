@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getToken,
   setToken,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/auth";
 
 export function useAuth() {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,8 +67,9 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     await apiLogout();
+    queryClient.clear();
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   return { user, loading, signOut };
 }

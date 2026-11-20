@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { needsOnboarding, useSettings } from "@/hooks/useSettings";
-import { sampleDataApi } from "@/lib/api";
+import { useSeedSampleData } from "@/hooks/useDataPortability";
 import { colors } from "@/lib/theme";
 
 const STEPS = [
@@ -35,6 +35,7 @@ const STEPS = [
  */
 export function OnboardingDialog() {
   const { settings, loading, update } = useSettings();
+  const seedSampleMutation = useSeedSampleData();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [seeding, setSeeding] = useState(false);
@@ -69,7 +70,7 @@ export function OnboardingDialog() {
   const loadSample = async () => {
     setSeeding(true);
     try {
-      await sampleDataApi.seed();
+      await seedSampleMutation.mutateAsync();
     } catch {
       // The dashboard reflects the failure; onboarding continues regardless.
     } finally {

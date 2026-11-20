@@ -11,11 +11,17 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { useLocalSearchParams, useRouter, useFocusEffect, Link } from "expo-router";
+import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { customersApi, transactionsApi } from "@/lib/api";
-import type { Customer, Transaction } from "@/lib/api";
+import type { Transaction } from "@/lib/api";
+import { useCustomer } from "@/hooks/useCustomers";
+import {
+  useDeleteTransaction,
+  useInfiniteCustomerTransactions,
+  useUpdateTransaction,
+} from "@/hooks/useTransactions";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { colors } from "@/lib/theme";
@@ -37,21 +43,8 @@ export default function CustomerDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [entries, setEntries] = useState<Transaction[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">("all");
-
   const { queuedEntries } = useOfflineQueue();
-  const [balance, setBalance] = useState<BalanceData>({
-    totalCredit: 0,
-    totalDebit: 0,
-    balance: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const [editingTransaction, setEditingTransaction] =
@@ -59,70 +52,67 @@ export default function CustomerDetailsScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
 
+  const customerQuery = useCustomer(id);
+  const transactionsQuery = useInfiniteCustomerTransactions(id, {
+    pageSize: PAGE_SIZE,
+  });
+  const updateTransactionMutation = useUpdateTransaction();
+  const deleteTransactionMutation = useDeleteTransaction();
+
+  const customer = customerQuery.data ?? null;
+  const entries = useMemo<Transaction[]>(() => {
+    const pages = transactionsQuery.data?.pages ?? [];
+    const seen = new Set<string>();
+    const list: Transaction[] = [];
+    for (const page of pages) {
+      for (const tx of page.data) {
+        if (!seen.has(tx.id)) {
+          seen.add(tx.id);
+          list.push(tx);
+        }
+      }
+    }
+    return list;
+  }, [transactionsQuery.data]);
+
+  const latestPage = transactionsQuery.data?.pages[0];
+  const balance: BalanceData = {
+    totalCredit: latestPage?.totalCredit ?? 0,
+    totalDebit: latestPage?.totalDebit ?? 0,
+    balance: (latestPage?.totalCredit ?? 0) - (latestPage?.totalDebit ?? 0),
+  };
+
+  const loading = customerQuery.isLoading || transactionsQuery.isLoading;
+  const loadingMore = transactionsQuery.isFetchingNextPage;
+  const hasMore = Boolean(transactionsQuery.hasNextPage);
+  const rawError = customerQuery.error ?? transactionsQuery.error;
+  const error = rawError
+    ? rawError instanceof Error
+      ? rawError.message
+      : "Could not load this customer"
+    : null;
+
   /* -------------------- DATA -------------------- */
 
-  const fetchData = useCallback(
-    async (pageToFetch = 1, isRefresh = false) => {
-      if (!id) return;
-      if (pageToFetch > 1) {
-        setLoadingMore(true);
-      }
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    await Promise.all([customerQuery.refetch(), transactionsQuery.refetch()]);
+  }, [id, customerQuery.refetch, transactionsQuery.refetch]);
 
-      try {
-        const [customerData, paged] = await Promise.all([
-          pageToFetch === 1 ? customersApi.get(id) : Promise.resolve(customer),
-          transactionsApi.listByCustomer(id, { page: pageToFetch, pageSize: PAGE_SIZE }),
-        ]);
-
-        if (customerData) {
-          setCustomer(customerData);
-        }
-
-        if (pageToFetch === 1 || isRefresh) {
-          setEntries(paged.data);
-        } else {
-          setEntries((prev) => {
-            const existingIds = new Set(prev.map((e) => e.id));
-            const newEntries = paged.data.filter((e) => !existingIds.has(e.id));
-            return [...prev, ...newEntries];
-          });
-        }
-
-        setPage(pageToFetch);
-        setHasMore(paged.data.length === PAGE_SIZE && pageToFetch * PAGE_SIZE < paged.total);
-        setBalance({
-          totalCredit: paged.totalCredit,
-          totalDebit: paged.totalDebit,
-          balance: paged.totalCredit - paged.totalDebit,
-        });
-        setError(null);
-      } catch (err) {
-        if (pageToFetch === 1) {
-          setError(err instanceof Error ? err.message : "Could not load this customer");
-        }
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
-      }
-    },
-    [id, customer],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchData(1);
-    }, [fetchData]),
-  );
+  useRefreshOnFocus(fetchData);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData(1, true);
+    try {
+      await fetchData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleLoadMore = () => {
     if (!loading && !loadingMore && hasMore) {
-      fetchData(page + 1);
+      void transactionsQuery.fetchNextPage();
     }
   };
 
@@ -204,8 +194,7 @@ export default function CustomerDetailsScreen() {
           title="Could not load customer"
           message={error || "Customer not found."}
           onRetry={() => {
-            setLoading(true);
-            fetchData(1);
+            void fetchData();
           }}
         />
       </View>
@@ -537,13 +526,15 @@ export default function CustomerDetailsScreen() {
         transaction={editingTransaction}
         onClose={() => setEditingTransaction(null)}
         onSave={async (entryId, amount, type, note, paymentMethod) => {
-          await transactionsApi.update(entryId, {
-            amount,
-            type,
-            note: note || undefined,
-            paymentMethod: paymentMethod ?? null,
+          await updateTransactionMutation.mutateAsync({
+            id: entryId,
+            data: {
+              amount,
+              type,
+              note: note || undefined,
+              paymentMethod: paymentMethod ?? null,
+            },
           });
-          await fetchData(1, true);
         }}
         onDelete={(txId) => {
           setDeleteEntryId(txId);
@@ -558,8 +549,7 @@ export default function CustomerDetailsScreen() {
         confirmText="Delete"
         onConfirm={async () => {
           if (deleteEntryId) {
-            await transactionsApi.remove(deleteEntryId);
-            await fetchData(1, true);
+            await deleteTransactionMutation.mutateAsync(deleteEntryId);
           }
           setShowDeleteConfirm(false);
         }}

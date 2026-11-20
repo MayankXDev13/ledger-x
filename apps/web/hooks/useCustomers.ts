@@ -50,10 +50,12 @@ export function useCreateCustomer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: customersApi.create,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: customerKeys.lists() });
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: collectionKeys.all });
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: customerKeys.lists() }),
+        qc.invalidateQueries({ queryKey: dashboardKeys.all }),
+        qc.invalidateQueries({ queryKey: collectionKeys.all }),
+      ]);
       toast.success("Customer created successfully");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -65,9 +67,11 @@ export function useUpdateCustomer() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; phone?: string } }) =>
       customersApi.update(id, data),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: customerKeys.lists() });
-      qc.invalidateQueries({ queryKey: customerKeys.detail(id) });
+    onSuccess: async (_, { id }) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: customerKeys.lists() }),
+        qc.invalidateQueries({ queryKey: customerKeys.detail(id) }),
+      ]);
       toast.success("Customer updated");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -78,13 +82,15 @@ export function useDeleteCustomer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: customersApi.delete,
-    onSuccess: (_, id) => {
+    onSuccess: async (_, id) => {
       // The list, the deleted customer's own detail view, and the dashboard
       // counters all hold stale data after a delete.
       qc.removeQueries({ queryKey: customerKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: customerKeys.lists() });
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: collectionKeys.all });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: customerKeys.lists() }),
+        qc.invalidateQueries({ queryKey: dashboardKeys.all }),
+        qc.invalidateQueries({ queryKey: collectionKeys.all }),
+      ]);
       toast.success("Customer deleted");
     },
     onError: (err: Error) => toast.error(err.message),

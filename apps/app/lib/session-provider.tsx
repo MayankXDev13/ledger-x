@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { AppState } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   revalidateSession,
   signOut as signOutSession,
@@ -39,6 +40,7 @@ const SessionContext = createContext<SessionValue | null>(null);
  * session when it comes back before anything decides where to route.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,8 +78,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // The lock belongs to the session: the PIN, the lock flag and the
     // attempt state are removed, so a signed-out app never asks for a PIN.
     await clearAppLock();
+    queryClient.clear();
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     refresh();

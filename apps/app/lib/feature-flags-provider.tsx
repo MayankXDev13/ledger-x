@@ -1,20 +1,13 @@
 // Feature-flag registry owned by the deployment administrator.
 //
 // The values are server-side, so the app only reads them: a user can never
-// switch a feature on for themselves. The registry is re-read on a bounded
-// window and whenever the app comes to the foreground, so a flag the
-// administrator changed is picked up without the user reloading.
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { AppState, type AppStateStatus } from "react-native";
+// switch a feature on for themselves. TanStack Query re-reads on a bounded
+// window and whenever the app comes to the foreground (via focusManager), so
+// a flag the administrator changed is picked up without reloading.
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { featureFlagsApi } from "@/lib/api";
+import { featureFlagKeys } from "@/hooks/query-keys";
 
 /** The flags the deployment ships with. */
 export const FEATURE_FLAG_KEYS = [
@@ -53,58 +46,41 @@ export interface FeatureFlagsValue {
 const FeatureFlagsContext = createContext<FeatureFlagsValue | null>(null);
 
 /**
- * Owns the feature flags for the whole app.
- *
- * Modelled on `SettingsProvider`, so a screen never reads the registry
- * itself and every screen sees the same values.
+ * Owns the feature flags for the whole app, backed by TanStack Query.
  */
 export function FeatureFlagsProvider({ children }: { children: ReactNode }) {
-  const [flags, setFlags] = useState<FeatureFlags>(DEFAULT_FEATURE_FLAGS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: featureFlagKeys.all,
+    queryFn: featureFlagsApi.get,
+    staleTime: REFRESH_INTERVAL_MS,
+    refetchInterval: REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+
+  const flags = useMemo<FeatureFlags>(
+    () => (query.data ? { ...DEFAULT_FEATURE_FLAGS, ...query.data } : DEFAULT_FEATURE_FLAGS),
+    [query.data],
+  );
 
   const refresh = useCallback(async () => {
-    try {
-      const next = await featureFlagsApi.get();
-      setFlags({ ...DEFAULT_FEATURE_FLAGS, ...next });
-      setError(null);
-    } catch (err) {
-      // Keep the last known values: a failed read must not hide a feature.
-      setError(err instanceof Error ? err.message : "Failed to load flags");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await query.refetch();
+  }, [query.refetch]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  // Re-read on a bounded window and whenever the app comes back to the
-  // foreground, so an administrator's change is picked up.
-  useEffect(() => {
-    const timer = setInterval(refresh, REFRESH_INTERVAL_MS);
-    const subscription = AppState.addEventListener(
-      "change",
-      (state: AppStateStatus) => {
-        if (state === "active") refresh();
-      },
-    );
-    return () => {
-      clearInterval(timer);
-      subscription.remove();
-    };
-  }, [refresh]);
+  const errorMessage = query.error
+    ? query.error instanceof Error
+      ? query.error.message
+      : "Failed to load flags"
+    : null;
 
   const value = useMemo<FeatureFlagsValue>(
     () => ({
       flags,
-      loading,
-      error,
+      loading: query.isLoading,
+      error: errorMessage,
       refresh,
       isEnabled: (key: FeatureFlagKey) => flags[key] === true,
     }),
-    [flags, loading, error, refresh],
+    [flags, query.isLoading, errorMessage, refresh],
   );
 
   return (

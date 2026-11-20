@@ -16,6 +16,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  collectionKeys,
+  customerKeys,
+  dashboardKeys,
+  statementKeys,
+  transactionKeys,
+} from "@/hooks/query-keys";
 import {
   discardItem,
   enqueue,
@@ -110,6 +118,7 @@ async function assertAccepted(itemId: string): Promise<void> {
 }
 
 export function OfflineQueueProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const { isOnline, appState } = useConnectivity();
   const [items, setItems] = useState<QueueItem[]>([]);
   const [outstanding, setOutstanding] = useState(0);
@@ -131,14 +140,23 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
       try {
         const count = await processQueue(execute);
         await reload();
-        if (count > 0) setLastSyncedAt(new Date().toISOString());
+        if (count > 0) {
+          setLastSyncedAt(new Date().toISOString());
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
+            queryClient.invalidateQueries({ queryKey: customerKeys.all }),
+            queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
+            queryClient.invalidateQueries({ queryKey: collectionKeys.all }),
+            queryClient.invalidateQueries({ queryKey: statementKeys.all }),
+          ]);
+        }
         return count;
       } finally {
         setSyncing(false);
       }
     });
     return accepted ?? 0;
-  }, [reload]);
+  }, [reload, queryClient]);
 
   // Replay on connectivity change and on app foreground.
   useEffect(() => {

@@ -14,7 +14,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { customersApi } from "@/lib/api";
+import {
+  useCustomer,
+  useDeleteCustomer,
+  useUpdateCustomer,
+} from "@/hooks/useCustomers";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
@@ -24,33 +28,30 @@ export default function EditCustomerScreen() {
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const customerQuery = useCustomer(id);
+  const updateCustomerMutation = useUpdateCustomer();
+  const deleteCustomerMutation = useDeleteCustomer();
+
+  const loading = customerQuery.isLoading;
+
   useEffect(() => {
-    if (id) {
-      fetchCustomer();
+    if (customerQuery.data) {
+      setName(customerQuery.data.name);
+      setPhone(customerQuery.data.phone);
     }
-  }, [id]);
+  }, [customerQuery.data]);
 
-  const fetchCustomer = async () => {
-    if (!id) return;
-
-    setLoading(true);
-    try {
-      const customer = await customersApi.get(id);
-      setName(customer.name);
-      setPhone(customer.phone);
-    } catch {
+  useEffect(() => {
+    if (customerQuery.error) {
       setError("Failed to load customer");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [customerQuery.error]);
 
   const validateForm = () => {
     let valid = true;
@@ -80,9 +81,12 @@ export default function EditCustomerScreen() {
     setError(null);
 
     try {
-      await customersApi.update(id, {
-        name: name.trim(),
-        phone: phone.trim(),
+      await updateCustomerMutation.mutateAsync({
+        id,
+        data: {
+          name: name.trim(),
+          phone: phone.trim(),
+        },
       });
       announce("Customer updated");
       router.back();
@@ -98,7 +102,7 @@ export default function EditCustomerScreen() {
     if (!id) return;
 
     try {
-      await customersApi.remove(id);
+      await deleteCustomerMutation.mutateAsync(id);
       router.replace("/(tabs)/customers");
     } catch (err) {
       console.error("Error deleting customer:", err);

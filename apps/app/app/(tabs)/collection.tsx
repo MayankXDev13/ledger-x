@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { ErrorState } from "@/components/ErrorState";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import {
@@ -18,7 +18,9 @@ import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system/legacy";
-import { useCollection } from "@/hooks/useInsights";
+import { useCollection } from "@/hooks/useCollection";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { useFeatureFlags } from "@/lib/feature-flags-provider";
 import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,7 +32,6 @@ import { Button } from "@/components/Button";
 import { AgingStrip } from "@/components/AgingStrip";
 import { formatCurrency } from "@/types/database";
 import type { CollectionRow, Customer } from "@/lib/api";
-import { customersApi } from "@/lib/api";
 import { colors } from "@/lib/theme";
 import { usePressable } from "@/lib/press-feedback";
 import { announce } from "@/lib/announce";
@@ -61,36 +62,41 @@ export default function CollectionScreen() {
   const collectionEnabled = isEnabled("collection");
   // The UPI surfaces are behind their own flag.
   const upiEnabled = isEnabled("upi_collection");
-  const { data, loading, error, refresh } = useCollection(
-    sort,
-    collectionEnabled,
+  const collectionQuery = useCollection(sort, collectionEnabled);
+  const data = collectionQuery.data ?? null;
+  const loading = collectionQuery.isLoading;
+  const error = collectionQuery.error
+    ? collectionQuery.error instanceof Error
+      ? collectionQuery.error.message
+      : "Failed to load"
+    : null;
+  const refresh = useCallback(async () => {
+    await collectionQuery.refetch();
+  }, [collectionQuery.refetch]);
+
+  useRefreshOnFocus(
+    useCallback(() => {
+      if (!collectionEnabled) return;
+      return refresh();
+    }, [collectionEnabled, refresh]),
   );
+
   const { pendingCustomers, queuedEntries } = useOfflineQueue();
   const { settings } = useSettings();
   const { session } = useAuth();
   const [qrRow, setQrRow] = useState<CollectionRow | null>(null);
   const [busy, setBusy] = useState<BusyAction>(null);
-  const [directory, setDirectory] = useState<Map<string, Customer>>(new Map());
   const qrRef = useRef<any>(null);
 
   // A queued credit can turn a customer the server does not list into a
   // debtor. Their name and phone come from the customer list, which is only
   // fetched while a queued entry needs it.
   const needsDirectory = queuedEntries.some((entry) => entry.pending);
-  useEffect(() => {
-    if (!needsDirectory) return;
-    let cancelled = false;
-    customersApi
-      .list()
-      .then((rows) => {
-        if (cancelled) return;
-        setDirectory(new Map(rows.map((row) => [row.id, row])));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [needsDirectory]);
+  const directoryQuery = useCustomers(needsDirectory);
+  const directory = useMemo<Map<string, Customer>>(
+    () => new Map((directoryQuery.data ?? []).map((row) => [row.id, row])),
+    [directoryQuery.data],
+  );
 
   const payeeName =
     settings?.payeeName?.trim() || session?.user.email.split("@")[0] || "Ledger-X";

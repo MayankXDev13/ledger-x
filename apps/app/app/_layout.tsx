@@ -9,6 +9,7 @@ import { SessionProvider } from "@/lib/session-provider";
 import { SettingsProvider } from "@/lib/settings-provider";
 import { FeatureFlagsProvider } from "@/lib/feature-flags-provider";
 import { OfflineQueueProvider } from "@/hooks/useOfflineQueue";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { StyleSheet } from "react-native";
 import { colors } from "@/lib/theme";
 import {
@@ -45,26 +46,28 @@ export default function RootLayout() {
           wrapper only handles left/right. (Top edge here used to paint a
           black strip above every screen.) */}
       <SafeAreaView style={styles.container} edges={["left", "right"]}>
-        {/* One session, one settings copy, one flag registry and one offline
+        {/* One query cache, session, settings copy, flag registry and offline
             queue for the app. */}
-        <SessionProvider>
-          <SettingsProvider>
-            <FeatureFlagsProvider>
-              <OfflineQueueProvider>
-                <AuthGuard>
-                  <AppLockGate>
-                    <Stack
-                      screenOptions={{
-                        headerShown: false,
-                        contentStyle: { backgroundColor: colors.bg },
-                      }}
-                    />
-                  </AppLockGate>
-                </AuthGuard>
-              </OfflineQueueProvider>
-            </FeatureFlagsProvider>
-          </SettingsProvider>
-        </SessionProvider>
+        <QueryProvider>
+          <SessionProvider>
+            <SettingsProvider>
+              <FeatureFlagsProvider>
+                <OfflineQueueProvider>
+                  <AuthGuard>
+                    <AppLockGate>
+                      <Stack
+                        screenOptions={{
+                          headerShown: false,
+                          contentStyle: { backgroundColor: colors.bg },
+                        }}
+                      />
+                    </AppLockGate>
+                  </AuthGuard>
+                </OfflineQueueProvider>
+              </FeatureFlagsProvider>
+            </SettingsProvider>
+          </SessionProvider>
+        </QueryProvider>
       </SafeAreaView>
     </SafeAreaProvider>
   );

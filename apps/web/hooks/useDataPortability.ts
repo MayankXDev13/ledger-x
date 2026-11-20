@@ -17,18 +17,17 @@ import { statementKeys } from "./useStatement";
 function useInvalidateAccountData() {
   const qc = useQueryClient();
 
-  return () => {
-    for (const key of [
-      customerKeys.all,
-      transactionKeys.all,
-      dashboardKeys.all,
-      collectionKeys.all,
-      settingsKeys.all,
-      statementKeys.all,
-    ]) {
-      qc.invalidateQueries({ queryKey: key });
-    }
-  };
+  return () =>
+    Promise.all(
+      [
+        customerKeys.all,
+        transactionKeys.all,
+        dashboardKeys.all,
+        collectionKeys.all,
+        settingsKeys.all,
+        statementKeys.all,
+      ].map((key) => qc.invalidateQueries({ queryKey: key })),
+    );
 }
 
 export function useExportCustomers() {
@@ -82,8 +81,8 @@ export function useSeedSampleData() {
 
   return useMutation({
     mutationFn: sampleDataApi.seed,
-    onSuccess: () => {
-      invalidate();
+    onSuccess: async () => {
+      await invalidate();
       toast.success("Sample data loaded");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -95,8 +94,8 @@ export function useRemoveSampleData() {
 
   return useMutation({
     mutationFn: sampleDataApi.remove,
-    onSuccess: () => {
-      invalidate();
+    onSuccess: async () => {
+      await invalidate();
       toast.success("Sample data removed");
     },
     onError: (err: Error) => toast.error(err.message),

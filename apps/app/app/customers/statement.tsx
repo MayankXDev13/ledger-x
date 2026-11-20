@@ -14,7 +14,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import { statementsApi, type Statement } from "@/lib/api";
+import { useStatement } from "@/hooks/useStatement";
 import {
   formatMoney,
   formatStatementDate,
@@ -38,8 +38,6 @@ export default function StatementScreen() {
   const insets = useSafeAreaInsets();
   const { settings } = useSettings();
 
-  const [statement, setStatement] = useState<Statement | null>(null);
-  const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [start, setStart] = useState(startParam ?? "");
   const [end, setEnd] = useState(endParam ?? "");
@@ -48,32 +46,24 @@ export default function StatementScreen() {
     end: endParam ?? "",
   });
 
+  const statementQuery = useStatement(id, {
+    start: applied.start || undefined,
+    end: applied.end || undefined,
+  });
+
+  const statement = statementQuery.data ?? null;
+  const loading = statementQuery.isLoading;
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await statementsApi.get(id, {
-          start: applied.start || undefined,
-          end: applied.end || undefined,
-        });
-        if (!cancelled) setStatement(data);
-      } catch (error) {
-        if (!cancelled) {
-          Alert.alert(
-            "Statement unavailable",
-            error instanceof Error ? error.message : "Could not load statement",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, applied]);
+    if (statementQuery.error) {
+      Alert.alert(
+        "Statement unavailable",
+        statementQuery.error instanceof Error
+          ? statementQuery.error.message
+          : "Could not load statement",
+      );
+    }
+  }, [statementQuery.error]);
 
   const period =
     applied.start && applied.end

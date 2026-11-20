@@ -63,18 +63,23 @@ export function useInfiniteCustomerTransactions(
   params?: { pageSize?: number; start?: string; end?: string }
 ) {
   const pageSize = params?.pageSize ?? 10;
+  const normalizedParams = {
+    pageSize,
+    start: params?.start,
+    end: params?.end,
+  };
   return useInfiniteQuery({
-    queryKey: transactionKeys.byCustomerInfinite(customerId, params),
+    queryKey: transactionKeys.byCustomerInfinite(customerId, normalizedParams),
     queryFn: ({ pageParam = 1 }) =>
       transactionsApi.listByCustomer(customerId, {
         page: pageParam,
-        pageSize,
-        start: params?.start,
-        end: params?.end,
+        pageSize: normalizedParams.pageSize,
+        start: normalizedParams.start,
+        end: normalizedParams.end,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
-      const fetched = allPages.length * pageSize;
+      const fetched = allPages.length * normalizedParams.pageSize;
       return fetched < lastPage.total ? allPages.length + 1 : undefined;
     },
     enabled: !!customerId,
@@ -95,7 +100,7 @@ export function useCreateTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.create,
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       // Patch the customer's transaction list, balances, and recent list
       // immediately from the server response so the UI updates without waiting
       // for background refetches, then reconcile with the server in parallel.
@@ -118,7 +123,7 @@ export function useCreateTransaction() {
         },
       );
 
-      void Promise.all([
+      await Promise.all([
         qc.invalidateQueries({
           queryKey: transactionKeys.byCustomerInfinite(created.customerId),
         }),
@@ -152,7 +157,7 @@ export function useUpdateTransaction() {
         note?: string;
       };
     }) => transactionsApi.update(id, data),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       let balanceDelta = 0;
       qc.setQueriesData<InfiniteData<PagedTransactions>>(
         { queryKey: transactionKeys.byCustomerInfinite(updated.customerId) },
@@ -169,7 +174,7 @@ export function useUpdateTransaction() {
         );
       }
 
-      void Promise.all([
+      await Promise.all([
         qc.invalidateQueries({
           queryKey: transactionKeys.byCustomerInfinite(updated.customerId),
         }),
@@ -192,7 +197,7 @@ export function useDeleteTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: transactionsApi.delete,
-    onSuccess: (_, deletedId) => {
+    onSuccess: async (_, deletedId) => {
       let removed: Transaction | undefined;
       qc.setQueriesData<InfiniteData<PagedTransactions>>(
         { queryKey: [...transactionKeys.all, "customer-infinite"] },
@@ -211,7 +216,7 @@ export function useDeleteTransaction() {
         );
       }
 
-      void Promise.all([
+      await Promise.all([
         qc.invalidateQueries({ queryKey: transactionKeys.all }),
         qc.invalidateQueries({ queryKey: customerKeys.balances() }),
         qc.invalidateQueries({ queryKey: dashboardKeys.all }),
