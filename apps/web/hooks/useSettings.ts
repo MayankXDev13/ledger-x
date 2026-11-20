@@ -21,9 +21,9 @@ export function useUpdateSettings() {
 
   return useMutation({
     mutationFn: settingsApi.update,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       qc.setQueryData(settingsKeys.detail(), data);
-      qc.invalidateQueries({ queryKey: settingsKeys.all });
+      await qc.invalidateQueries({ queryKey: settingsKeys.all });
     },
     onError: (err: Error) => toast.error(err.message),
   });

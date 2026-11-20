@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
-import { useFocusEffect, Link } from "expo-router";
+import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
-import { customersApi, collectionApi, type Customer } from "@/lib/api";
+import type { Customer } from "@/lib/api";
+import { useCustomerBalances, useCustomers } from "@/hooks/useCustomers";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { OfflinePendingBar } from "@/components/OfflinePendingBar";
 import { CustomerAvatar } from "@/components/CustomerAvatar";
@@ -37,33 +39,29 @@ export default function CustomersScreen() {
     pendingCustomers,
   } = useOfflineQueue();
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [balances, setBalances] = useState<Record<string, Balance>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchCustomers = useCallback(async () => {
-    try {
-      const [list, balMap] = await Promise.all([
-        customersApi.list(),
-        customersApi.balances().catch(() => null),
-      ]);
-      setCustomers(list);
-      if (balMap) {
-        setBalances(balMap);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load your customers");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const customersQuery = useCustomers(Boolean(session));
+  const balancesQuery = useCustomerBalances(Boolean(session));
 
-  useFocusEffect(
+  const customers = customersQuery.data ?? [];
+  const balances: Record<string, Balance> = balancesQuery.data ?? {};
+  const loading = customersQuery.isLoading;
+  const error = customersQuery.error
+    ? customersQuery.error instanceof Error
+      ? customersQuery.error.message
+      : "Could not load your customers"
+    : null;
+
+  const fetchCustomers = useCallback(async () => {
+    await Promise.all([customersQuery.refetch(), balancesQuery.refetch()]);
+  }, [customersQuery.refetch, balancesQuery.refetch]);
+
+  useRefreshOnFocus(
     useCallback(() => {
-      fetchCustomers();
-    }, [fetchCustomers]),
+      if (!session) return;
+      return fetchCustomers();
+    }, [session, fetchCustomers]),
   );
 
   /**

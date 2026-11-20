@@ -8,15 +8,15 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, Link } from "expo-router";
+import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  dashboardApi,
-  type Analytics,
-  type DashboardMetrics,
-} from "@/lib/api";
+  useDashboardAnalytics,
+  useDashboardMetrics,
+} from "@/hooks/useDashboard";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { QuickEntryModal } from "@/components/QuickEntryModal";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { OfflinePendingBar } from "@/components/OfflinePendingBar";
@@ -89,37 +89,38 @@ export default function DashboardScreen() {
   const { outstanding, items, syncing, isOnline, retry, discard, queuedEntries } =
     useOfflineQueue();
 
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [quickEntryType, setQuickEntryType] = useState<"credit" | "debit" | null>(
     null,
   );
 
+  const canQuery = !authLoading && Boolean(session);
+  const metricsQuery = useDashboardMetrics(canQuery);
+  const analyticsQuery = useDashboardAnalytics(canQuery);
+
+  const metrics = metricsQuery.data ?? null;
+  const analytics = analyticsQuery.data ?? null;
+  const loading = metricsQuery.isLoading || analyticsQuery.isLoading;
+  const rawError = metricsQuery.error ?? analyticsQuery.error;
+  const error = rawError
+    ? rawError instanceof Error
+      ? rawError.message
+      : "Could not load your totals"
+    : null;
+
   const fetchDashboardData = useCallback(async () => {
     try {
-      setError(null);
-      const [metricsData, analyticsData] = await Promise.all([
-        dashboardApi.metrics(),
-        dashboardApi.analytics(),
-      ]);
-      setMetrics(metricsData);
-      setAnalytics(analyticsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load your totals");
+      await Promise.all([metricsQuery.refetch(), analyticsQuery.refetch()]);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [metricsQuery.refetch, analyticsQuery.refetch]);
 
-  useFocusEffect(
+  useRefreshOnFocus(
     useCallback(() => {
-      if (authLoading) return;
-      fetchDashboardData();
-    }, [authLoading, fetchDashboardData]),
+      if (!canQuery) return;
+      return fetchDashboardData();
+    }, [canQuery, fetchDashboardData]),
   );
 
   if (authLoading) {
@@ -225,8 +226,7 @@ export default function DashboardScreen() {
               title="Try again"
               className="mt-4"
               onPress={() => {
-                setLoading(true);
-                fetchDashboardData();
+                void fetchDashboardData();
               }}
             />
           </View>

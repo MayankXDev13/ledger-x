@@ -1,13 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { settingsApi, type UserSettings } from "@/lib/api";
+import { settingsKeys } from "@/hooks/query-keys";
 
 export interface SettingsValue {
   settings: UserSettings | null;
@@ -25,26 +19,29 @@ export interface SettingsValue {
 const SettingsContext = createContext<SettingsValue | null>(null);
 
 /**
- * Owns the user settings for the whole app.
+ * Owns the user settings for the whole app, backed by TanStack Query.
  *
- * Profile, Collection and the onboarding dialog used to keep separate copies
- * of the same settings, so saving in one place silently reverted the other.
+ * Profile, Collection and the onboarding dialog share one cached copy, so
+ * saving in one place updates every consumer immediately.
  */
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: settingsKeys.detail(),
+    queryFn: settingsApi.get,
+  });
+
+  const mutation = useMutation({
+    mutationFn: settingsApi.update,
+    onSuccess: async (next) => {
+      qc.setQueryData(settingsKeys.detail(), next);
+      await qc.invalidateQueries({ queryKey: settingsKeys.all });
+    },
+  });
 
   const refresh = useCallback(async () => {
-    try {
-      setError(null);
-      setSettings(await settingsApi.get());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load settings");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await query.refetch();
+  }, [query.refetch]);
 
   const update = useCallback(
     async (data: {
@@ -52,21 +49,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       payeeName?: string | null;
       onboardingCompleted?: boolean;
       onboardingDismissed?: boolean;
-    }) => {
-      const next = await settingsApi.update(data);
-      setSettings(next);
-      return next;
-    },
-    [],
+    }) => mutation.mutateAsync(data),
+    [mutation.mutateAsync],
   );
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const errorMessage = query.error
+    ? query.error instanceof Error
+      ? query.error.message
+      : "Failed to load settings"
+    : null;
 
   const value = useMemo<SettingsValue>(
-    () => ({ settings, loading, error, refresh, update }),
-    [settings, loading, error, refresh, update],
+    () => ({
+      settings: query.data ?? null,
+      loading: query.isLoading,
+      error: errorMessage,
+      refresh,
+      update,
+    }),
+    [query.data, query.isLoading, errorMessage, refresh, update],
   );
 
   return (

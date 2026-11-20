@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { customersApi, type Customer } from "@/lib/api";
+import type { Customer, PaymentMethod } from "@/lib/api";
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
-import type { PaymentMethod } from "@/lib/api";
+import { useCustomers } from "@/hooks/useCustomers";
 import { parseWholeRupeAmount } from "@/lib/amount";
 import { colors } from "@/lib/theme";
 import { announce } from "@/lib/announce";
@@ -38,50 +38,41 @@ export function QuickEntryModal({
 }: QuickEntryModalProps) {
   const insets = useSafeAreaInsets();
   const { queueTransaction, outstanding, isOnline } = useOfflineQueue();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
-    try {
-      const data = await customersApi.list();
-      setCustomers(data);
-      setFilteredCustomers(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load customers");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const customersQuery = useCustomers(visible);
+  const customers = customersQuery.data ?? [];
+  const loading = customersQuery.isLoading;
 
   useEffect(() => {
     if (visible) {
-      fetchCustomers();
       setPaymentMethod(initialPaymentMethod ?? null);
     }
-  }, [visible]);
+  }, [visible, initialPaymentMethod]);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredCustomers(customers);
-    } else {
-      const query = searchQuery.toLowerCase();
-      setFilteredCustomers(
-        customers.filter(
-          (c) =>
-            c.name.toLowerCase().includes(query) ||
-            c.phone.includes(searchQuery),
-        ),
+    if (customersQuery.error) {
+      setError(
+        customersQuery.error instanceof Error
+          ? customersQuery.error.message
+          : "Failed to load customers",
       );
     }
+  }, [customersQuery.error]);
+
+  const filteredCustomers = useMemo(() => {
+    if (searchQuery.trim() === "") return customers;
+    const query = searchQuery.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) || c.phone.includes(searchQuery),
+    );
   }, [searchQuery, customers]);
 
   const handleSubmit = async () => {

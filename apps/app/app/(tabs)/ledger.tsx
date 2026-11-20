@@ -8,16 +8,13 @@ import {
   TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Link, router, useFocusEffect } from "expo-router";
+import { Link, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { format, isToday, isYesterday } from "date-fns";
-import {
-  customersApi,
-  dashboardApi,
-  type Customer,
-  type PaymentMethod,
-  type Transaction,
-} from "@/lib/api";
+import type { PaymentMethod, Transaction } from "@/lib/api";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useRecentTransactions } from "@/hooks/useDashboard";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { CustomerAvatar } from "@/components/CustomerAvatar";
 import { MoneyText } from "@/components/MoneyText";
 import { Button } from "@/components/Button";
@@ -54,35 +51,27 @@ export default function LedgerScreen() {
   const insets = useSafeAreaInsets();
   const press = usePressable();
   const { queuedEntries } = useOfflineQueue();
-  const [entries, setEntries] = useState<Transaction[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
+
+  const recentQuery = useRecentTransactions();
+  const customersQuery = useCustomers();
+
+  const entries = recentQuery.data ?? [];
+  const customers = customersQuery.data ?? [];
+  const loading = recentQuery.isLoading || customersQuery.isLoading;
+  const rawError = recentQuery.error ?? customersQuery.error;
+  const error = rawError
+    ? rawError instanceof Error
+      ? rawError.message
+      : "Could not load your ledger"
+    : null;
 
   const fetchEntries = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [recent, customerRows] = await Promise.all([
-        dashboardApi.recentTransactions(),
-        customersApi.list(),
-      ]);
-      setEntries(recent);
-      setCustomers(customerRows);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load your ledger");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await Promise.all([recentQuery.refetch(), customersQuery.refetch()]);
+  }, [recentQuery.refetch, customersQuery.refetch]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchEntries();
-    }, [fetchEntries]),
-  );
+  useRefreshOnFocus(fetchEntries);
 
   const customerName = useCallback(
     (customerId: string) =>

@@ -18,12 +18,14 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import { useAuth } from "@/hooks/useAuth";
+import { useCustomers } from "@/hooks/useCustomers";
 import {
-  accountApi,
-  exportsApi,
-  sampleDataApi,
-  customersApi,
-} from "@/lib/api";
+  useAccountArchive,
+  useDeleteAccount,
+  useExportCsv,
+  useRemoveSampleData,
+  useSeedSampleData,
+} from "@/hooks/useDataPortability";
 import { isValidUpiId } from "@/lib/upi";
 import { useSettings } from "@/hooks/useSettings";
 import { useFeatureFlags } from "@/lib/feature-flags-provider";
@@ -52,15 +54,23 @@ export default function ProfileScreen() {
   const scrollRef = useRef<any>(null);
   const upiSectionY = useRef(0);
 
+  const customersQuery = useCustomers(Boolean(session));
+  const exportCsvMutation = useExportCsv();
+  const archiveMutation = useAccountArchive();
+  const deleteAccountMutation = useDeleteAccount();
+  const seedSampleMutation = useSeedSampleData();
+  const removeSampleMutation = useRemoveSampleData();
+
   const [activeTab, setActiveTab] = useState<"data" | "security">("data");
   const [upiId, setUpiId] = useState("");
   const [payeeName, setPayeeName] = useState("");
   const [savingUpi, setSavingUpi] = useState(false);
-  const [hasSamples, setHasSamples] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const hasSamples = (customersQuery.data ?? []).some((row) => row.isSample);
 
   const [lockEnabled, setLockEnabledState] = useState(false);
   const [pinExists, setPinExists] = useState(false);
@@ -80,13 +90,6 @@ export default function ProfileScreen() {
       setLockEnabledState(await isLockEnabled());
       setPinExists(await hasPin());
     })();
-  }, []);
-
-  useEffect(() => {
-    customersApi
-      .list()
-      .then((rows) => setHasSamples(rows.some((row) => row.isSample)))
-      .catch(() => undefined);
   }, []);
 
   const upiError =
@@ -116,10 +119,7 @@ export default function ProfileScreen() {
   const shareCsv = async (kind: "customers" | "transactions") => {
     setBusy(kind);
     try {
-      const csv =
-        kind === "customers"
-          ? await exportsApi.customersCsv()
-          : await exportsApi.transactionsCsv();
+      const csv = await exportCsvMutation.mutateAsync(kind);
       if (await Sharing.isAvailableAsync()) {
         const filename = `ledger-x-${kind}.csv`;
         await Share.share({ message: csv, title: filename });
@@ -139,7 +139,7 @@ export default function ProfileScreen() {
   const shareArchive = async () => {
     setBusy("archive");
     try {
-      const archive = await accountApi.archive();
+      const archive = await archiveMutation.mutateAsync();
       if (await Sharing.isAvailableAsync()) {
         await Share.share({
           message: JSON.stringify(archive, null, 2),
@@ -162,11 +162,9 @@ export default function ProfileScreen() {
     setBusy("samples");
     try {
       if (hasSamples) {
-        await sampleDataApi.remove();
-        setHasSamples(false);
+        await removeSampleMutation.mutateAsync();
       } else {
-        await sampleDataApi.seed();
-        setHasSamples(true);
+        await seedSampleMutation.mutateAsync();
       }
     } catch (error) {
       Alert.alert(
@@ -214,7 +212,7 @@ export default function ProfileScreen() {
     if (deleteText !== "DELETE") return;
     setDeleting(true);
     try {
-      await accountApi.delete();
+      await deleteAccountMutation.mutateAsync();
       await signOut();
       router.replace(LOGIN_ROUTE);
     } catch (error) {
