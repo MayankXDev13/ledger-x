@@ -57,3 +57,27 @@ SMOKE_TOKEN=<session-token> ./scripts/smoke.sh
 
 Without `SMOKE_TOKEN` the script runs the unauthenticated checks only and says
 so, rather than reporting a false pass.
+
+## Automated CI / CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`) runs four parallel checks on pull requests
+  targeting `main` and pushes to `main`: **Lint**, **Typecheck**, **Test**, and
+  **OpenAPI** (`bun run --cwd apps/api openapi:check`).
+- **CD** (`.github/workflows/deploy.yml`) runs automatically after `CI` succeeds
+  on a push to `main` (or manually via `workflow_dispatch` with `target`:
+  `all`, `api`, or `web`).
+  - Changes under `apps/web/**` deploy only **Cloudflare Pages**.
+  - Changes under `apps/api/**` deploy only **Cloudflare Workers** and run
+    `apps/api/scripts/smoke.sh` (rolling back via `wrangler rollback --yes` on
+    failure).
+  - Changes to root `package.json`, `bun.lock`, or
+    `.github/workflows/deploy.yml` deploy both targets.
+
+### Required GitHub Actions Secrets & Variables
+
+- Secrets:
+  - `CLOUDFLARE_API_TOKEN` (permissions: **Workers Scripts: Edit**, **Cloudflare Pages: Edit**)
+  - `CLOUDFLARE_ACCOUNT_ID`
+- Optional repository variables:
+  - `CLOUDFLARE_PAGES_PROJECT` (defaults to `ledgerx`)
+  - `NEXT_PUBLIC_API_URL` (defaults to `https://server-v2.mayankxdev13.workers.dev`)

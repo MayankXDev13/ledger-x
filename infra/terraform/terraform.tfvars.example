@@ -1,0 +1,5 @@
+cloudflare_account_id = "e01af243c57f1deb498d5a6f5001002a"
+github_owner          = "MayankXDev13"
+github_repository     = "ledger-x"
+token_name            = "GITHUB_CD_CLOUDFLARE_API_TOKEN"
+# token_expires_on    = "2027-12-31T23:59:59Z"

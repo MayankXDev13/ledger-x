@@ -1,0 +1,171 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deployment target"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - api
+          - web
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect deploy targets
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy_api: ${{ steps.filter.outputs.deploy_api }}
+      deploy_web: ${{ steps.filter.outputs.deploy_web }}
+      sha: ${{ steps.filter.outputs.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Resolve changed targets
+        id: filter
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET="${{ inputs.target }}"
+            if [ "$TARGET" = "all" ]; then
+              echo "deploy_api=true" >> "$GITHUB_OUTPUT"
+              echo "deploy_web=true" >> "$GITHUB_OUTPUT"
+            elif [ "$TARGET" = "api" ]; then
+              echo "deploy_api=true" >> "$GITHUB_OUTPUT"
+              echo "deploy_web=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "deploy_api=false" >> "$GITHUB_OUTPUT"
+              echo "deploy_web=true" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+
+          if ! git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+            echo "No parent commit found; deploying both targets."
+            echo "deploy_api=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_web=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only HEAD^1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          DEPLOY_API=false
+          DEPLOY_WEB=false
+
+          if echo "$CHANGED" | grep -qE '^(package\.json|bun\.lock|\.github/workflows/deploy\.yml)$'; then
+            DEPLOY_API=true
+            DEPLOY_WEB=true
+          else
+            if echo "$CHANGED" | grep -qE '^apps/api/'; then
+              DEPLOY_API=true
+            fi
+            if echo "$CHANGED" | grep -qE '^apps/web/'; then
+              DEPLOY_WEB=true
+            fi
+          fi
+
+          echo "deploy_api=$DEPLOY_API" >> "$GITHUB_OUTPUT"
+          echo "deploy_web=$DEPLOY_WEB" >> "$GITHUB_OUTPUT"
+
+  deploy-api:
+    name: Deploy API (Workers)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://server-v2.mayankxdev13.workers.dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.detect-changes.outputs.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Deploy Cloudflare Worker
+        run: bun run --cwd apps/api deploy
+
+      - name: Run smoke check (rollback on failure)
+        working-directory: apps/api
+        run: |
+          if ! API_URL="$API_URL" bash scripts/smoke.sh; then
+            echo "::error::Post-deploy smoke check failed; rolling back Worker deployment."
+            bun x wrangler rollback --yes
+            exit 1
+          fi
+
+  deploy-web:
+    name: Deploy Web (Pages)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PAGES_EXPORT: "1"
+      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://server-v2.mayankxdev13.workers.dev' }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'ledgerx' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.detect-changes.outputs.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build static web export
+        run: bun run --cwd apps/web build
+
+      - name: Deploy Cloudflare Pages
+        working-directory: apps/api
+        run: >-
+          bun x wrangler pages deploy ../web/out
+          --project-name "$CLOUDFLARE_PAGES_PROJECT"
+          --branch main
+          --commit-hash "${{ needs.detect-changes.outputs.sha }}"
