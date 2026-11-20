@@ -52,3 +52,14 @@ __pycache__/
 # Local setup notes from a past session (machine-specific paths and IPs)
 MOBILE_APP_READY.md
 MOBILE_DEV_SETUP.md
+
+# Terraform state, caches, and local variable files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
