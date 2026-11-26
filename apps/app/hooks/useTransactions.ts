@@ -3,8 +3,24 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
 } from "@tanstack/react-query";
-import { transactionsApi, type PaymentMethod } from "@/lib/api";
+import {
+  transactionsApi,
+  type Analytics,
+  type DashboardMetrics,
+  type PagedTransactions,
+  type PaymentMethod,
+  type Transaction,
+} from "@/lib/api";
+import {
+  applyBalanceDelta,
+  applyDeletedTransactionToInfinite,
+  applyTransactionToDashboardAnalytics,
+  applyTransactionToDashboardMetrics,
+  applyUpdatedTransactionToInfinite,
+  type CustomerBalancesMap,
+} from "@/lib/transaction-cache";
 import {
   collectionKeys,
   customerKeys,
@@ -74,6 +90,55 @@ export function useUpdateTransaction() {
       };
     }) => transactionsApi.update(id, data),
     onSuccess: async (updated) => {
+      const prevBalances = qc.getQueryData<CustomerBalancesMap>(
+        customerKeys.balances(),
+      );
+      const prevOutstanding = prevBalances?.[updated.customerId]?.outstanding;
+
+      let balanceDelta = 0;
+      let creditDelta = 0;
+      let debitDelta = 0;
+      qc.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: transactionKeys.byCustomerInfinite(updated.customerId) },
+        (old) => {
+          const res = applyUpdatedTransactionToInfinite(old, updated);
+          if (res.balanceDelta !== 0) {
+            balanceDelta = res.balanceDelta;
+            creditDelta = res.creditDelta;
+            debitDelta = res.debitDelta;
+          }
+          return res.next;
+        },
+      );
+
+      if (balanceDelta !== 0) {
+        qc.setQueryData<CustomerBalancesMap>(customerKeys.balances(), (old) =>
+          applyBalanceDelta(old, updated.customerId, balanceDelta),
+        );
+        qc.setQueryData<DashboardMetrics>(dashboardKeys.metrics(), (old) =>
+          applyTransactionToDashboardMetrics(
+            old,
+            balanceDelta,
+            updated.createdAt,
+          ),
+        );
+        qc.setQueryData<Analytics>(dashboardKeys.analytics(), (old) =>
+          applyTransactionToDashboardAnalytics(old, {
+            customerId: updated.customerId,
+            creditDelta,
+            debitDelta,
+            createdAt: updated.createdAt,
+            previousCustomerOutstanding: prevOutstanding,
+          }),
+        );
+      }
+
+      qc.setQueryData<Transaction[]>(
+        dashboardKeys.recentTransactions(),
+        (old) =>
+          old?.map((tx) => (tx.id === updated.id ? { ...tx, ...updated } : tx)),
+      );
+
       await Promise.all([
         qc.invalidateQueries({
           queryKey: transactionKeys.byCustomerInfinite(updated.customerId),
@@ -95,7 +160,48 @@ export function useDeleteTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => transactionsApi.remove(id),
-    onSuccess: async () => {
+    onSuccess: async (_, deletedId) => {
+      let removed: Transaction | undefined;
+      qc.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: [...transactionKeys.all, "customer-infinite"] },
+        (old) => {
+          const res = applyDeletedTransactionToInfinite(old, deletedId);
+          if (res.removed) removed = res.removed;
+          return res.next;
+        },
+      );
+
+      if (removed) {
+        const prevBalances = qc.getQueryData<CustomerBalancesMap>(
+          customerKeys.balances(),
+        );
+        const prevOutstanding = prevBalances?.[removed.customerId]?.outstanding;
+        const creditDelta = removed.type === "credit" ? -removed.amount : 0;
+        const debitDelta = removed.type === "debit" ? -removed.amount : 0;
+        const delta = creditDelta - debitDelta;
+
+        qc.setQueryData<CustomerBalancesMap>(customerKeys.balances(), (old) =>
+          applyBalanceDelta(old, removed!.customerId, delta),
+        );
+        qc.setQueryData<DashboardMetrics>(dashboardKeys.metrics(), (old) =>
+          applyTransactionToDashboardMetrics(old, delta, removed!.createdAt),
+        );
+        qc.setQueryData<Analytics>(dashboardKeys.analytics(), (old) =>
+          applyTransactionToDashboardAnalytics(old, {
+            customerId: removed!.customerId,
+            creditDelta,
+            debitDelta,
+            createdAt: removed!.createdAt,
+            previousCustomerOutstanding: prevOutstanding,
+          }),
+        );
+      }
+
+      qc.setQueryData<Transaction[]>(
+        dashboardKeys.recentTransactions(),
+        (old) => old?.filter((tx) => tx.id !== deletedId),
+      );
+
       await Promise.all([
         qc.invalidateQueries({ queryKey: transactionKeys.all }),
         qc.invalidateQueries({ queryKey: customerKeys.balances() }),

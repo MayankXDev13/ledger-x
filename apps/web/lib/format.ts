@@ -24,6 +24,12 @@ export function formatCompactCurrency(value: number): string {
   return `₹${abs}`;
 }
 
+/** Signed compact axis form that preserves negative ticks, e.g. `−₹500`. */
+export function formatSignedCompactCurrency(value: number): string {
+  const compact = formatCompactCurrency(value);
+  return value < 0 ? `−${compact}` : compact;
+}
+
 /** Month label used by the dashboard trend axis, e.g. `Jan 25`. */
 export function formatMonthLabel(value: string): string {
   const [year, month] = value.split("-");

@@ -37,6 +37,7 @@ export default function CustomersScreen() {
     retry,
     discard,
     pendingCustomers,
+    queuedEntries,
   } = useOfflineQueue();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +46,25 @@ export default function CustomersScreen() {
   const balancesQuery = useCustomerBalances(Boolean(session));
 
   const customers = customersQuery.data ?? [];
-  const balances: Record<string, Balance> = balancesQuery.data ?? {};
+  const balances = useMemo<Record<string, Balance>>(() => {
+    const base: Record<string, Balance> = { ...(balancesQuery.data ?? {}) };
+    for (const entry of queuedEntries) {
+      if (!entry.pending) continue;
+      const current = base[entry.customerId] ?? { outstanding: 0, ageDays: null };
+      const delta = entry.type === "credit" ? entry.amount : -entry.amount;
+      const nextOutstanding = current.outstanding + delta;
+      base[entry.customerId] = {
+        outstanding: nextOutstanding,
+        ageDays:
+          nextOutstanding <= 0
+            ? null
+            : current.ageDays === null
+              ? 0
+              : current.ageDays,
+      };
+    }
+    return base;
+  }, [balancesQuery.data, queuedEntries]);
   const loading = customersQuery.isLoading;
   const error = customersQuery.error
     ? customersQuery.error instanceof Error

@@ -100,26 +100,61 @@ export function nextPending(items: QueueItem[]): QueueItem | null {
 
 
 /**
- * Guards the queue against two concurrent replays.
+ * Guards the queue against two concurrent replays while coalescing follow-up
+ * requests.
  *
- * The queue is owned by one provider for the whole app, but several screens
- * can still ask for a sync at the same moment (a reconnect plus a foreground
- * plus a manual retry). This guard makes the second caller wait for the first
- * instead of racing it over the same FIFO rows.
+ * The queue is owned by one provider for the whole app, so several screens or
+ * a foreground sync plus a new transaction submission can ask for a sync at the
+ * same moment. Only one replay runs at a time, and any callers arriving while a
+ * replay is in flight are coalesced into a single follow-up pass once the
+ * active pass finishes so newly enqueued writes are never dropped.
  */
 export function createReplayGuard() {
   let running = false;
+  let queuedWaiters: {
+    task: () => Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (reason: unknown) => void;
+  }[] = [];
+
+  async function flushQueued() {
+    while (queuedWaiters.length > 0) {
+      const batch = queuedWaiters;
+      queuedWaiters = [];
+      const nextTask = batch[batch.length - 1].task;
+      try {
+        const result = await nextTask();
+        for (const waiter of batch) waiter.resolve(result);
+      } catch (err) {
+        for (const waiter of batch) waiter.reject(err);
+      }
+    }
+  }
 
   return {
     isRunning: () => running,
-    /** Runs `task` unless a replay is already in flight. */
+    /** Runs `task` exclusively, coalescing concurrent callers into one follow-up pass. */
     async run<T>(task: () => Promise<T>): Promise<T | null> {
-      if (running) return null;
+      if (running) {
+        return new Promise<T>((resolve, reject) => {
+          queuedWaiters.push({
+            task: task as () => Promise<unknown>,
+            resolve: resolve as (value: unknown) => void,
+            reject,
+          });
+        });
+      }
       running = true;
       try {
         return await task();
       } finally {
-        running = false;
+        if (queuedWaiters.length > 0) {
+          void flushQueued().finally(() => {
+            running = false;
+          });
+        } else {
+          running = false;
+        }
       }
     },
   };

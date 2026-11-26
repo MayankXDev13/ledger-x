@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { authMiddleware } from "./middleware/authmiddleware";
 import authApp from "./routes/auth";
@@ -66,6 +66,24 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use("/settings/*", authMiddleware);
   app.use("/collection/*", authMiddleware);
   app.use("/sample-data/*", authMiddleware);
+
+  // Prevent browser or proxy HTTP caching on authenticated ledger GETs so a
+  // refetch right after a write never serves stale balances or lists.
+  const noStoreLedgerGet: MiddlewareHandler<AppEnv> = async (ctx, next) => {
+    await next();
+    if (ctx.req.method === "GET") {
+      ctx.header("Cache-Control", "no-store");
+    }
+  };
+  for (const path of [
+    "/customers/*",
+    "/transactions/*",
+    "/dashboard/*",
+    "/collection/*",
+    "/statements/*",
+  ]) {
+    app.use(path, noStoreLedgerGet);
+  }
 
   app.route("/auth", authApp);
   app.route("/audit-logs", auditLogsApp);

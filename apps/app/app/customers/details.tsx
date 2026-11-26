@@ -75,11 +75,28 @@ export default function CustomerDetailsScreen() {
     return list;
   }, [transactionsQuery.data]);
 
+  const unseenQueued = useMemo(
+    () =>
+      entriesNotIn(
+        queuedEntries.filter((entry) => entry.customerId === id),
+        entries.map((entry) => entry.id),
+      ),
+    [entries, queuedEntries, id],
+  );
+
   const latestPage = transactionsQuery.data?.pages[0];
+  const queuedCredit = unseenQueued
+    .filter((entry) => entry.type === "credit")
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const queuedDebit = unseenQueued
+    .filter((entry) => entry.type === "debit")
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const totalCredit = (latestPage?.totalCredit ?? 0) + queuedCredit;
+  const totalDebit = (latestPage?.totalDebit ?? 0) + queuedDebit;
   const balance: BalanceData = {
-    totalCredit: latestPage?.totalCredit ?? 0,
-    totalDebit: latestPage?.totalDebit ?? 0,
-    balance: (latestPage?.totalCredit ?? 0) - (latestPage?.totalDebit ?? 0),
+    totalCredit,
+    totalDebit,
+    balance: totalCredit - totalDebit,
   };
 
   const loading = customerQuery.isLoading || transactionsQuery.isLoading;
@@ -156,11 +173,7 @@ export default function CustomerDetailsScreen() {
   /* -------------------- RENDER -------------------- */
 
   const visibleEntries = useMemo<Transaction[]>(() => {
-    const serverIds = entries.map((entry) => entry.id);
-    const queued: Transaction[] = entriesNotIn(
-      queuedEntries.filter((entry) => entry.customerId === id),
-      serverIds,
-    ).map((entry) => ({
+    const queued: Transaction[] = unseenQueued.map((entry) => ({
       id: entry.id,
       userId: "",
       customerId: entry.customerId,
@@ -172,7 +185,7 @@ export default function CustomerDetailsScreen() {
     }));
 
     return [...queued, ...entries];
-  }, [entries, queuedEntries, id]);
+  }, [entries, unseenQueued]);
 
   const filteredEntries = useMemo(() => {
     if (typeFilter === "all") return visibleEntries;

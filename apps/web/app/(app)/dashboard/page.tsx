@@ -63,7 +63,12 @@ import { QueryErrorState } from "@/components/QueryErrorState";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TOTAL_OUTSTANDING_LABEL } from "@/lib/labels";
 import { paymentMethodLabel } from "@/lib/payments";
-import { formatCurrency, formatCompactCurrency } from "@/lib/format";
+import {
+  formatCurrency,
+  formatCompactCurrency,
+  formatSignedCompactCurrency,
+} from "@/lib/format";
+import { buildRecentChartData } from "@/lib/dashboard-charts";
 import { moneyPresentation, moneyTextClass } from "@/lib/money";
 
 /** Chart series colours come from the shared chart tokens, never literals. */
@@ -178,14 +183,17 @@ function MetricCard({
 
 /* ── Tooltips ── */
 
-/** Single-series tooltip that keeps the sign of the value. */
+/** Single-series tooltip that keeps the sign and entry label of the value. */
 function FlowTooltip({
   active,
   payload,
   label,
 }: {
   active?: boolean;
-  payload?: Array<{ value?: number; payload?: { toneLabel?: string; sign?: string } }>;
+  payload?: Array<{
+    value?: number;
+    payload?: { typeLabel?: string; sign?: string; tooltipLabel?: string };
+  }>;
   label?: string | number;
 }) {
   if (!active || !payload?.length) return null;
@@ -194,13 +202,13 @@ function FlowTooltip({
   const meta = entry.payload;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl text-xs">
-      <p className="text-muted-foreground mb-1">{label}</p>
+      <p className="text-muted-foreground mb-1">{meta?.tooltipLabel ?? label}</p>
       <p className="font-bold text-foreground tabular-nums">
         {meta?.sign ?? (value < 0 ? "−" : "+")}
         {formatCurrency(value)}
       </p>
-      {meta?.toneLabel ? (
-        <p className="text-muted-foreground mt-0.5">{meta.toneLabel}</p>
+      {meta?.typeLabel ? (
+        <p className="text-muted-foreground mt-0.5">{meta.typeLabel}</p>
       ) : null}
     </div>
   );
@@ -275,19 +283,7 @@ export default function DashboardPage() {
   // local-part, then "there" as the greeting placeholder.
   const firstName = user ? deriveFirstName(user.name, user.email) : "there";
 
-  const chartData = recentTxns
-    ? [...recentTxns].reverse().map((tx) => {
-        const money = moneyPresentation(tx);
-        return {
-          name: format(new Date(tx.createdAt), "MMM d"),
-          amount: tx.type === "credit" ? tx.amount : -tx.amount,
-          type: tx.type,
-          tone: money.tone,
-          sign: money.sign,
-          toneLabel: money.label,
-        };
-      })
-    : [];
+  const chartData = buildRecentChartData(recentTxns, customers);
 
   /** Totals behind the "Transaction Flow" summary sentence. */
   const flowTotals = chartData.reduce(
@@ -534,8 +530,8 @@ export default function DashboardPage() {
                       tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                       axisLine={false}
                       tickLine={false}
-                      width={56}
-                      tickFormatter={(v) => formatCompactCurrency(v)}
+                      width={58}
+                      tickFormatter={(v) => formatSignedCompactCurrency(Number(v))}
                     />
                     <RechartsTooltip
                       content={<FlowTooltip />}
@@ -647,20 +643,24 @@ export default function DashboardPage() {
                       tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                       axisLine={false}
                       tickLine={false}
-                      width={46}
-                      tickFormatter={(v) => formatCompactCurrency(v)}
+                      width={52}
+                      tickFormatter={(v) => formatSignedCompactCurrency(Number(v))}
                     />
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
-                          labelKey="activities"
                           indicator="line"
+                          labelFormatter={(value, tooltipPayload) =>
+                            tooltipPayload?.[0]?.payload?.tooltipLabel ??
+                            String(value ?? "")
+                          }
                           formatter={(value, name, item) => (
                             <div className="flex w-full items-center justify-between gap-4">
                               <span className="text-muted-foreground">
-                                {item?.payload?.toneLabel ?? name}
+                                {item?.payload?.typeLabel ?? name}
                               </span>
                               <span className="font-semibold tabular-nums text-foreground">
+                                {item?.payload?.sign ?? ""}
                                 {formatCurrency(Number(value))}
                               </span>
                             </div>
@@ -670,11 +670,11 @@ export default function DashboardPage() {
                       cursor={false}
                     />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                      {chartData.map((entry, index) => (
+                      {chartData.map((entry) => (
                         <Cell
-                          key={index}
+                          key={entry.id}
                           fill={
-                            entry.tone === "paid"
+                            entry.type === "debit"
                               ? "var(--chart-1)"
                               : "url(#hatchTypeCredit)"
                           }
@@ -816,7 +816,6 @@ export default function DashboardPage() {
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
-                          labelKey="activities"
                           indicator="line"
                           labelFormatter={(value) =>
                             typeof value === "string" ? monthLabel(value) : value
