@@ -30,29 +30,39 @@ function item(overrides: Partial<QueueItem> = {}): QueueItem {
 }
 
 describe("createReplayGuard", () => {
-  it("runs the task once when three screens ask for a sync at once", async () => {
+  it("never runs concurrently and coalesces concurrent callers into one follow-up pass", async () => {
     const guard = createReplayGuard();
     let runs = 0;
-    let release: () => void = () => {};
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
+    let activeCount = 0;
+    let maxActive = 0;
+    let releaseFirst: () => void = () => {};
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
     });
 
     const task = async () => {
       runs += 1;
-      await gate;
+      activeCount += 1;
+      maxActive = Math.max(maxActive, activeCount);
+      if (runs === 1) {
+        await firstGate;
+      }
+      activeCount -= 1;
       return runs;
     };
 
-    // Three mounted screens all ask for a sync in the same tick.
+    // Three callers ask for a sync while the first pass is in flight:
+    // pass 1 finishes, then the two waiting callers coalesce into one pass 2.
     const first = guard.run(task);
     const second = guard.run(task);
     const third = guard.run(task);
-    release();
+    releaseFirst();
     const results = await Promise.all([first, second, third]);
 
-    expect(runs).toBe(1);
-    expect(results.filter((result) => result !== null)).toHaveLength(1);
+    expect(maxActive).toBe(1);
+    expect(runs).toBe(2);
+    expect(results).toEqual([1, 2, 2]);
+    expect(guard.isRunning()).toBe(false);
   });
 
   it("allows the next replay once the first one finished", async () => {

@@ -1,10 +1,16 @@
 import type { InfiniteData } from "@tanstack/react-query";
-import type { PagedTransactions, Transaction } from "./api";
+import type { Analytics, PagedTransactions, Transaction } from "./api";
 
 export type CustomerBalancesMap = Record<
   string,
   { outstanding: number; ageDays: number | null }
 >;
+
+export interface DashboardMetrics {
+  totalBalance: number;
+  totalCustomers: number;
+  monthlyNet: number;
+}
 
 function signedDelta(type: "credit" | "debit", amount: number): number {
   return type === "credit" ? amount : -amount;
@@ -214,5 +220,152 @@ export function applyBalanceDelta(
       outstanding: nextOutstanding,
       ageDays: nextAgeDays,
     },
+  };
+}
+
+function isInCurrentMonth(iso?: string, now = new Date()): boolean {
+  if (!iso) return true;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return true;
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
+function utcMonthKey(iso?: string, now = new Date()): string {
+  const date = iso ? new Date(iso) : now;
+  const valid = Number.isNaN(date.getTime()) ? now : date;
+  return `${valid.getUTCFullYear()}-${String(valid.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Patch cached `/dashboard/metrics` immediately when a transaction is created,
+ * updated, or deleted so navigating from a customer page to the dashboard
+ * never flashes stale totals while the background refetch runs.
+ */
+export function applyTransactionToDashboardMetrics(
+  existing: DashboardMetrics | undefined,
+  delta: number,
+  createdAt?: string,
+  now = new Date(),
+): DashboardMetrics | undefined {
+  if (!existing || delta === 0) return existing;
+
+  return {
+    ...existing,
+    totalBalance: existing.totalBalance + delta,
+    monthlyNet: isInCurrentMonth(createdAt, now)
+      ? existing.monthlyNet + delta
+      : existing.monthlyNet,
+  };
+}
+
+/**
+ * Patch cached `/dashboard/analytics` (monthly trend, top debtors, and total
+ * receivables) immediately from a transaction delta before the server refetch
+ * reconciles exact FIFO aging buckets.
+ */
+export function applyTransactionToDashboardAnalytics(
+  existing: Analytics | undefined,
+  params: {
+    customerId: string;
+    creditDelta: number;
+    debitDelta: number;
+    createdAt?: string;
+    previousCustomerOutstanding?: number;
+  },
+  now = new Date(),
+): Analytics | undefined {
+  if (!existing) return existing;
+  const { customerId, creditDelta, debitDelta, createdAt } = params;
+  if (creditDelta === 0 && debitDelta === 0) return existing;
+
+  const balanceDelta = creditDelta - debitDelta;
+  const targetMonth = utcMonthKey(createdAt, now);
+
+  const trend = existing.trend.map((point) =>
+    point.month === targetMonth
+      ? {
+          ...point,
+          credit: Math.max(0, point.credit + creditDelta),
+          debit: Math.max(0, point.debit + debitDelta),
+        }
+      : point,
+  );
+
+  const existingDebtor = existing.topDebtors.find(
+    (d) => d.customerId === customerId,
+  );
+  const prevOutstanding =
+    params.previousCustomerOutstanding ?? existingDebtor?.outstanding ?? 0;
+  const nextOutstanding = prevOutstanding + balanceDelta;
+  const receivableDelta =
+    Math.max(0, nextOutstanding) - Math.max(0, prevOutstanding);
+
+  const topDebtors = existingDebtor
+    ? existing.topDebtors
+        .map((d) =>
+          d.customerId === customerId
+            ? {
+                ...d,
+                outstanding: nextOutstanding,
+                ageDays:
+                  nextOutstanding <= 0
+                    ? null
+                    : d.ageDays === null
+                      ? 0
+                      : d.ageDays,
+              }
+            : d,
+        )
+        .filter((d) => d.outstanding > 0)
+        .sort((a, b) => b.outstanding - a.outstanding)
+    : existing.topDebtors;
+
+  return {
+    ...existing,
+    trend,
+    topDebtors,
+    totalReceivables: Math.max(0, existing.totalReceivables + receivableDelta),
+  };
+}
+
+/**
+ * Patch a non-infinite paged customer transaction query (`useCustomerTransactions`)
+ * when a transaction is created.
+ */
+export function applyCreatedTransactionToPaged(
+  existing: PagedTransactions | undefined,
+  created: Transaction,
+): PagedTransactions | undefined {
+  if (!existing) return existing;
+  if (existing.data.some((tx) => tx.id === created.id)) return existing;
+
+  const prevBalance =
+    Number(existing.totalCredit ?? 0) - Number(existing.totalDebit ?? 0);
+  const delta = signedDelta(created.type, created.amount);
+  const optimisticTx: Transaction = {
+    ...created,
+    runningBalance:
+      created.runningBalance !== undefined
+        ? created.runningBalance
+        : prevBalance + delta,
+  };
+
+  return {
+    ...existing,
+    data:
+      existing.page === 1
+        ? [optimisticTx, ...existing.data].slice(0, existing.pageSize)
+        : existing.data,
+    total: (existing.total ?? 0) + 1,
+    totalCredit:
+      Number(existing.totalCredit ?? 0) +
+      (created.type === "credit" ? created.amount : 0),
+    totalDebit:
+      Number(existing.totalDebit ?? 0) +
+      (created.type === "debit" ? created.amount : 0),
+    totalAmount: Number(existing.totalAmount ?? 0) + created.amount,
   };
 }

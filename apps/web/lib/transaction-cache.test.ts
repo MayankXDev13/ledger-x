@@ -4,7 +4,10 @@ import type { PagedTransactions, Transaction } from "./api";
 import {
   applyBalanceDelta,
   applyCreatedTransactionToInfinite,
+  applyCreatedTransactionToPaged,
   applyDeletedTransactionToInfinite,
+  applyTransactionToDashboardAnalytics,
+  applyTransactionToDashboardMetrics,
   applyUpdatedTransactionToInfinite,
 } from "./transaction-cache";
 
@@ -151,5 +154,89 @@ describe("applyBalanceDelta", () => {
       -400,
     );
     expect(next?.["c-1"]).toEqual({ outstanding: 0, ageDays: null });
+  });
+});
+
+describe("applyTransactionToDashboardMetrics", () => {
+  it("updates both totalBalance and monthlyNet for current-month transactions", () => {
+    const now = new Date("2026-11-26T10:00:00.000Z");
+    const next = applyTransactionToDashboardMetrics(
+      { totalBalance: 1000, totalCustomers: 5, monthlyNet: 300 },
+      250,
+      "2026-11-26T09:00:00.000Z",
+      now,
+    );
+    expect(next).toEqual({
+      totalBalance: 1250,
+      totalCustomers: 5,
+      monthlyNet: 550,
+    });
+  });
+
+  it("leaves monthlyNet unchanged for transactions from a previous month", () => {
+    const now = new Date("2026-11-26T10:00:00.000Z");
+    const next = applyTransactionToDashboardMetrics(
+      { totalBalance: 1000, totalCustomers: 5, monthlyNet: 300 },
+      -200,
+      "2026-10-15T09:00:00.000Z",
+      now,
+    );
+    expect(next).toEqual({
+      totalBalance: 800,
+      totalCustomers: 5,
+      monthlyNet: 300,
+    });
+  });
+});
+
+describe("applyTransactionToDashboardAnalytics", () => {
+  it("updates matching trend month, topDebtors, and totalReceivables", () => {
+    const now = new Date("2026-11-26T10:00:00.000Z");
+    const next = applyTransactionToDashboardAnalytics(
+      {
+        trend: [
+          { month: "2026-10", credit: 100, debit: 50 },
+          { month: "2026-11", credit: 500, debit: 100 },
+        ],
+        topDebtors: [
+          { customerId: "c-1", name: "Ramesh", outstanding: 400, ageDays: 5 },
+        ],
+        aging: { "0-30": 400, "31-60": 0, "60+": 0 },
+        totalReceivables: 400,
+      },
+      {
+        customerId: "c-1",
+        creditDelta: 0,
+        debitDelta: 150,
+        createdAt: "2026-11-26T09:00:00.000Z",
+        previousCustomerOutstanding: 400,
+      },
+      now,
+    );
+
+    expect(next?.trend[1]).toEqual({ month: "2026-11", credit: 500, debit: 250 });
+    expect(next?.topDebtors[0].outstanding).toBe(250);
+    expect(next?.totalReceivables).toBe(250);
+  });
+});
+
+describe("applyCreatedTransactionToPaged", () => {
+  it("prepends on page 1 and increments totals", () => {
+    const existing = {
+      data: [makeTx({ id: "tx-1", amount: 500, type: "credit" })],
+      page: 1,
+      pageSize: 10,
+      total: 1,
+      totalCredit: 500,
+      totalDebit: 0,
+      totalAmount: 500,
+    };
+    const next = applyCreatedTransactionToPaged(
+      existing,
+      makeTx({ id: "tx-2", amount: 200, type: "debit", runningBalance: undefined }),
+    );
+    expect(next?.data.map((t) => t.id)).toEqual(["tx-2", "tx-1"]);
+    expect(next?.total).toBe(2);
+    expect(next?.totalDebit).toBe(200);
   });
 });

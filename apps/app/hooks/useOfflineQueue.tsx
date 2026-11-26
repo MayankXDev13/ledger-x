@@ -16,7 +16,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import {
   collectionKeys,
   customerKeys,
@@ -36,10 +36,20 @@ import {
 import {
   customersApi,
   transactionsApi,
+  type Analytics,
   type Customer,
+  type DashboardMetrics,
+  type PagedTransactions,
   type PaymentMethod,
   type Transaction,
 } from "@/lib/api";
+import {
+  applyBalanceDelta,
+  applyCreatedTransactionToInfinite,
+  applyTransactionToDashboardAnalytics,
+  applyTransactionToDashboardMetrics,
+  type CustomerBalancesMap,
+} from "@/lib/transaction-cache";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import {
   createReplayGuard,
@@ -213,13 +223,78 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
         note: data.note,
       });
       await reload();
+
+      // Optimistically patch transaction lists immediately (deduplicated by id
+      // against queuedEntries in details.tsx and ledger.tsx).
+      const optimisticTx: Transaction = {
+        id: item.id,
+        userId: "",
+        customerId: data.customerId,
+        amount: data.amount,
+        type: data.type,
+        paymentMethod: data.paymentMethod ?? null,
+        note: data.note ?? null,
+        createdAt: item.createdAt,
+      };
+      queryClient.setQueriesData<InfiniteData<PagedTransactions>>(
+        { queryKey: transactionKeys.byCustomerInfinite(data.customerId) },
+        (old) => applyCreatedTransactionToInfinite(old, optimisticTx),
+      );
+      queryClient.setQueryData<Transaction[]>(
+        dashboardKeys.recentTransactions(),
+        (old) => {
+          if (!old) return old;
+          if (old.some((tx) => tx.id === optimisticTx.id)) return old;
+          return [optimisticTx, ...old].slice(0, 5);
+        },
+      );
+
       if (isOnline) {
+        const prevBalances = queryClient.getQueryData<CustomerBalancesMap>(
+          customerKeys.balances(),
+        );
+        const prevOutstanding = prevBalances?.[data.customerId]?.outstanding;
+        const creditDelta = data.type === "credit" ? data.amount : 0;
+        const debitDelta = data.type === "debit" ? data.amount : 0;
+        const delta = creditDelta - debitDelta;
+        const syncStartedAt = Date.now();
+
         await sync();
         await assertAccepted(item.id);
+
+        // Patch only inactive aggregate caches that `sync()` did not refetch
+        // (active queries already hold the fresh server response, and offline
+        // pending writes are folded by screen overlays).
+        const wasNotRefetched = (key: readonly unknown[]) =>
+          (queryClient.getQueryState(key)?.dataUpdatedAt ?? 0) < syncStartedAt;
+
+        if (wasNotRefetched(customerKeys.balances())) {
+          queryClient.setQueryData<CustomerBalancesMap>(
+            customerKeys.balances(),
+            (old) => applyBalanceDelta(old, data.customerId, delta),
+          );
+        }
+        if (wasNotRefetched(dashboardKeys.metrics())) {
+          queryClient.setQueryData<DashboardMetrics>(
+            dashboardKeys.metrics(),
+            (old) => applyTransactionToDashboardMetrics(old, delta, item.createdAt),
+          );
+        }
+        if (wasNotRefetched(dashboardKeys.analytics())) {
+          queryClient.setQueryData<Analytics>(dashboardKeys.analytics(), (old) =>
+            applyTransactionToDashboardAnalytics(old, {
+              customerId: data.customerId,
+              creditDelta,
+              debitDelta,
+              createdAt: item.createdAt,
+              previousCustomerOutstanding: prevOutstanding,
+            }),
+          );
+        }
       }
       return item.id;
     },
-    [reload, sync, isOnline],
+    [reload, sync, isOnline, queryClient],
   );
 
   const retry = useCallback(
